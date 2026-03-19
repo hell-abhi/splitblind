@@ -13,8 +13,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -69,6 +72,19 @@ fun GroupListScreen(
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
                 actions = {
+                    val context = LocalContext.current
+                    val isDark = when (com.akeshari.splitblind.ui.theme.ThemeManager.themeMode) {
+                        com.akeshari.splitblind.ui.theme.ThemeMode.DARK -> true
+                        com.akeshari.splitblind.ui.theme.ThemeMode.LIGHT -> false
+                        com.akeshari.splitblind.ui.theme.ThemeMode.SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme()
+                    }
+                    IconButton(onClick = { com.akeshari.splitblind.ui.theme.ThemeManager.toggle(context) }) {
+                        Icon(
+                            if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
+                            contentDescription = "Toggle theme",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
                     IconButton(onClick = onSyncClick) {
                         Icon(
                             Icons.Default.Sync,

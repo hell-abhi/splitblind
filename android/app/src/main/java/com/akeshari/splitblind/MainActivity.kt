@@ -27,6 +27,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        com.akeshari.splitblind.ui.theme.ThemeManager.init(this)
 
         val deepLink = parseDeepLink(intent)
 

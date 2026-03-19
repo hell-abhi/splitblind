@@ -31,7 +31,7 @@
             --r: 20px;
             --rs: 14px;
         }
-        @media(prefers-color-scheme:dark){:root{
+        :root.dark, @media(prefers-color-scheme:dark){:root:not(.light){
             --primary:#A89AF2;--primary-soft:#7C6FE0;--primary-bg:#2A2540;
             --accent-pink:#D9789B;--accent-mint:#5CB8A0;--accent-peach:#D4956E;--accent-sky:#5A9BD5;--accent-yellow:#D4BA3C;
             --surface:#1A1720;--card:#252230;--text:#EDE9FC;--text-secondary:#8E8A9E;--border:#342F45;
@@ -492,6 +492,7 @@
     <div class="screen" id="s-groups">
         <div class="topbar">
             <h1>SplitBlind</h1>
+            <button class="icon-btn" id="btn-theme" title="Toggle theme">&#x1F319;</button>
             <button class="icon-btn" id="btn-sync-device" title="Use on another device">&#x1F504;</button>
             <button class="icon-btn" id="btn-security">&#x1F512;</button>
         </div>
@@ -1178,6 +1179,21 @@ function wireEvents(){
     document.getElementById('sec-back').onclick=goBack;
     document.getElementById('inv-done').onclick=goBack;
     document.getElementById('btn-security').onclick=()=>show('security');
+
+    // Theme toggle
+    function applyTheme(){
+        const saved=localStorage.getItem('theme');
+        const isDark=saved==='dark'||(saved===null&&window.matchMedia('(prefers-color-scheme:dark)').matches);
+        document.documentElement.classList.toggle('dark',isDark);
+        document.documentElement.classList.toggle('light',!isDark);
+        document.getElementById('btn-theme').textContent=isDark?'\u2600\uFE0F':'\uD83C\uDF19';
+    }
+    applyTheme();
+    document.getElementById('btn-theme').onclick=()=>{
+        const isDark=document.documentElement.classList.contains('dark');
+        localStorage.setItem('theme',isDark?'light':'dark');
+        applyTheme();
+    };
     document.getElementById('btn-sync-device').onclick=()=>{document.getElementById('sg-pin').value='';document.getElementById('sg-btn').disabled=true;document.getElementById('sg-result').style.display='none';show('sync-gen')};
     document.getElementById('sg-back').onclick=goBack;
     document.getElementById('rec-back').onclick=goBack;
