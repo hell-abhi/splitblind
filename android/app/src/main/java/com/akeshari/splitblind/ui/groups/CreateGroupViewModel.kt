@@ -13,7 +13,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import java.net.URLEncoder
 import java.util.UUID
 import javax.inject.Inject
 
@@ -86,8 +85,9 @@ class CreateGroupViewModel @Inject constructor(
                 )
             )
 
-            val encodedName = URLEncoder.encode(name, "UTF-8")
-            val inviteLink = "https://hell-abhi.github.io/splitblind/?g=$groupId#$groupKeyBase64|$encodedName"
+            // Create a short code in Firebase for a cleaner invite link
+            val shortCode = syncEngine.createShortCode(groupId, name)
+            val inviteLink = "https://hell-abhi.github.io/splitblind/?c=$shortCode#$groupKeyBase64"
 
             _state.value = _state.value.copy(
                 createdGroupId = groupId,

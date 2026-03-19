@@ -14,6 +14,7 @@ import com.akeshari.splitblind.data.database.entity.SettlementEntity
 import com.google.firebase.database.ChildEventListener
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ServerValue
 import kotlinx.coroutines.CoroutineScope
@@ -56,7 +57,7 @@ class SyncEngine @Inject constructor(
     private val processedOpDao: ProcessedOpDao
 ) {
     private val TAG = "SyncEngine"
-    private val listeners = mutableMapOf<String, ChildEventListener>()
+    private val listeners = mutableMapOf<String, Pair<DatabaseReference, ChildEventListener>>()
     private val scope = CoroutineScope(Dispatchers.IO)
 
     private val _syncStatus = MutableStateFlow<Map<String, Boolean>>(emptyMap())
@@ -99,14 +100,13 @@ class SyncEngine @Inject constructor(
         }
 
         ref.addChildEventListener(listener)
-        listeners[groupId] = listener
+        listeners[groupId] = Pair(ref, listener)
         updateSyncStatus(groupId, true)
     }
 
     fun stopListening(groupId: String) {
-        listeners.remove(groupId)?.let { listener ->
-            firebaseDatabase.getReference("groups/$groupId/ops")
-                .removeEventListener(listener)
+        listeners.remove(groupId)?.let { (ref, listener) ->
+            ref.removeEventListener(listener)
         }
         _syncStatus.value = _syncStatus.value - groupId
     }
@@ -175,6 +175,40 @@ class SyncEngine @Inject constructor(
                 )
             }
         }
+    }
+
+    /**
+     * Create a short invite code in Firebase at links/{code} = {g: groupId, n: name}.
+     * Returns the 8-char code.
+     */
+    fun createShortCode(groupId: String, groupName: String): String {
+        val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+        val code = (1..8).map { chars.random() }.joinToString("")
+        val data = mapOf("g" to groupId, "n" to groupName)
+        firebaseDatabase.getReference("links/$code").setValue(data)
+            .addOnFailureListener { e -> Log.e(TAG, "Failed to create short link", e) }
+        return code
+    }
+
+    /**
+     * Resolve a short code from Firebase at links/{code}.
+     * Calls onResult with (groupId, groupName) or null if not found.
+     */
+    fun resolveShortCode(code: String, onResult: (Pair<String, String>?) -> Unit) {
+        firebaseDatabase.getReference("links/$code").get()
+            .addOnSuccessListener { snapshot ->
+                val groupId = snapshot.child("g").getValue(String::class.java)
+                val name = snapshot.child("n").getValue(String::class.java) ?: "Shared Group"
+                if (groupId != null) {
+                    onResult(Pair(groupId, name))
+                } else {
+                    onResult(null)
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Failed to resolve short code: $code", e)
+                onResult(null)
+            }
     }
 
     private fun updateSyncStatus(groupId: String, connected: Boolean) {

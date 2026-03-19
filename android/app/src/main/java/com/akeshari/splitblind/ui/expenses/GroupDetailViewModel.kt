@@ -48,21 +48,22 @@ class GroupDetailViewModel @Inject constructor(
     val groupId: String = savedStateHandle["groupId"] ?: ""
 
     private val _group = MutableStateFlow<GroupEntity?>(null)
+    private val _shortCode = MutableStateFlow<String?>(null)
 
     val state: StateFlow<GroupDetailState> = combine(
         groupDao.getMembers(groupId),
         expenseDao.getExpenses(groupId),
         settlementDao.getSettlements(groupId),
-        syncEngine.syncStatus
-    ) { members, expenses, settlements, syncStatus ->
+        syncEngine.syncStatus,
+        _shortCode
+    ) { members, expenses, settlements, syncStatus, _ ->
         val memberNames = members.associate { it.memberId to it.displayName }
         val balances = BalanceCalculator.computeNetBalances(expenses, settlements)
         val debts = BalanceCalculator.simplifyDebts(balances)
 
         val group = _group.value
-        val inviteLink = if (group != null) {
-            val encodedName = java.net.URLEncoder.encode(group.name, "UTF-8")
-            "https://hell-abhi.github.io/splitblind/?g=${group.groupId}#${group.groupKeyBase64}|$encodedName"
+        val inviteLink = if (group != null && _shortCode.value != null) {
+            "https://hell-abhi.github.io/splitblind/?c=${_shortCode.value}#${group.groupKeyBase64}"
         } else null
 
         GroupDetailState(
@@ -83,6 +84,9 @@ class GroupDetailViewModel @Inject constructor(
             val group = groupDao.getGroup(groupId) ?: return@launch
             _group.value = group
             syncEngine.startListening(groupId, group.groupKeyBase64)
+            // Generate a short code for invite links
+            val code = syncEngine.createShortCode(groupId, group.name)
+            _shortCode.value = code
         }
     }
 

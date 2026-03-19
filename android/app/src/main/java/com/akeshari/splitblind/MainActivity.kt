@@ -3,11 +3,13 @@ package com.akeshari.splitblind
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.navigation.compose.rememberNavController
 import com.akeshari.splitblind.crypto.Identity
+import com.akeshari.splitblind.sync.SyncEngine
 import com.akeshari.splitblind.ui.navigation.NavGraph
 import com.akeshari.splitblind.ui.theme.SplitBlindTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -19,12 +21,60 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var identity: Identity
 
+    @Inject
+    lateinit var syncEngine: SyncEngine
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
         val deepLink = parseDeepLink(intent)
 
+        if (deepLink is DeepLinkResult.ShortCode) {
+            // Resolve the short code asynchronously, then render
+            syncEngine.resolveShortCode(deepLink.code) { result ->
+                runOnUiThread {
+                    val resolved = if (result != null) {
+                        DeepLinkData(
+                            groupId = result.first,
+                            groupKey = deepLink.groupKey,
+                            groupName = result.second
+                        )
+                    } else {
+                        Log.e("MainActivity", "Failed to resolve short code: ${deepLink.code}")
+                        null
+                    }
+                    renderContent(resolved)
+                }
+            }
+        } else {
+            renderContent((deepLink as? DeepLinkResult.Full)?.data)
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        val deepLink = parseDeepLink(intent) ?: return
+
+        if (deepLink is DeepLinkResult.ShortCode) {
+            syncEngine.resolveShortCode(deepLink.code) { result ->
+                runOnUiThread {
+                    val resolved = if (result != null) {
+                        DeepLinkData(
+                            groupId = result.first,
+                            groupKey = deepLink.groupKey,
+                            groupName = result.second
+                        )
+                    } else null
+                    renderContent(resolved)
+                }
+            }
+        } else {
+            renderContent((deepLink as? DeepLinkResult.Full)?.data)
+        }
+    }
+
+    private fun renderContent(deepLink: DeepLinkData?) {
         setContent {
             SplitBlindTheme {
                 val navController = rememberNavController()
@@ -39,41 +89,34 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        // Handle deep links when activity is already running
-        val deepLink = parseDeepLink(intent) ?: return
-        // Re-create the content with the new deep link
-        setContent {
-            SplitBlindTheme {
-                val navController = rememberNavController()
-                NavGraph(
-                    navController = navController,
-                    isOnboarded = identity.isOnboarded,
-                    joinGroupId = deepLink.groupId,
-                    joinGroupKey = deepLink.groupKey,
-                    joinGroupName = deepLink.groupName
-                )
-            }
-        }
-    }
-
     private data class DeepLinkData(
         val groupId: String,
         val groupKey: String,
         val groupName: String
     )
 
-    private fun parseDeepLink(intent: Intent?): DeepLinkData? {
+    private sealed class DeepLinkResult {
+        data class Full(val data: DeepLinkData) : DeepLinkResult()
+        data class ShortCode(val code: String, val groupKey: String) : DeepLinkResult()
+    }
+
+    private fun parseDeepLink(intent: Intent?): DeepLinkResult? {
         val uri = intent?.data ?: return null
         return parseInviteUri(uri)
     }
 
-    private fun parseInviteUri(uri: Uri): DeepLinkData? {
-        // Format: https://hell-abhi.github.io/splitblind/?g={groupId}#{base64key}|{encodedName}
-        val groupId = uri.getQueryParameter("g") ?: return null
+    private fun parseInviteUri(uri: Uri): DeepLinkResult? {
         val fragment = uri.fragment ?: return null
 
+        // Format 1 (short): ?c={shortcode}#{base64key}
+        val shortCode = uri.getQueryParameter("c")
+        if (shortCode != null) {
+            val groupKey = fragment
+            return DeepLinkResult.ShortCode(code = shortCode, groupKey = groupKey)
+        }
+
+        // Format 2 (legacy): ?g={groupId}#{base64key}|{encodedName}
+        val groupId = uri.getQueryParameter("g") ?: return null
         val parts = fragment.split("|", limit = 2)
         if (parts.isEmpty()) return null
 
@@ -84,10 +127,12 @@ class MainActivity : ComponentActivity() {
             "Shared Group"
         }
 
-        return DeepLinkData(
-            groupId = groupId,
-            groupKey = groupKey,
-            groupName = groupName
+        return DeepLinkResult.Full(
+            DeepLinkData(
+                groupId = groupId,
+                groupKey = groupKey,
+                groupName = groupName
+            )
         )
     }
 }
