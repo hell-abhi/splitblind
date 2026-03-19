@@ -145,11 +145,13 @@ fun GroupDetailScreen(
                     debts = state.debts,
                     netBalances = state.netBalances,
                     memberNames = state.memberNames,
+                    myId = state.myId,
                     groupId = viewModel.groupId,
                     onSettle = onSettle
                 )
                 2 -> MembersTab(
                     members = state.members,
+                    myId = state.myId,
                     inviteLink = state.inviteLink,
                     groupName = state.group?.name ?: ""
                 )
@@ -257,74 +259,78 @@ private fun BalancesTab(
     debts: List<Debt>,
     netBalances: Map<String, Long>,
     memberNames: Map<String, String>,
+    myId: String,
     groupId: String,
     onSettle: (String, String, String, Long) -> Unit
 ) {
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         if (netBalances.isNotEmpty()) {
             item {
-                Text(
-                    "Net Balances",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
+                Text("Net Balances", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 4.dp))
             }
             items(netBalances.entries.toList()) { (memberId, balance) ->
-                Row(
+                val isMe = memberId == myId
+                Card(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    colors = if (isMe) androidx.compose.material3.CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
+                    else androidx.compose.material3.CardDefaults.cardColors()
                 ) {
-                    Text(memberNames[memberId] ?: memberId)
-                    Text(
-                        text = (if (balance >= 0) "+" else "") + formatAmount(balance),
-                        color = if (balance >= 0) Color(0xFF4CAF50) else Color(0xFFF44336),
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(if (isMe) "You" else (memberNames[memberId] ?: memberId), fontWeight = if (isMe) FontWeight.Bold else FontWeight.Normal)
+                            if (isMe) {
+                                Box(modifier = Modifier.background(MaterialTheme.colorScheme.primary, RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 1.dp)) {
+                                    Text("YOU", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                        Text(
+                            text = (if (balance >= 0) "+" else "") + formatAmount(balance),
+                            color = if (balance >= 0) Color(0xFF6BCB77) else Color(0xFFFF6B6B),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
 
         if (debts.isNotEmpty()) {
             item {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    "Settle Up",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text("Settlements Needed", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 4.dp))
             }
             items(debts) { debt ->
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                val isMyDebt = debt.from == myId || debt.to == myId
+                val fromName = if (debt.from == myId) "You" else (memberNames[debt.from] ?: debt.from)
+                val toName = if (debt.to == myId) "You" else (memberNames[debt.to] ?: debt.to)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = if (isMyDebt) androidx.compose.material3.CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
+                    else androidx.compose.material3.CardDefaults.cardColors()
+                ) {
+                    Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "${memberNames[debt.from] ?: debt.from} owes ${memberNames[debt.to] ?: debt.to}",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            Text(
-                                formatAmount(debt.amountCents),
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("$fromName owes $toName", style = MaterialTheme.typography.bodyMedium)
+                                if (isMyDebt) {
+                                    Box(modifier = Modifier.background(MaterialTheme.colorScheme.primary, RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 1.dp)) {
+                                        Text("YOU", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                            Text(formatAmount(debt.amountCents), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         }
-                        OutlinedButton(
-                            onClick = { onSettle(groupId, debt.from, debt.to, debt.amountCents) }
-                        ) {
-                            Text("Settle")
+                        if (isMyDebt) {
+                            androidx.compose.material3.Button(onClick = { onSettle(groupId, debt.from, debt.to, debt.amountCents) }) {
+                                Text("Settle")
+                            }
+                        } else {
+                            OutlinedButton(onClick = { onSettle(groupId, debt.from, debt.to, debt.amountCents) }) {
+                                Text("Settle")
+                            }
                         }
                     }
                 }
@@ -333,15 +339,8 @@ private fun BalancesTab(
 
         if (debts.isEmpty() && netBalances.isEmpty()) {
             item {
-                Box(
-                    modifier = Modifier.fillParentMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "All settled up!",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("\uD83C\uDF89 All settled up!", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -351,6 +350,7 @@ private fun BalancesTab(
 @Composable
 private fun MembersTab(
     members: List<MemberEntity>,
+    myId: String,
     inviteLink: String?,
     groupName: String
 ) {
@@ -363,12 +363,33 @@ private fun MembersTab(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(members) { member ->
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = member.displayName,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(16.dp)
-                )
+            val isMe = member.memberId == myId
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = if (isMe) androidx.compose.material3.CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
+                else androidx.compose.material3.CardDefaults.cardColors()
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = member.displayName,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = if (isMe) FontWeight.Bold else FontWeight.Normal,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (isMe) {
+                        Box(
+                            modifier = Modifier
+                                .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text("YOU", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
             }
         }
 
