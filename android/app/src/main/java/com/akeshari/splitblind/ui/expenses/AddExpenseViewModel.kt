@@ -62,7 +62,7 @@ data class AddExpenseState(
     val saved: Boolean = false,
     val error: String? = null,
     // New fields
-    val selectedTag: String? = null,
+    val selectedTag: String = "other",
     val isMultiPayer: Boolean = false,
     val payerAmounts: Map<String, String> = emptyMap(),
     val splitMode: SplitMode = SplitMode.EQUAL,
@@ -114,8 +114,7 @@ class AddExpenseViewModel @Inject constructor(
     }
 
     fun setTag(tag: String?) {
-        val current = _state.value.selectedTag
-        _state.value = _state.value.copy(selectedTag = if (current == tag) null else tag)
+        _state.value = _state.value.copy(selectedTag = tag ?: "other")
     }
 
     fun setMultiPayer(enabled: Boolean) {
