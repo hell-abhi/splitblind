@@ -32,7 +32,8 @@ data class GroupDetailState(
     val netBalances: Map<String, Long> = emptyMap(),
     val memberNames: Map<String, String> = emptyMap(),
     val isSynced: Boolean = false,
-    val inviteLink: String? = null
+    val inviteLink: String? = null,
+    val myId: String = ""
 )
 
 @HiltViewModel
@@ -75,7 +76,8 @@ class GroupDetailViewModel @Inject constructor(
             netBalances = balances,
             memberNames = memberNames,
             isSynced = syncStatus[groupId] == true,
-            inviteLink = inviteLink
+            inviteLink = inviteLink,
+            myId = identity.memberId
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), GroupDetailState())
 
