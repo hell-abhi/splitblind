@@ -13,6 +13,9 @@ interface GroupDao {
     @Query("SELECT * FROM groups ORDER BY createdAt DESC")
     fun getAllGroups(): Flow<List<GroupEntity>>
 
+    @Query("SELECT * FROM groups ORDER BY createdAt DESC")
+    suspend fun getAllGroupsList(): List<GroupEntity>
+
     @Query("SELECT * FROM groups WHERE groupId = :groupId")
     suspend fun getGroup(groupId: String): GroupEntity?
 

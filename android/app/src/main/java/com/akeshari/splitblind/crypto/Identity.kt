@@ -20,12 +20,13 @@ class Identity(context: Context) {
         )
     }
 
-    val memberId: String
+    var memberId: String
         get() = prefs.getString("member_id", null) ?: run {
             val id = UUID.randomUUID().toString().take(16)
             prefs.edit().putString("member_id", id).apply()
             id
         }
+        set(value) = prefs.edit().putString("member_id", value).apply()
 
     var displayName: String
         get() = prefs.getString("display_name", "") ?: ""

@@ -13,6 +13,7 @@ import com.akeshari.splitblind.ui.groups.GroupListScreen
 import com.akeshari.splitblind.ui.onboarding.OnboardingScreen
 import com.akeshari.splitblind.ui.security.SecurityScreen
 import com.akeshari.splitblind.ui.settle.SettleUpScreen
+import com.akeshari.splitblind.ui.sync.SyncDeviceScreen
 
 object Routes {
     const val ONBOARDING = "onboarding"
@@ -22,6 +23,8 @@ object Routes {
     const val ADD_EXPENSE = "add_expense/{groupId}"
     const val SETTLE = "settle/{groupId}/{from}/{to}/{amountCents}"
     const val SECURITY = "security"
+    const val SYNC_GENERATE = "sync_generate"
+    const val SYNC_RESTORE = "sync_restore"
 
     fun groupDetail(groupId: String) = "group_detail/$groupId"
     fun addExpense(groupId: String) = "add_expense/$groupId"
@@ -46,6 +49,9 @@ fun NavGraph(
                     navController.navigate(Routes.GROUPS) {
                         popUpTo(Routes.ONBOARDING) { inclusive = true }
                     }
+                },
+                onRestore = {
+                    navController.navigate(Routes.SYNC_RESTORE)
                 }
             )
         }
@@ -60,6 +66,9 @@ fun NavGraph(
                 },
                 onSecurityClick = {
                     navController.navigate(Routes.SECURITY)
+                },
+                onSyncClick = {
+                    navController.navigate(Routes.SYNC_GENERATE)
                 },
                 joinGroupId = joinGroupId,
                 joinGroupKey = joinGroupKey,
@@ -119,6 +128,25 @@ fun NavGraph(
         composable(Routes.SECURITY) {
             SecurityScreen(
                 onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Routes.SYNC_GENERATE) {
+            SyncDeviceScreen(
+                mode = "generate",
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Routes.SYNC_RESTORE) {
+            SyncDeviceScreen(
+                mode = "restore",
+                onBack = { navController.popBackStack() },
+                onRestoreComplete = {
+                    navController.navigate(Routes.GROUPS) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
     }

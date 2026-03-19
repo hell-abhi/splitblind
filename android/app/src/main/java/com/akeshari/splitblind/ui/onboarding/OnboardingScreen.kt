@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -24,6 +25,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 @Composable
 fun OnboardingScreen(
     onComplete: () -> Unit,
+    onRestore: () -> Unit = {},
     viewModel: OnboardingViewModel = hiltViewModel()
 ) {
     val name by viewModel.name.collectAsState()
@@ -73,6 +75,15 @@ fun OnboardingScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Continue")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedButton(
+                onClick = onRestore,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Already using SplitBlind? Restore")
             }
         }
     }
