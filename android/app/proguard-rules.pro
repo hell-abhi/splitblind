@@ -1,0 +1,7 @@
+-keepattributes *Annotation*, InnerClasses
+-dontnote kotlinx.serialization.AnnotationsKt
+-keep,includedescriptorclasses class com.akeshari.splitblind.**$$serializer { *; }
+-keepclassmembers class com.akeshari.splitblind.** { *** Companion; }
+-keepclasseswithmembers class com.akeshari.splitblind.** { kotlinx.serialization.KSerializer serializer(...); }
+-keep class com.google.firebase.** { *; }
+-keep class com.google.android.gms.** { *; }

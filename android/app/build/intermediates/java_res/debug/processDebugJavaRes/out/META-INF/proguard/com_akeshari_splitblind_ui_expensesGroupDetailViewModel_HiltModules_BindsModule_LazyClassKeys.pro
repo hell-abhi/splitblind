@@ -1,0 +1,1 @@
+-keep,allowobfuscation,allowshrinking class com.akeshari.splitblind.ui.expenses.GroupDetailViewModel
