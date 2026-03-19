@@ -90,6 +90,11 @@ class GroupDetailViewModel @Inject constructor(
         }
     }
 
+    fun refresh() {
+        val group = _group.value ?: return
+        syncEngine.fullSync(groupId, group.groupKeyBase64)
+    }
+
     override fun onCleared() {
         super.onCleared()
         syncEngine.stopListening(groupId)
