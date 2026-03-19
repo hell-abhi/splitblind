@@ -1,0 +1,9 @@
+{
+    "name": "SplitBlind",
+    "short_name": "SplitBlind",
+    "description": "Split expenses with friends. No servers reading your data. Everything is encrypted end-to-end.",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#FAFDF6",
+    "theme_color": "#1B5E20"
+}
