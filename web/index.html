@@ -9,48 +9,29 @@
     <title>SplitBlind</title>
     <link rel="manifest" href="manifest.json">
     <style>
-        :root {
-            --primary: #1B5E20; --primary-l: #4CAF50; --primary-c: #C8E6C9;
-            --on-primary: #fff; --surface: #FAFDF6; --card: #fff;
-            --text: #1A1C19; --dim: #6B6E6B; --border: #E0E3DD;
-            --pos: #2E7D32; --neg: #C62828;
-            --r: 16px; --rs: 12px;
-        }
-        @media(prefers-color-scheme:dark){:root{
-            --primary:#81C784;--primary-l:#66BB6A;--primary-c:#1B5E20;
-            --on-primary:#003300;--surface:#121412;--card:#1E201E;
-            --text:#E2E3DD;--dim:#8E918E;--border:#2E312E;
-            --pos:#81C784;--neg:#EF9A9A;
-        }}
+        :root{--primary:#1B5E20;--primary-l:#4CAF50;--primary-c:#C8E6C9;--on-primary:#fff;--surface:#FAFDF6;--card:#fff;--text:#1A1C19;--dim:#6B6E6B;--border:#E0E3DD;--pos:#2E7D32;--neg:#C62828;--r:16px;--rs:12px}
+        @media(prefers-color-scheme:dark){:root{--primary:#81C784;--primary-l:#66BB6A;--primary-c:#1B5E20;--on-primary:#003300;--surface:#121412;--card:#1E201E;--text:#E2E3DD;--dim:#8E918E;--border:#2E312E;--pos:#81C784;--neg:#EF9A9A}}
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--surface);color:var(--text);min-height:100dvh;-webkit-tap-highlight-color:transparent}
         .app{max-width:480px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column}
         .topbar{background:var(--primary-c);padding:16px 20px;padding-top:max(16px,env(safe-area-inset-top));display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}
-        .topbar h1{font-size:20px;font-weight:600;flex:1}
-        .topbar .back{background:none;border:none;font-size:24px;cursor:pointer;color:var(--text);padding:4px}
+        .topbar h1{font-size:20px;font-weight:600;flex:1}.topbar .back{background:none;border:none;font-size:24px;cursor:pointer;color:var(--text);padding:4px}
         .content{flex:1;padding:16px;padding-bottom:max(80px,calc(16px + env(safe-area-inset-bottom)))}
-        .card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:12px;cursor:pointer;transition:transform .1s}
-        .card:active{transform:scale(.98)}
+        .card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:12px;cursor:pointer;transition:transform .1s}.card:active{transform:scale(.98)}
         .card-t{font-size:16px;font-weight:600}.card-s{font-size:13px;color:var(--dim);margin-top:4px}
         .exp-c{display:flex;justify-content:space-between;align-items:center;cursor:default}.exp-c:active{transform:none}
         .exp-a{font-size:18px;font-weight:700;text-align:right}.exp-d{font-size:12px;color:var(--dim);text-align:right}
-        .bal-r{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
-        .bal-r:last-child{border-bottom:none}
+        .bal-r{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}.bal-r:last-child{border-bottom:none}
         .bp{color:var(--pos);font-weight:600}.bn{color:var(--neg);font-weight:600}
         .debt-c{display:flex;justify-content:space-between;align-items:center}
         .settle-b{background:var(--primary);color:var(--on-primary);border:none;border-radius:8px;padding:8px 16px;font-size:14px;font-weight:600;cursor:pointer}
         .tabs{display:flex;border-bottom:2px solid var(--border);margin-bottom:16px}
-        .tab{flex:1;padding:12px;text-align:center;font-weight:600;font-size:14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--dim);transition:.2s}
-        .tab.active{color:var(--primary);border-bottom-color:var(--primary)}
-        .fab{position:fixed;bottom:max(24px,env(safe-area-inset-bottom));right:calc(50% - 220px);width:56px;height:56px;background:var(--primary);color:var(--on-primary);border:none;border-radius:16px;font-size:28px;font-weight:300;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;transition:transform .1s}
-        .fab:active{transform:scale(.9)}
+        .tab{flex:1;padding:12px;text-align:center;font-weight:600;font-size:14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--dim);transition:.2s}.tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+        .fab{position:fixed;bottom:max(24px,env(safe-area-inset-bottom));right:calc(50% - 220px);width:56px;height:56px;background:var(--primary);color:var(--on-primary);border:none;border-radius:16px;font-size:28px;font-weight:300;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.2);display:flex;align-items:center;justify-content:center;transition:transform .1s}.fab:active{transform:scale(.9)}
         @media(max-width:480px){.fab{right:24px}}
         .fg{margin-bottom:20px}.fg label{display:block;font-size:13px;font-weight:600;color:var(--dim);margin-bottom:6px}
-        .fg input,.fg select{width:100%;padding:14px 16px;border:1px solid var(--border);border-radius:var(--rs);font-size:16px;background:var(--card);color:var(--text);outline:none;transition:border-color .2s}
-        .fg input:focus{border-color:var(--primary)}
-        .btn{width:100%;padding:14px;border:none;border-radius:var(--rs);font-size:16px;font-weight:600;cursor:pointer;transition:opacity .2s}
-        .btn-p{background:var(--primary);color:var(--on-primary)}.btn-o{background:transparent;border:2px solid var(--primary);color:var(--primary)}
-        .btn:disabled{opacity:.4;cursor:not-allowed}
+        .fg input,.fg select{width:100%;padding:14px 16px;border:1px solid var(--border);border-radius:var(--rs);font-size:16px;background:var(--card);color:var(--text);outline:none;transition:border-color .2s}.fg input:focus{border-color:var(--primary)}
+        .btn{width:100%;padding:14px;border:none;border-radius:var(--rs);font-size:16px;font-weight:600;cursor:pointer;transition:opacity .2s}.btn-p{background:var(--primary);color:var(--on-primary)}.btn-o{background:transparent;border:2px solid var(--primary);color:var(--primary)}.btn:disabled{opacity:.4;cursor:not-allowed}
         .inv-box{background:var(--surface);border:1px dashed var(--primary);border-radius:var(--rs);padding:12px;word-break:break-all;font-size:12px;font-family:monospace;color:var(--dim);margin:12px 0}
         .empty{text-align:center;padding:60px 20px;color:var(--dim)}.empty .ic{font-size:64px;margin-bottom:16px;opacity:.4}.empty h3{margin-bottom:8px;color:var(--text)}
         .chk-r{display:flex;align-items:center;gap:12px;padding:8px 0}.chk-r input[type=checkbox],.chk-r input[type=radio]{width:20px;height:20px;accent-color:var(--primary)}
@@ -58,20 +39,14 @@
         .onboarding{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;padding:32px;text-align:center}
         .onboarding .logo{font-size:64px;margin-bottom:16px}.onboarding h1{font-size:28px;color:var(--primary);margin-bottom:8px}.onboarding p{color:var(--dim);margin-bottom:40px;line-height:1.5}
         .stl-ctr{text-align:center;padding:40px 0}.stl-ctr .ic{font-size:80px;margin-bottom:24px}.stl-ctr .amt{font-size:36px;font-weight:700;color:var(--primary);margin:12px 0}.stl-ctr .hint{color:var(--dim);margin-bottom:40px;line-height:1.5}
-        .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--surface);padding:12px 24px;border-radius:8px;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:100}
-        .toast.show{opacity:1}
+        .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--surface);padding:12px 24px;border-radius:8px;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:100}.toast.show{opacity:1}
         .screen{display:none}.screen.active{display:flex;flex-direction:column;min-height:100dvh}
-        .sync-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-left:8px}
-        .sync-on{background:#4CAF50;animation:pulse 2s infinite}.sync-off{background:#F44336}
+        .sync-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-left:8px}.sync-on{background:#4CAF50;animation:pulse 2s infinite}.sync-off{background:#F44336}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-        .member-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-        .chip{background:var(--primary-c);color:var(--text);padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500}
     </style>
 </head>
 <body>
 <div class="app" id="app">
-
-    <!-- Onboarding -->
     <div class="screen" id="s-onboard">
         <div class="onboarding">
             <div class="logo">&#x1F91D;</div>
@@ -83,17 +58,13 @@
             </div>
         </div>
     </div>
-
-    <!-- Group List -->
     <div class="screen" id="s-groups">
-        <div class="topbar"><h1>SplitBlind</h1><button class="back" onclick="show('security')" title="How your data is protected" style="font-size:20px">&#x1F512;</button></div>
+        <div class="topbar"><h1>SplitBlind</h1><button class="back" id="btn-security" title="How your data is protected" style="font-size:20px">&#x1F512;</button></div>
         <div class="content" id="grp-list"></div>
         <button class="fab" id="fab-cg">+</button>
     </div>
-
-    <!-- Create Group -->
     <div class="screen" id="s-cg">
-        <div class="topbar"><button class="back" onclick="goBack()">&larr;</button><h1>Create Group</h1></div>
+        <div class="topbar"><button class="back" id="cg-back">&larr;</button><h1>Create Group</h1></div>
         <div class="content">
             <div id="cg-form">
                 <div class="fg"><label>Group name</label><input type="text" id="cg-name" placeholder="e.g., Trip to Goa"></div>
@@ -107,28 +78,24 @@
             </div>
         </div>
     </div>
-
-    <!-- Group Detail -->
     <div class="screen" id="s-gd">
         <div class="topbar">
-            <button class="back" onclick="goHome()">&larr;</button>
+            <button class="back" id="gd-back">&larr;</button>
             <h1 id="gd-title">Group</h1>
             <span class="sync-dot sync-off" id="sync-dot" title="Sync status"></span>
         </div>
         <div class="tabs">
-            <div class="tab active" onclick="switchTab('exp')">Expenses</div>
-            <div class="tab" onclick="switchTab('bal')">Balances</div>
-            <div class="tab" onclick="switchTab('members')">Members</div>
+            <div class="tab active" data-tab="exp">Expenses</div>
+            <div class="tab" data-tab="bal">Balances</div>
+            <div class="tab" data-tab="members">Members</div>
         </div>
         <div class="content" id="t-exp"></div>
         <div class="content" id="t-bal" style="display:none"></div>
         <div class="content" id="t-mem" style="display:none"></div>
         <button class="fab" id="fab-ae">+</button>
     </div>
-
-    <!-- Add Expense -->
     <div class="screen" id="s-ae">
-        <div class="topbar"><button class="back" onclick="goBack()">&larr;</button><h1>Add Expense</h1></div>
+        <div class="topbar"><button class="back" id="ae-back">&larr;</button><h1>Add Expense</h1></div>
         <div class="content">
             <div class="fg"><label>What's this for?</label><input type="text" id="ae-desc" placeholder="e.g., Dinner, Cab, Groceries"></div>
             <div class="fg"><label>Amount (&#x20B9;)</label><input type="number" id="ae-amt" placeholder="0.00" step="0.01" min="0" inputmode="decimal"></div>
@@ -137,10 +104,8 @@
             <button class="btn btn-p" id="ae-btn" disabled>Add Expense</button>
         </div>
     </div>
-
-    <!-- Settle Up -->
     <div class="screen" id="s-settle">
-        <div class="topbar"><button class="back" onclick="goBack()">&larr;</button><h1>Settle Up</h1></div>
+        <div class="topbar"><button class="back" id="stl-back">&larr;</button><h1>Settle Up</h1></div>
         <div class="content">
             <div class="stl-ctr">
                 <div class="ic">&#x1F91D;</div>
@@ -151,500 +116,406 @@
             </div>
         </div>
     </div>
-
-    <!-- Invite / Share -->
     <div class="screen" id="s-invite">
-        <div class="topbar"><button class="back" onclick="goBack()">&larr;</button><h1>Invite Friends</h1></div>
+        <div class="topbar"><button class="back" id="inv-back">&larr;</button><h1>Invite Friends</h1></div>
         <div class="content">
             <p style="margin-bottom:12px">Share this link with friends to invite them:</p>
             <div class="inv-box" id="inv-display2"></div>
             <button class="btn btn-o" id="share-btn2" style="margin-bottom:12px">Share Invite Link</button>
-            <button class="btn btn-p" onclick="goBack()">Done</button>
+            <button class="btn btn-p" id="inv-done">Done</button>
         </div>
     </div>
-
-    <!-- How Your Data is Protected -->
     <div class="screen" id="s-security">
-        <div class="topbar"><button class="back" onclick="goBack()">&larr;</button><h1>Your Data</h1></div>
+        <div class="topbar"><button class="back" id="sec-back">&larr;</button><h1>Your Data</h1></div>
         <div class="content">
             <div style="text-align:center;padding:20px 0">
                 <div style="font-size:48px">&#x1F512;</div>
                 <h2 style="color:var(--primary);margin:12px 0">End-to-End Encrypted</h2>
                 <p style="color:var(--dim);line-height:1.6">Your expenses are encrypted on your device before they leave it. No one — not even us — can read your data.</p>
             </div>
-
             <div class="sec-t">How it works</div>
-
-            <div class="card" style="cursor:default">
-                <div class="card-t">&#x1F511; A unique key is created per group</div>
-                <div class="card-s">When you create a group, a random AES-256 encryption key is generated on your device. This is the same encryption standard used by banks and governments.</div>
-            </div>
-
-            <div class="card" style="cursor:default">
-                <div class="card-t">&#x1F517; The key lives in the invite link</div>
-                <div class="card-s">The key is embedded in the # part of the invite URL. This part is never sent to any server — it stays in your browser. Only people you share the link with can decrypt the group's data.</div>
-            </div>
-
-            <div class="card" style="cursor:default">
-                <div class="card-t">&#x1F4E6; Firebase stores only encrypted blobs</div>
-                <div class="card-s">Your expenses are encrypted into unreadable gibberish before being sent to Firebase for syncing. Firebase acts as a blind mailbox — it delivers data but cannot read it.</div>
-            </div>
-
-            <div class="card" style="cursor:default">
-                <div class="card-t">&#x1F4F1; Your device holds the truth</div>
-                <div class="card-s">All your data is stored locally on your device. Firebase is just a sync pipe. Even if Firebase disappears tomorrow, your local data remains intact.</div>
-            </div>
-
+            <div class="card" style="cursor:default"><div class="card-t">&#x1F511; A unique key is created per group</div><div class="card-s">When you create a group, a random AES-256 encryption key is generated on your device. This is the same encryption standard used by banks and governments.</div></div>
+            <div class="card" style="cursor:default"><div class="card-t">&#x1F517; The key lives in the invite link</div><div class="card-s">The key is embedded in the # part of the invite URL. This part is never sent to any server — it stays in your browser. Only people you share the link with can decrypt the group's data.</div></div>
+            <div class="card" style="cursor:default"><div class="card-t">&#x1F4E6; Firebase stores only encrypted blobs</div><div class="card-s">Your expenses are encrypted into unreadable gibberish before being sent for syncing. The sync server acts as a blind mailbox — it delivers data but cannot read it.</div></div>
+            <div class="card" style="cursor:default"><div class="card-t">&#x1F4F1; Your device holds the truth</div><div class="card-s">All your data is stored locally on your device. The server is just a sync pipe. Even if it disappears tomorrow, your local data remains intact.</div></div>
             <div class="sec-t">See for yourself</div>
-
-            <div class="card" style="cursor:default">
-                <div class="card-t">&#x1F50D; Inspect the raw data on Firebase</div>
-                <div class="card-s">You can see exactly what's stored on the server. It's all encrypted — no names, no amounts, no group names. Just random characters.</div>
-                <a href="https://console.firebase.google.com/project/splitblind/database/splitblind-default-rtdb/data" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;color:var(--primary);font-weight:600;font-size:14px">Open Firebase Console &rarr;</a>
-            </div>
-
-            <div class="card" style="cursor:default">
-                <div class="card-t">&#x1F4BB; This app is open source</div>
-                <div class="card-s">Every line of code is public. You can verify that encryption happens on your device, that no data is sent unencrypted, and that no analytics or tracking exists.</div>
-                <a href="https://github.com/hell-abhi/splitblind" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;color:var(--primary);font-weight:600;font-size:14px">View Source Code &rarr;</a>
-            </div>
-
-            <div class="card" style="cursor:default;background:var(--primary-c)">
-                <div class="card-t">&#x2705; The bottom line</div>
-                <div class="card-s" style="color:var(--text)">Even if someone has the source code AND full access to Firebase, they cannot read your data without your group's invite link. The encryption key never touches any server.</div>
-            </div>
+            <div class="card" style="cursor:default"><div class="card-t">&#x1F50D; Inspect the raw data</div><div class="card-s">You can see exactly what's stored on the server. It's all encrypted — no names, no amounts, no group names. Just random characters.</div><a href="https://console.firebase.google.com/project/splitblind/database/splitblind-default-rtdb/data" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;color:var(--primary);font-weight:600;font-size:14px">Open Firebase Console &rarr;</a></div>
+            <div class="card" style="cursor:default"><div class="card-t">&#x1F4BB; This app is open source</div><div class="card-s">Every line of code is public. Verify that encryption happens on your device and no analytics or tracking exists.</div><a href="https://github.com/hell-abhi/splitblind" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;color:var(--primary);font-weight:600;font-size:14px">View Source Code &rarr;</a></div>
+            <div class="card" style="cursor:default;background:var(--primary-c)"><div class="card-t">&#x2705; The bottom line</div><div class="card-s" style="color:var(--text)">Even if someone has the source code AND full access to the server, they cannot read your data without your group's invite link. The encryption key never touches any server.</div></div>
         </div>
     </div>
 </div>
-
 <div class="toast" id="toast"></div>
 
-<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-
 <script>
-// ========== FIREBASE INIT ==========
+// ===== FIREBASE =====
 firebase.initializeApp({
-    apiKey: "AIzaSyCajH6mYj67XKu_p5XMUceaHRDb6mAY2Uk",
-    authDomain: "splitblind.firebaseapp.com",
-    databaseURL: "https://splitblind-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "splitblind",
-    storageBucket: "splitblind.firebasestorage.app",
-    messagingSenderId: "958579101301",
-    appId: "1:958579101301:web:7f343729353eb67711f23c"
+    apiKey:"AIzaSyCajH6mYj67XKu_p5XMUceaHRDb6mAY2Uk",
+    authDomain:"splitblind.firebaseapp.com",
+    databaseURL:"https://splitblind-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId:"splitblind",
+    storageBucket:"splitblind.firebasestorage.app",
+    messagingSenderId:"958579101301",
+    appId:"1:958579101301:web:7f343729353eb67711f23c"
 });
 const fbDb = firebase.database();
 
-// ========== CRYPTO (AES-256-GCM) ==========
-async function generateGroupKey() {
-    const key = await crypto.subtle.generateKey({name:'AES-GCM',length:256}, true, ['encrypt','decrypt']);
-    const raw = await crypto.subtle.exportKey('raw', key);
-    return bufToB64(new Uint8Array(raw));
+// ===== CRYPTO =====
+async function genKey(){const k=await crypto.subtle.generateKey({name:'AES-GCM',length:256},true,['encrypt','decrypt']);return bufB64(new Uint8Array(await crypto.subtle.exportKey('raw',k)))}
+async function impKey(b){return crypto.subtle.importKey('raw',b64Buf(b),{name:'AES-GCM'},false,['encrypt','decrypt'])}
+async function enc(kb,data){const k=await impKey(kb),iv=crypto.getRandomValues(new Uint8Array(12)),ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},k,new TextEncoder().encode(JSON.stringify(data)));return{d:bufB64(new Uint8Array(ct)),n:bufB64(iv)}}
+async function dec(kb,e){const k=await impKey(kb),pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64Buf(e.n)},k,b64Buf(e.d));return JSON.parse(new TextDecoder().decode(pt))}
+function bufB64(b){let s='';b.forEach(c=>s+=String.fromCharCode(c));return btoa(s)}
+function b64Buf(s){const d=atob(s),b=new Uint8Array(d.length);for(let i=0;i<d.length;i++)b[i]=d.charCodeAt(i);return b}
+
+// ===== IDB =====
+let db;
+function openDB(){return new Promise((res,rej)=>{const r=indexedDB.open('splitblind',3);r.onupgradeneeded=e=>{const d=e.target.result;['identity','processedOps'].forEach(n=>{if(!d.objectStoreNames.contains(n))d.createObjectStore(n)});
+[['groups','groupId'],['expenses','expenseId'],['settlements','settlementId']].forEach(([n,k])=>{if(!d.objectStoreNames.contains(n))d.createObjectStore(n,{keyPath:k})});
+if(!d.objectStoreNames.contains('members'))d.createObjectStore('members',{keyPath:'_key'});
+if(!d.objectStoreNames.contains('shortcodes'))d.createObjectStore('shortcodes')};
+r.onsuccess=()=>{db=r.result;res(db)};r.onerror=()=>rej(r.error)})}
+function iP(s,d){return new Promise((r,j)=>{const t=db.transaction(s,'readwrite');t.objectStore(s).put(d);t.oncomplete=()=>r();t.onerror=()=>j(t.error)})}
+function iPK(s,k,v){return new Promise((r,j)=>{const t=db.transaction(s,'readwrite');t.objectStore(s).put(v,k);t.oncomplete=()=>r();t.onerror=()=>j(t.error)})}
+function iG(s,k){return new Promise((r,j)=>{const t=db.transaction(s,'readonly');const q=t.objectStore(s).get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error)})}
+function iA(s){return new Promise((r,j)=>{const t=db.transaction(s,'readonly');const q=t.objectStore(s).getAll();q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error)})}
+
+// ===== IDENTITY =====
+let myId='',myName='';
+function uid(){return crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16)})}
+function shortId(){return uid().replace(/-/g,'').substring(0,8)}
+async function loadId(){myId=await iG('identity','id');myName=await iG('identity','name');return!!(myId&&myName)}
+async function saveId(n){myId=uid().substring(0,16);myName=n;await iPK('identity','id',myId);await iPK('identity','name',myName)}
+
+// ===== BALANCE =====
+function calcBal(exps,sets){
+    const b={};
+    for(const e of exps){if(e.isDeleted)continue;const s=e.splitAmong,sh=Math.floor(e.amountCents/s.length),rem=e.amountCents%s.length;b[e.paidBy]=(b[e.paidBy]||0)+e.amountCents;s.forEach((m,i)=>{b[m]=(b[m]||0)-sh-(i<rem?1:0)})}
+    for(const s of sets){if(s.isDeleted)continue;b[s.fromMember]=(b[s.fromMember]||0)+s.amountCents;b[s.toMember]=(b[s.toMember]||0)-s.amountCents}
+    return b}
+function simplify(bal){
+    const cr=[],dr=[];for(const[m,b] of Object.entries(bal)){if(b>0)cr.push({id:m,a:b});else if(b<0)dr.push({id:m,a:-b})}
+    cr.sort((a,b)=>b.a-a.a);dr.sort((a,b)=>b.a-a.a);const debts=[];let i=0,j=0;
+    while(i<cr.length&&j<dr.length){const a=Math.min(cr[i].a,dr[j].a);if(a>0)debts.push({from:dr[j].id,to:cr[i].id,amountCents:a});cr[i].a-=a;dr[j].a-=a;if(!cr[i].a)i++;if(!dr[j].a)j++}
+    return debts}
+function fmt(c){const w=Math.floor(Math.abs(c)/100),f=Math.abs(c)%100;return(c<0?'-':'')+'\u20B9'+w+'.'+String(f).padStart(2,'0')}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+// ===== NAV =====
+let curScreen='',curGroup='',curGroupKey='',hist=[];
+function show(id,push=true){if(curScreen&&push)hist.push(curScreen);document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('s-'+id).classList.add('active');curScreen=id}
+function goBack(){const p=hist.pop();if(p)show(p,false)}
+function goHome(){stopSync();hist=[];show('groups',false);renderGroups()}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000)}
+
+// ===== FIREBASE SYNC =====
+let syncRef=null;
+
+async function pushOp(gid,key,op){
+    const e=await enc(key,op);
+    e.t=firebase.database.ServerValue.TIMESTAMP;
+    return fbDb.ref('groups/'+gid+'/ops').push(e);
 }
 
-async function importKey(b64) {
-    const raw = b64ToBuf(b64);
-    return crypto.subtle.importKey('raw', raw, {name:'AES-GCM'}, false, ['encrypt','decrypt']);
-}
-
-async function encrypt(keyB64, data) {
-    const key = await importKey(keyB64);
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const encoded = new TextEncoder().encode(JSON.stringify(data));
-    const ct = await crypto.subtle.encrypt({name:'AES-GCM',iv}, key, encoded);
-    return { d: bufToB64(new Uint8Array(ct)), n: bufToB64(iv) };
-}
-
-async function decrypt(keyB64, encrypted) {
-    const key = await importKey(keyB64);
-    const iv = b64ToBuf(encrypted.n);
-    const ct = b64ToBuf(encrypted.d);
-    const pt = await crypto.subtle.decrypt({name:'AES-GCM',iv}, key, ct);
-    return JSON.parse(new TextDecoder().decode(pt));
-}
-
-function bufToB64(buf) { return btoa(String.fromCharCode(...buf)); }
-function b64ToBuf(b64) { const s = atob(b64); const buf = new Uint8Array(s.length); for(let i=0;i<s.length;i++) buf[i]=s.charCodeAt(i); return buf; }
-
-// ========== LOCAL DB (IndexedDB) ==========
-const IDB = 'splitblind'; let db;
-function openDB() {
-    return new Promise((res, rej) => {
-        const r = indexedDB.open(IDB, 2);
-        r.onupgradeneeded = e => {
-            const d = e.target.result;
-            if(!d.objectStoreNames.contains('identity')) d.createObjectStore('identity');
-            if(!d.objectStoreNames.contains('groups')) d.createObjectStore('groups',{keyPath:'groupId'});
-            if(!d.objectStoreNames.contains('members')) d.createObjectStore('members',{keyPath:'_key'});
-            if(!d.objectStoreNames.contains('expenses')) d.createObjectStore('expenses',{keyPath:'expenseId'});
-            if(!d.objectStoreNames.contains('settlements')) d.createObjectStore('settlements',{keyPath:'settlementId'});
-            if(!d.objectStoreNames.contains('processedOps')) d.createObjectStore('processedOps');
-        };
-        r.onsuccess = () => { db = r.result; res(db); };
-        r.onerror = () => rej(r.error);
-    });
-}
-function idbPut(s, d) { return new Promise((res, rej) => { const tx = db.transaction(s,'readwrite'); tx.objectStore(s).put(d); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
-function idbPutKV(s, k, v) { return new Promise((res, rej) => { const tx = db.transaction(s,'readwrite'); tx.objectStore(s).put(v, k); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
-function idbGet(s, k) { return new Promise((res, rej) => { const tx = db.transaction(s,'readonly'); const r = tx.objectStore(s).get(k); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
-function idbAll(s) { return new Promise((res, rej) => { const tx = db.transaction(s,'readonly'); const r = tx.objectStore(s).getAll(); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
-function idbDel(s, k) { return new Promise((res, rej) => { const tx = db.transaction(s,'readwrite'); tx.objectStore(s).delete(k); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
-
-// ========== IDENTITY ==========
-let myId = '', myName = '';
-function uid() { return crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16);}); }
-async function loadIdentity() { myId = await idbGet('identity','id'); myName = await idbGet('identity','name'); return !!(myId && myName); }
-async function saveIdentity(name) { myId = uid().substring(0,16); myName = name; await idbPutKV('identity','id',myId); await idbPutKV('identity','name',myName); }
-
-// ========== BALANCE CALCULATOR ==========
-function calcBalances(expenses, settlements) {
-    const b = {};
-    for (const e of expenses) {
-        if (e.isDeleted) continue;
-        const s = e.splitAmong, share = Math.floor(e.amountCents / s.length), rem = e.amountCents % s.length;
-        b[e.paidBy] = (b[e.paidBy]||0) + e.amountCents;
-        s.forEach((m,i) => { b[m] = (b[m]||0) - share - (i < rem ? 1 : 0); });
+async function processOp(op,gid){
+    if(await iG('processedOps',op.id))return false;
+    if(op.type==='member_join'){
+        const k=gid+'_'+op.data.memberId;
+        const ex=await iG('members',k);
+        if(!ex||op.hlc>ex.hlcTimestamp)await iP('members',{_key:k,groupId:gid,memberId:op.data.memberId,displayName:op.data.displayName,joinedAt:op.data.joinedAt,isDeleted:false,hlcTimestamp:op.hlc});
+    }else if(op.type==='expense'){
+        const ex=await iG('expenses',op.data.expenseId);
+        if(!ex||op.hlc>ex.hlcTimestamp)await iP('expenses',{...op.data,hlcTimestamp:op.hlc});
+    }else if(op.type==='settlement'){
+        const ex=await iG('settlements',op.data.settlementId);
+        if(!ex||op.hlc>ex.hlcTimestamp)await iP('settlements',{...op.data,hlcTimestamp:op.hlc});
     }
-    for (const s of settlements) { if(s.isDeleted) continue; b[s.fromMember]=(b[s.fromMember]||0)+s.amountCents; b[s.toMember]=(b[s.toMember]||0)-s.amountCents; }
-    return b;
-}
-function simplifyDebts(bal) {
-    const cr=[], dr=[];
-    for(const[m,b] of Object.entries(bal)){if(b>0)cr.push({id:m,a:b});else if(b<0)dr.push({id:m,a:-b});}
-    cr.sort((a,b)=>b.a-a.a); dr.sort((a,b)=>b.a-a.a);
-    const debts=[]; let i=0,j=0;
-    while(i<cr.length&&j<dr.length){const a=Math.min(cr[i].a,dr[j].a);if(a>0)debts.push({from:dr[j].id,to:cr[i].id,amountCents:a});cr[i].a-=a;dr[j].a-=a;if(!cr[i].a)i++;if(!dr[j].a)j++;}
-    return debts;
-}
-function fmt(cents) { const w=Math.floor(Math.abs(cents)/100),f=Math.abs(cents)%100; return (cents<0?'-':'')+'\u20B9'+w+'.'+String(f).padStart(2,'0'); }
-function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
-
-// ========== NAVIGATION ==========
-let curScreen='', curGroup='', curGroupKey='', hist=[];
-function show(id, push=true) { if(curScreen&&push)hist.push(curScreen); document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById('s-'+id).classList.add('active'); curScreen=id; }
-function goBack() { const p=hist.pop(); if(p)show(p,false); }
-function goHome() { stopSync(); hist=[]; show('groups',false); renderGroups(); }
-function showToast(m) { const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2000); }
-
-// ========== FIREBASE SYNC ==========
-let activeListener = null;
-
-async function pushOp(groupId, keyB64, op) {
-    const encrypted = await encrypt(keyB64, op);
-    encrypted.t = firebase.database.ServerValue.TIMESTAMP;
-    await fbDb.ref('groups/' + groupId + '/ops').push(encrypted);
-}
-
-async function processOp(op, groupId) {
-    const already = await idbGet('processedOps', op.id);
-    if (already) return false;
-
-    if (op.type === 'member_join') {
-        const key = groupId + '_' + op.data.memberId;
-        const existing = await idbGet('members', key);
-        if (!existing || op.hlc > existing.hlcTimestamp) {
-            await idbPut('members', { _key: key, groupId, memberId: op.data.memberId, displayName: op.data.displayName, joinedAt: op.data.joinedAt, isDeleted: false, hlcTimestamp: op.hlc });
-        }
-    } else if (op.type === 'expense') {
-        const existing = await idbGet('expenses', op.data.expenseId);
-        if (!existing || op.hlc > existing.hlcTimestamp) {
-            await idbPut('expenses', { ...op.data, hlcTimestamp: op.hlc });
-        }
-    } else if (op.type === 'settlement') {
-        const existing = await idbGet('settlements', op.data.settlementId);
-        if (!existing || op.hlc > existing.hlcTimestamp) {
-            await idbPut('settlements', { ...op.data, hlcTimestamp: op.hlc });
-        }
-    }
-    await idbPutKV('processedOps', op.id, true);
+    await iPK('processedOps',op.id,true);
     return true;
 }
 
-function startSync(groupId, keyB64) {
+function startSync(gid,key){
     stopSync();
-    const dot = document.getElementById('sync-dot');
-    dot.className = 'sync-dot sync-on';
-
-    const ref = fbDb.ref('groups/' + groupId + '/ops').orderByChild('t');
-    activeListener = ref.on('child_added', async (snap) => {
-        try {
-            const enc = snap.val();
-            if (!enc || !enc.d || !enc.n) return;
-            const op = await decrypt(keyB64, enc);
-            const changed = await processOp(op, groupId);
-            if (changed && curScreen === 'gd' && curGroup === groupId) {
-                const tabs = document.querySelectorAll('.tab');
-                const activeTab = [...tabs].find(t => t.classList.contains('active'));
-                if (activeTab) {
-                    const tabName = activeTab.textContent.trim().toLowerCase();
-                    if (tabName === 'expenses') renderExpenses();
-                    else if (tabName === 'balances') renderBalances();
-                    else if (tabName === 'members') renderMembers();
-                }
-            }
-        } catch(e) { console.warn('Failed to process op:', e); }
+    document.getElementById('sync-dot').className='sync-dot sync-on';
+    syncRef=fbDb.ref('groups/'+gid+'/ops').orderByChild('t');
+    syncRef.on('child_added',async snap=>{
+        try{
+            const e=snap.val();if(!e||!e.d||!e.n)return;
+            const op=await dec(key,e);
+            const changed=await processOp(op,gid);
+            if(changed&&curScreen==='gd'&&curGroup===gid)refreshCurrentTab();
+        }catch(err){console.warn('Sync op failed:',err)}
     });
 }
 
-function stopSync() {
-    if (activeListener) { fbDb.ref().off('child_added', activeListener); activeListener = null; }
-    const dot = document.getElementById('sync-dot');
-    if (dot) dot.className = 'sync-dot sync-off';
+function stopSync(){
+    if(syncRef){syncRef.off();syncRef=null}
+    const d=document.getElementById('sync-dot');if(d)d.className='sync-dot sync-off';
 }
 
-// ========== RENDER FUNCTIONS ==========
-async function renderGroups() {
-    const groups = (await idbAll('groups')).sort((a,b) => b.createdAt - a.createdAt);
-    const el = document.getElementById('grp-list');
-    if (!groups.length) {
-        el.innerHTML = '<div class="empty"><div class="ic">&#x1F465;</div><h3>No groups yet</h3><p>Tap + to create your first group</p></div>';
-        return;
+function refreshCurrentTab(){
+    const active=document.querySelector('.tab.active');
+    if(!active)return;
+    const t=active.dataset.tab;
+    if(t==='exp')renderExpenses();else if(t==='bal')renderBalances();else if(t==='members')renderMembers();
+}
+
+// ===== SHORT LINKS (Firebase) =====
+async function createShortCode(gid,key,name){
+    const code=shortId();
+    await fbDb.ref('links/'+code).set({g:gid,n:name});
+    return{code,key};
+}
+
+async function resolveShortCode(code){
+    const snap=await fbDb.ref('links/'+code).once('value');
+    return snap.val();
+}
+
+function makeInviteLink(gid,key,name){
+    return location.origin+location.pathname+'?g='+gid+'#'+encodeURIComponent(key)+'|'+encodeURIComponent(name);
+}
+
+async function makeShortInviteLink(gid,key,name){
+    const{code}=await createShortCode(gid,key,name);
+    return location.origin+location.pathname+'?c='+code+'#'+encodeURIComponent(key);
+}
+
+function shareLink(link,name){
+    if(navigator.share){
+        // Send full link as text to preserve the # fragment
+        navigator.share({title:'Join "'+name+'" on SplitBlind',text:link}).catch(()=>{});
+    }else{
+        navigator.clipboard.writeText(link).then(()=>toast('Link copied!'));
     }
-    // Get member counts
-    const allMembers = await idbAll('members');
-    el.innerHTML = groups.map(g => {
-        const count = allMembers.filter(m => m.groupId === g.groupId && !m.isDeleted).length;
-        return `<div class="card" data-g="${g.groupId}"><div class="card-t">${esc(g.name)}</div><div class="card-s">${count} member${count!==1?'s':''} &middot; ${new Date(g.createdAt).toLocaleDateString()}</div></div>`;
+}
+
+// ===== RENDER =====
+async function renderGroups(){
+    const groups=(await iA('groups')).sort((a,b)=>b.createdAt-a.createdAt);
+    const el=document.getElementById('grp-list');
+    if(!groups.length){el.innerHTML='<div class="empty"><div class="ic">&#x1F465;</div><h3>No groups yet</h3><p>Tap + to create your first group</p></div>';return}
+    const allM=await iA('members');
+    el.innerHTML=groups.map(g=>{
+        const c=allM.filter(m=>m.groupId===g.groupId&&!m.isDeleted).length;
+        return`<div class="card" data-g="${g.groupId}"><div class="card-t">${esc(g.name)}</div><div class="card-s">${c} member${c!==1?'s':''} &middot; ${new Date(g.createdAt).toLocaleDateString()}</div></div>`
     }).join('');
-    el.querySelectorAll('.card').forEach(c => c.addEventListener('click', () => openGroup(c.dataset.g)));
+    el.querySelectorAll('.card').forEach(c=>c.addEventListener('click',()=>openGroup(c.dataset.g)));
 }
 
-async function openGroup(groupId) {
-    curGroup = groupId;
-    const g = await idbGet('groups', groupId);
-    if (!g) return;
-    curGroupKey = g.groupKeyBase64;
-    document.getElementById('gd-title').textContent = g.name;
-    show('gd');
-    startSync(groupId, curGroupKey);
-    switchTab('exp');
+async function openGroup(gid){
+    curGroup=gid;const g=await iG('groups',gid);if(!g)return;
+    curGroupKey=g.groupKeyBase64;
+    document.getElementById('gd-title').textContent=g.name;
+    show('gd');startSync(gid,curGroupKey);switchTab('exp');
 }
 
-async function renderExpenses() {
-    const exps = (await idbAll('expenses')).filter(e => e.groupId === curGroup && !e.isDeleted).sort((a,b) => b.createdAt - a.createdAt);
-    const mems = (await idbAll('members')).filter(m => m.groupId === curGroup);
-    const nm = {}; mems.forEach(m => nm[m.memberId] = m.displayName);
-    const el = document.getElementById('t-exp');
-    if (!exps.length) { el.innerHTML = '<div class="empty"><div class="ic">&#x1F9FE;</div><h3>No expenses yet</h3><p>Tap + to add your first expense</p></div>'; return; }
-    el.innerHTML = exps.map(e => `<div class="card exp-c"><div><div class="card-t">${esc(e.description)}</div><div class="card-s">Paid by ${esc(nm[e.paidBy]||e.paidBy.slice(0,8))}</div></div><div><div class="exp-a">${fmt(e.amountCents)}</div><div class="exp-d">${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div>`).join('');
+async function renderExpenses(){
+    const exps=(await iA('expenses')).filter(e=>e.groupId===curGroup&&!e.isDeleted).sort((a,b)=>b.createdAt-a.createdAt);
+    const mems=(await iA('members')).filter(m=>m.groupId===curGroup);
+    const nm={};mems.forEach(m=>nm[m.memberId]=m.displayName);
+    const el=document.getElementById('t-exp');
+    if(!exps.length){el.innerHTML='<div class="empty"><div class="ic">&#x1F9FE;</div><h3>No expenses yet</h3><p>Tap + to add your first expense</p></div>';return}
+    el.innerHTML=exps.map(e=>`<div class="card exp-c"><div><div class="card-t">${esc(e.description)}</div><div class="card-s">Paid by ${esc(nm[e.paidBy]||e.paidBy.slice(0,8))}</div></div><div><div class="exp-a">${fmt(e.amountCents)}</div><div class="exp-d">${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div>`).join('');
 }
 
-async function renderBalances() {
-    const exps = (await idbAll('expenses')).filter(e => e.groupId === curGroup && !e.isDeleted);
-    const sets = (await idbAll('settlements')).filter(s => s.groupId === curGroup && !s.isDeleted);
-    const mems = (await idbAll('members')).filter(m => m.groupId === curGroup);
-    const nm = {}; mems.forEach(m => nm[m.memberId] = m.displayName);
-    const bal = calcBalances(exps, sets), debts = simplifyDebts(bal);
-    const el = document.getElementById('t-bal');
-    let h = '<div class="sec-t">Net Balances</div><div class="card" style="cursor:default">';
-    const entries = Object.entries(bal);
-    if (!entries.length) h += '<p style="text-align:center;padding:20px;color:var(--dim)">All settled up!</p>';
-    else h += entries.map(([id,a]) => `<div class="bal-r"><span>${esc(nm[id]||id.slice(0,8))}${id===myId?' (you)':''}</span><span class="${a>=0?'bp':'bn'}">${a>0?'+':''}${fmt(a)}</span></div>`).join('');
-    h += '</div>';
-    if (debts.length) {
-        h += '<div class="sec-t">Settlements Needed</div>';
-        h += debts.map(d => {
-            const fn=nm[d.from]||d.from.slice(0,8), tn=nm[d.to]||d.to.slice(0,8), can=d.from===myId||d.to===myId;
-            return `<div class="card debt-c"><div><div class="card-t">${esc(fn)} owes ${esc(tn)}</div><div class="card-s" style="color:var(--primary);font-weight:600">${fmt(d.amountCents)}</div></div>${can?`<button class="settle-b" data-f="${d.from}" data-t="${d.to}" data-a="${d.amountCents}">Settle</button>`:''}</div>`;
-        }).join('');
-    }
-    el.innerHTML = h;
-    el.querySelectorAll('.settle-b').forEach(b => b.addEventListener('click', () => openSettle(b.dataset.f, b.dataset.t, +b.dataset.a)));
+async function renderBalances(){
+    const exps=(await iA('expenses')).filter(e=>e.groupId===curGroup&&!e.isDeleted);
+    const sets=(await iA('settlements')).filter(s=>s.groupId===curGroup&&!s.isDeleted);
+    const mems=(await iA('members')).filter(m=>m.groupId===curGroup);
+    const nm={};mems.forEach(m=>nm[m.memberId]=m.displayName);
+    const bal=calcBal(exps,sets),debts=simplify(bal);
+    const el=document.getElementById('t-bal');
+    let h='<div class="sec-t">Net Balances</div><div class="card" style="cursor:default">';
+    const ent=Object.entries(bal);
+    if(!ent.length)h+='<p style="text-align:center;padding:20px;color:var(--dim)">All settled up!</p>';
+    else h+=ent.map(([id,a])=>`<div class="bal-r"><span>${esc(nm[id]||id.slice(0,8))}${id===myId?' (you)':''}</span><span class="${a>=0?'bp':'bn'}">${a>0?'+':''}${fmt(a)}</span></div>`).join('');
+    h+='</div>';
+    if(debts.length){h+='<div class="sec-t">Settlements Needed</div>';
+    h+=debts.map(d=>{const fn=esc(nm[d.from]||d.from.slice(0,8)),tn=esc(nm[d.to]||d.to.slice(0,8)),can=d.from===myId||d.to===myId;
+    return`<div class="card debt-c"><div><div class="card-t">${fn} owes ${tn}</div><div class="card-s" style="color:var(--primary);font-weight:600">${fmt(d.amountCents)}</div></div>${can?`<button class="settle-b" data-f="${d.from}" data-t="${d.to}" data-a="${d.amountCents}">Settle</button>`:''}</div>`}).join('')}
+    el.innerHTML=h;
+    el.querySelectorAll('.settle-b').forEach(b=>b.addEventListener('click',()=>openSettle(b.dataset.f,b.dataset.t,+b.dataset.a)));
 }
 
-async function renderMembers() {
-    const mems = (await idbAll('members')).filter(m => m.groupId === curGroup && !m.isDeleted).sort((a,b) => a.joinedAt - b.joinedAt);
-    const g = await idbGet('groups', curGroup);
-    const el = document.getElementById('t-mem');
-    let h = '<div class="sec-t">Members (' + mems.length + ')</div>';
-    h += mems.map(m => `<div class="card" style="cursor:default"><div class="card-t">${esc(m.displayName)}${m.memberId===myId?' (you)':''}</div><div class="card-s">Joined ${new Date(m.joinedAt).toLocaleDateString()}</div></div>`).join('');
-    // Invite button
-    h += '<div style="margin-top:20px"><button class="btn btn-o" id="invite-btn">Invite Friends</button></div>';
-    el.innerHTML = h;
-    document.getElementById('invite-btn').addEventListener('click', () => {
-        const link = makeInviteLink(curGroup, curGroupKey, g.name);
-        document.getElementById('inv-display2').textContent = link;
-        document.getElementById('share-btn2').onclick = () => shareLink(link, g.name);
+async function renderMembers(){
+    const mems=(await iA('members')).filter(m=>m.groupId===curGroup&&!m.isDeleted).sort((a,b)=>a.joinedAt-b.joinedAt);
+    const g=await iG('groups',curGroup);
+    const el=document.getElementById('t-mem');
+    let h='<div class="sec-t">Members ('+mems.length+')</div>';
+    h+=mems.map(m=>`<div class="card" style="cursor:default"><div class="card-t">${esc(m.displayName)}${m.memberId===myId?' (you)':''}</div><div class="card-s">Joined ${new Date(m.joinedAt).toLocaleDateString()}</div></div>`).join('');
+    h+='<div style="margin-top:20px"><button class="btn btn-o" id="invite-btn">Invite Friends</button></div>';
+    el.innerHTML=h;
+    document.getElementById('invite-btn').addEventListener('click',async()=>{
+        const link=await makeShortInviteLink(curGroup,curGroupKey,g.name);
+        document.getElementById('inv-display2').textContent=link;
+        document.getElementById('share-btn2').onclick=()=>shareLink(link,g.name);
         show('invite');
     });
 }
 
-function switchTab(tab) {
-    document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['exp','bal','members'][i]===tab));
-    document.getElementById('t-exp').style.display = tab==='exp'?'':'none';
-    document.getElementById('t-bal').style.display = tab==='bal'?'':'none';
-    document.getElementById('t-mem').style.display = tab==='members'?'':'none';
-    document.getElementById('fab-ae').style.display = tab==='exp'?'':'none';
-    if(tab==='exp') renderExpenses(); else if(tab==='bal') renderBalances(); else renderMembers();
+function switchTab(tab){
+    document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
+    document.getElementById('t-exp').style.display=tab==='exp'?'':'none';
+    document.getElementById('t-bal').style.display=tab==='bal'?'':'none';
+    document.getElementById('t-mem').style.display=tab==='members'?'':'none';
+    document.getElementById('fab-ae').style.display=tab==='exp'?'':'none';
+    if(tab==='exp')renderExpenses();else if(tab==='bal')renderBalances();else renderMembers();
 }
 
-async function renderAddExpense() {
-    const mems = (await idbAll('members')).filter(m => m.groupId === curGroup && !m.isDeleted);
-    document.getElementById('ae-paidby').innerHTML = mems.map(m => `<div class="chk-r"><input type="radio" name="pb" value="${m.memberId}" ${m.memberId===myId?'checked':''}><span>${esc(m.displayName)}${m.memberId===myId?' (you)':''}</span></div>`).join('');
-    document.getElementById('ae-split').innerHTML = mems.map(m => `<div class="chk-r"><input type="checkbox" class="sc" value="${m.memberId}" checked><span>${esc(m.displayName)}${m.memberId===myId?' (you)':''}</span></div>`).join('');
-    document.getElementById('ae-desc').value = '';
-    document.getElementById('ae-amt').value = '';
-    updAeBtn();
+async function renderAddExpense(){
+    const mems=(await iA('members')).filter(m=>m.groupId===curGroup&&!m.isDeleted);
+    document.getElementById('ae-paidby').innerHTML=mems.map(m=>`<div class="chk-r"><input type="radio" name="pb" value="${m.memberId}" ${m.memberId===myId?'checked':''}><span>${esc(m.displayName)}${m.memberId===myId?' (you)':''}</span></div>`).join('');
+    document.getElementById('ae-split').innerHTML=mems.map(m=>`<div class="chk-r"><input type="checkbox" class="sc" value="${m.memberId}" checked><span>${esc(m.displayName)}${m.memberId===myId?' (you)':''}</span></div>`).join('');
+    document.getElementById('ae-desc').value='';document.getElementById('ae-amt').value='';updAe();
 }
 
-function updAeBtn() {
-    const d = document.getElementById('ae-desc').value.trim();
-    const a = parseFloat(document.getElementById('ae-amt').value) || 0;
-    const c = document.querySelectorAll('.sc:checked').length;
-    document.getElementById('ae-btn').disabled = !d || a <= 0 || c === 0;
+function updAe(){
+    const d=document.getElementById('ae-desc').value.trim(),a=parseFloat(document.getElementById('ae-amt').value)||0,c=document.querySelectorAll('.sc:checked').length;
+    document.getElementById('ae-btn').disabled=!d||a<=0||c===0;
 }
 
-let settleData = {};
-async function openSettle(from, to, amountCents) {
-    settleData = {from, to, amountCents};
-    const mems = (await idbAll('members')).filter(m => m.groupId === curGroup);
-    const nm = {}; mems.forEach(m => nm[m.memberId] = m.displayName);
-    document.getElementById('stl-who').textContent = `${nm[from]||from.slice(0,8)} pays ${nm[to]||to.slice(0,8)}`;
-    document.getElementById('stl-amt').textContent = fmt(amountCents);
+let settleData={};
+async function openSettle(from,to,amt){
+    settleData={from,to,amountCents:amt};
+    const mems=(await iA('members')).filter(m=>m.groupId===curGroup);
+    const nm={};mems.forEach(m=>nm[m.memberId]=m.displayName);
+    document.getElementById('stl-who').textContent=`${nm[from]||from.slice(0,8)} pays ${nm[to]||to.slice(0,8)}`;
+    document.getElementById('stl-amt').textContent=fmt(amt);
     show('settle');
 }
 
-function makeInviteLink(groupId, keyB64, name) {
-    return location.origin + location.pathname + '?g=' + groupId + '#' + encodeURIComponent(keyB64) + '|' + encodeURIComponent(name);
+// ===== JOIN =====
+async function handleJoin(){
+    const params=new URLSearchParams(location.search);
+    const shortCode=params.get('c');
+    const groupId=params.get('g');
+    const hash=location.hash.substring(1);
+
+    // Clean URL immediately
+    if(shortCode||groupId)history.replaceState({},'',location.pathname);
+
+    let gid,keyB64,name;
+
+    if(shortCode&&hash){
+        // Short link: ?c=abc123#key
+        const linkData=await resolveShortCode(shortCode);
+        if(!linkData)return null;
+        gid=linkData.g;
+        name=linkData.n||'Shared Group';
+        keyB64=decodeURIComponent(hash);
+    }else if(groupId&&hash){
+        // Full link: ?g=uuid#key|name
+        gid=groupId;
+        const parts=hash.split('|');
+        keyB64=decodeURIComponent(parts[0]);
+        name=parts[1]?decodeURIComponent(parts[1]):'Shared Group';
+    }else{return null}
+
+    const existing=await iG('groups',gid);
+    if(existing)return{groupId:gid,action:'existing'};
+
+    const now=Date.now();
+    await iP('groups',{groupId:gid,name,createdBy:'',createdAt:now,inviteToken:'',groupKeyBase64:keyB64,hlcTimestamp:now,hlcNodeId:myId});
+    await iP('members',{_key:gid+'_'+myId,groupId:gid,memberId:myId,displayName:myName,joinedAt:now,isDeleted:false,hlcTimestamp:now});
+
+    const op={id:uid(),type:'member_join',data:{memberId:myId,displayName:myName,joinedAt:now},hlc:now,author:myId};
+    await pushOp(gid,keyB64,op);
+    return{groupId:gid,action:'joined'};
 }
 
-function shareLink(link, name) {
-    if (navigator.share) {
-        navigator.share({title:'Join SplitBlind group', text:`Join "${name}" on SplitBlind!`, url: link});
-    } else {
-        navigator.clipboard.writeText(link).then(() => showToast('Link copied!'));
-    }
-}
+// ===== WIRE UP ALL EVENTS =====
+function wireEvents(){
+    // Back buttons
+    document.getElementById('cg-back').onclick=goBack;
+    document.getElementById('gd-back').onclick=goHome;
+    document.getElementById('ae-back').onclick=goBack;
+    document.getElementById('stl-back').onclick=goBack;
+    document.getElementById('inv-back').onclick=goBack;
+    document.getElementById('sec-back').onclick=goBack;
+    document.getElementById('inv-done').onclick=goBack;
+    document.getElementById('btn-security').onclick=()=>show('security');
 
-// ========== JOIN VIA URL ==========
-async function handleJoin() {
-    const params = new URLSearchParams(location.search);
-    const groupId = params.get('g');
-    if (!groupId) return null;
+    // Tabs
+    document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>switchTab(t.dataset.tab)));
 
-    const hash = location.hash.substring(1); // remove #
-    if (!hash) return null;
-    const parts = hash.split('|');
-    const keyB64 = decodeURIComponent(parts[0]);
-    const name = parts[1] ? decodeURIComponent(parts[1]) : 'Shared Group';
-
-    // Clean URL
-    history.replaceState({}, '', location.pathname);
-
-    const existing = await idbGet('groups', groupId);
-    if (existing) return { groupId, action: 'existing' };
-
-    const now = Date.now();
-    await idbPut('groups', { groupId, name, createdBy:'', createdAt:now, inviteToken:'', groupKeyBase64:keyB64, hlcTimestamp:now, hlcNodeId:myId });
-
-    // Add self as member locally
-    await idbPut('members', { _key: groupId+'_'+myId, groupId, memberId:myId, displayName:myName, joinedAt:now, isDeleted:false, hlcTimestamp:now });
-
-    // Broadcast member_join to Firebase
-    const op = { id: uid(), type:'member_join', data:{memberId:myId, displayName:myName, joinedAt:now}, hlc:now, author:myId };
-    await pushOp(groupId, keyB64, op);
-
-    return { groupId, action: 'joined' };
-}
-
-// ========== INIT ==========
-async function init() {
-    await openDB();
-
-    // Onboarding
-    const ni = document.getElementById('ob-name'), nb = document.getElementById('ob-btn');
-    ni.addEventListener('input', () => { nb.disabled = !ni.value.trim(); });
-    nb.addEventListener('click', async () => {
-        await saveIdentity(ni.value.trim());
-        const jr = await handleJoin();
-        show('groups', false);
-        await renderGroups();
-        if (jr) { await openGroup(jr.groupId); if(jr.action==='joined') showToast('Joined group!'); }
-    });
-
-    if (!(await loadIdentity())) { show('onboard', false); return; }
-
-    const jr = await handleJoin();
-    show('groups', false);
-    await renderGroups();
-    if (jr) { await openGroup(jr.groupId); if(jr.action==='joined') showToast('Joined group!'); return; }
-
-    // FAB: Create group
-    document.getElementById('fab-cg').addEventListener('click', () => {
+    // Create group
+    document.getElementById('fab-cg').addEventListener('click',()=>{
         document.getElementById('cg-form').style.display='';
         document.getElementById('cg-done').style.display='none';
         document.getElementById('cg-name').value='';
         document.getElementById('cg-btn').disabled=true;
         show('cg');
     });
-    document.getElementById('cg-name').addEventListener('input', e => { document.getElementById('cg-btn').disabled = !e.target.value.trim(); });
+    document.getElementById('cg-name').addEventListener('input',e=>{document.getElementById('cg-btn').disabled=!e.target.value.trim()});
 
-    // Create group action
-    let newGid = '';
-    document.getElementById('cg-btn').addEventListener('click', async () => {
-        const name = document.getElementById('cg-name').value.trim();
-        const groupId = uid(), now = Date.now();
-        const keyB64 = await generateGroupKey();
-
-        await idbPut('groups', { groupId, name, createdBy:myId, createdAt:now, inviteToken:uid(), groupKeyBase64:keyB64, hlcTimestamp:now, hlcNodeId:myId });
-        await idbPut('members', { _key:groupId+'_'+myId, groupId, memberId:myId, displayName:myName, joinedAt:now, isDeleted:false, hlcTimestamp:now });
-
-        // Push member_join op to Firebase
-        const op = { id:uid(), type:'member_join', data:{memberId:myId, displayName:myName, joinedAt:now}, hlc:now, author:myId };
-        await pushOp(groupId, keyB64, op);
-
-        newGid = groupId;
-        const link = makeInviteLink(groupId, keyB64, name);
-        document.getElementById('inv-display').textContent = link;
+    let newGid='';
+    document.getElementById('cg-btn').addEventListener('click',async()=>{
+        const name=document.getElementById('cg-name').value.trim();
+        const gid=uid(),now=Date.now();
+        const key=await genKey();
+        await iP('groups',{groupId:gid,name,createdBy:myId,createdAt:now,inviteToken:uid(),groupKeyBase64:key,hlcTimestamp:now,hlcNodeId:myId});
+        await iP('members',{_key:gid+'_'+myId,groupId:gid,memberId:myId,displayName:myName,joinedAt:now,isDeleted:false,hlcTimestamp:now});
+        const op={id:uid(),type:'member_join',data:{memberId:myId,displayName:myName,joinedAt:now},hlc:now,author:myId};
+        await pushOp(gid,key,op);
+        newGid=gid;
+        const link=await makeShortInviteLink(gid,key,name);
+        document.getElementById('inv-display').textContent=link;
         document.getElementById('cg-form').style.display='none';
         document.getElementById('cg-done').style.display='';
-        document.getElementById('share-btn').onclick = () => shareLink(link, name);
-        document.getElementById('goto-btn').onclick = async () => { await renderGroups(); openGroup(newGid); };
+        document.getElementById('share-btn').onclick=()=>shareLink(link,name);
+        document.getElementById('goto-btn').onclick=async()=>{await renderGroups();openGroup(newGid)};
     });
 
-    // FAB: Add expense
-    document.getElementById('fab-ae').addEventListener('click', () => { show('ae'); renderAddExpense(); });
+    // Add expense
+    document.getElementById('fab-ae').addEventListener('click',()=>{show('ae');renderAddExpense()});
+    document.getElementById('ae-desc').addEventListener('input',updAe);
+    document.getElementById('ae-amt').addEventListener('input',updAe);
+    document.addEventListener('change',e=>{if(e.target.classList.contains('sc'))updAe()});
 
-    // Add expense inputs
-    document.getElementById('ae-desc').addEventListener('input', updAeBtn);
-    document.getElementById('ae-amt').addEventListener('input', updAeBtn);
-    document.addEventListener('change', e => { if(e.target.classList.contains('sc')) updAeBtn(); });
-
-    // Add expense action
-    document.getElementById('ae-btn').addEventListener('click', async () => {
-        const desc = document.getElementById('ae-desc').value.trim();
-        const amtCents = Math.round((parseFloat(document.getElementById('ae-amt').value)||0)*100);
-        const paidBy = document.querySelector('input[name=pb]:checked')?.value || myId;
-        const splitAmong = [...document.querySelectorAll('.sc:checked')].map(c=>c.value);
-        const now = Date.now(), eid = uid();
-
-        const expData = { expenseId:eid, groupId:curGroup, description:desc, amountCents:amtCents, currency:'INR', paidBy, splitAmong, createdAt:now, isDeleted:false };
-        await idbPut('expenses', { ...expData, hlcTimestamp:now });
-
-        const op = { id:uid(), type:'expense', data:expData, hlc:now, author:myId };
-        await pushOp(curGroup, curGroupKey, op);
-
-        goBack();
-        switchTab('exp');
-        showToast('Expense added!');
+    document.getElementById('ae-btn').addEventListener('click',async()=>{
+        const desc=document.getElementById('ae-desc').value.trim();
+        const amtC=Math.round((parseFloat(document.getElementById('ae-amt').value)||0)*100);
+        const paidBy=document.querySelector('input[name=pb]:checked')?.value||myId;
+        const split=[...document.querySelectorAll('.sc:checked')].map(c=>c.value);
+        const now=Date.now(),eid=uid();
+        const data={expenseId:eid,groupId:curGroup,description:desc,amountCents:amtC,currency:'INR',paidBy,splitAmong:split,createdAt:now,isDeleted:false};
+        await iP('expenses',{...data,hlcTimestamp:now});
+        await pushOp(curGroup,curGroupKey,{id:uid(),type:'expense',data,hlc:now,author:myId});
+        goBack();switchTab('exp');toast('Expense added!');
     });
 
-    // Settle action
-    document.getElementById('stl-btn').addEventListener('click', async () => {
-        const now = Date.now(), sid = uid();
-        const setData = { settlementId:sid, groupId:curGroup, fromMember:settleData.from, toMember:settleData.to, amountCents:settleData.amountCents, createdAt:now, isDeleted:false };
-        await idbPut('settlements', { ...setData, hlcTimestamp:now });
-
-        const op = { id:uid(), type:'settlement', data:setData, hlc:now, author:myId };
-        await pushOp(curGroup, curGroupKey, op);
-
-        goBack();
-        switchTab('bal');
-        showToast('Settled!');
+    // Settle
+    document.getElementById('stl-btn').addEventListener('click',async()=>{
+        const now=Date.now(),sid=uid();
+        const data={settlementId:sid,groupId:curGroup,fromMember:settleData.from,toMember:settleData.to,amountCents:settleData.amountCents,createdAt:now,isDeleted:false};
+        await iP('settlements',{...data,hlcTimestamp:now});
+        await pushOp(curGroup,curGroupKey,{id:uid(),type:'settlement',data,hlc:now,author:myId});
+        goBack();switchTab('bal');toast('Settled!');
     });
 }
 
+// ===== INIT =====
+async function init(){
+    await openDB();
+    wireEvents();
+
+    const ni=document.getElementById('ob-name'),nb=document.getElementById('ob-btn');
+    ni.addEventListener('input',()=>{nb.disabled=!ni.value.trim()});
+    nb.addEventListener('click',async()=>{
+        await saveId(ni.value.trim());
+        const jr=await handleJoin();
+        show('groups',false);await renderGroups();
+        if(jr){await openGroup(jr.groupId);if(jr.action==='joined')toast('Joined group!')}
+    });
+
+    if(!(await loadId())){show('onboard',false);return}
+    const jr=await handleJoin();
+    show('groups',false);await renderGroups();
+    if(jr){await openGroup(jr.groupId);if(jr.action==='joined')toast('Joined group!')}
+}
 init().catch(console.error);
 </script>
 </body>
