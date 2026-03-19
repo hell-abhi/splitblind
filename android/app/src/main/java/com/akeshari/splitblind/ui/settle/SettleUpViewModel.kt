@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.akeshari.splitblind.data.database.dao.GroupDao
 import com.akeshari.splitblind.data.database.dao.SettlementDao
 import com.akeshari.splitblind.data.database.entity.SettlementEntity
+import com.akeshari.splitblind.crypto.Identity
+import com.akeshari.splitblind.sync.OpData
 import com.akeshari.splitblind.sync.OpPayload
 import com.akeshari.splitblind.sync.SyncEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,7 +30,8 @@ class SettleUpViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val groupDao: GroupDao,
     private val settlementDao: SettlementDao,
-    private val syncEngine: SyncEngine
+    private val syncEngine: SyncEngine,
+    private val identity: Identity
 ) : ViewModel() {
 
     val groupId: String = savedStateHandle["groupId"] ?: ""
@@ -73,14 +76,18 @@ class SettleUpViewModel @Inject constructor(
                     groupId = groupId,
                     groupKeyBase64 = group.groupKeyBase64,
                     payload = OpPayload(
+                        id = UUID.randomUUID().toString(),
                         type = "settlement",
-                        id = settlementId,
-                        groupId = groupId,
-                        fromMember = fromId,
-                        toMember = toId,
-                        amountCents = amountCents,
-                        createdAt = now,
-                        hlcTimestamp = now
+                        data = OpData(
+                            settlementId = settlementId,
+                            groupId = groupId,
+                            fromMember = fromId,
+                            toMember = toId,
+                            amountCents = amountCents,
+                            createdAt = now
+                        ),
+                        hlc = now,
+                        author = identity.memberId
                     )
                 )
             }

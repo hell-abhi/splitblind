@@ -28,22 +28,36 @@ import kotlinx.serialization.encodeToString
 import javax.inject.Inject
 import javax.inject.Singleton
 
+// Matches the web app's op format: {id, type, data: {...}, hlc, author}
 @Serializable
 data class OpPayload(
-    val type: String,
     val id: String,
-    val groupId: String,
+    val type: String,
+    val data: OpData,
+    val hlc: Long = 0,
+    val author: String = ""
+)
+
+@Serializable
+data class OpData(
+    // member_join
     val memberId: String? = null,
     val displayName: String? = null,
+    val joinedAt: Long? = null,
+    // expense
+    val expenseId: String? = null,
+    val groupId: String? = null,
     val description: String? = null,
     val amountCents: Long? = null,
     val currency: String? = null,
     val paidBy: String? = null,
     val splitAmong: List<String>? = null,
-    val fromMember: String? = null,
-    val toMember: String? = null,
     val createdAt: Long? = null,
-    val hlcTimestamp: Long? = null
+    val isDeleted: Boolean = false,
+    // settlement
+    val settlementId: String? = null,
+    val fromMember: String? = null,
+    val toMember: String? = null
 )
 
 private val json = Json { ignoreUnknownKeys = true }
@@ -63,8 +77,32 @@ class SyncEngine @Inject constructor(
     private val _syncStatus = MutableStateFlow<Map<String, Boolean>>(emptyMap())
     val syncStatus: StateFlow<Map<String, Boolean>> = _syncStatus
 
+    fun fullSync(groupId: String, groupKeyBase64: String) {
+        firebaseDatabase.getReference("groups/$groupId/ops").orderByChild("t").get()
+            .addOnSuccessListener { snapshot ->
+                scope.launch {
+                    for (child in snapshot.children) {
+                        try {
+                            val d = child.child("d").getValue(String::class.java) ?: continue
+                            val n = child.child("n").getValue(String::class.java) ?: continue
+                            val envelope = EncryptedEnvelope(d = d, n = n)
+                            val plaintext = CryptoEngine.decrypt(groupKeyBase64, envelope)
+                            val op = json.decodeFromString<OpPayload>(plaintext)
+                            processOp(op, groupId)
+                            child.key?.let { processedOpDao.markProcessed(ProcessedOpEntity(opId = it)) }
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Full sync: failed to process op ${child.key}", e)
+                        }
+                    }
+                }
+            }
+            .addOnFailureListener { e -> Log.e(TAG, "Full sync failed for $groupId", e) }
+    }
+
     fun startListening(groupId: String, groupKeyBase64: String) {
         if (listeners.containsKey(groupId)) return
+        // Do a full pull first
+        fullSync(groupId, groupKeyBase64)
 
         val ref = firebaseDatabase.getReference("groups/$groupId/ops")
         val listener = object : ChildEventListener {
@@ -134,43 +172,45 @@ class SyncEngine @Inject constructor(
     }
 
     private suspend fun processOp(op: OpPayload, groupId: String) {
+        val d = op.data
+        val now = System.currentTimeMillis()
         when (op.type) {
             "member_join" -> {
                 groupDao.insertMember(
                     MemberEntity(
                         groupId = groupId,
-                        memberId = op.memberId ?: op.id,
-                        displayName = op.displayName ?: "Unknown",
-                        joinedAt = op.createdAt ?: System.currentTimeMillis(),
-                        hlcTimestamp = op.hlcTimestamp ?: System.currentTimeMillis()
+                        memberId = d.memberId ?: op.author,
+                        displayName = d.displayName ?: "Unknown",
+                        joinedAt = d.joinedAt ?: now,
+                        hlcTimestamp = op.hlc
                     )
                 )
             }
             "expense" -> {
                 expenseDao.insertExpense(
                     ExpenseEntity(
-                        expenseId = op.id,
+                        expenseId = d.expenseId ?: op.id,
                         groupId = groupId,
-                        description = op.description ?: "",
-                        amountCents = op.amountCents ?: 0,
-                        currency = op.currency ?: "INR",
-                        paidBy = op.paidBy ?: "",
-                        splitAmong = json.encodeToString(op.splitAmong ?: emptyList()),
-                        createdAt = op.createdAt ?: System.currentTimeMillis(),
-                        hlcTimestamp = op.hlcTimestamp ?: System.currentTimeMillis()
+                        description = d.description ?: "",
+                        amountCents = d.amountCents ?: 0,
+                        currency = d.currency ?: "INR",
+                        paidBy = d.paidBy ?: "",
+                        splitAmong = json.encodeToString(d.splitAmong ?: emptyList()),
+                        createdAt = d.createdAt ?: now,
+                        hlcTimestamp = op.hlc
                     )
                 )
             }
             "settlement" -> {
                 settlementDao.insertSettlement(
                     SettlementEntity(
-                        settlementId = op.id,
+                        settlementId = d.settlementId ?: op.id,
                         groupId = groupId,
-                        fromMember = op.fromMember ?: "",
-                        toMember = op.toMember ?: "",
-                        amountCents = op.amountCents ?: 0,
-                        createdAt = op.createdAt ?: System.currentTimeMillis(),
-                        hlcTimestamp = op.hlcTimestamp ?: System.currentTimeMillis()
+                        fromMember = d.fromMember ?: "",
+                        toMember = d.toMember ?: "",
+                        amountCents = d.amountCents ?: 0,
+                        createdAt = d.createdAt ?: now,
+                        hlcTimestamp = op.hlc
                     )
                 )
             }

@@ -549,7 +549,51 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
 let syncRef=null;
 async function pushOp(gid,key,op){const e=await enc(key,op);e.t=firebase.database.ServerValue.TIMESTAMP;return fbDb.ref('groups/'+gid+'/ops').push(e)}
 async function processOp(op,gid){if(await iG('processedOps',op.id))return false;if(op.type==='member_join'){const k=gid+'_'+op.data.memberId;const ex=await iG('members',k);if(!ex||op.hlc>ex.hlcTimestamp)await iP('members',{_key:k,groupId:gid,memberId:op.data.memberId,displayName:op.data.displayName,joinedAt:op.data.joinedAt,isDeleted:false,hlcTimestamp:op.hlc})}else if(op.type==='expense'){const ex=await iG('expenses',op.data.expenseId);if(!ex||op.hlc>ex.hlcTimestamp)await iP('expenses',{...op.data,hlcTimestamp:op.hlc})}else if(op.type==='settlement'){const ex=await iG('settlements',op.data.settlementId);if(!ex||op.hlc>ex.hlcTimestamp)await iP('settlements',{...op.data,hlcTimestamp:op.hlc})}await iPK('processedOps',op.id,true);return true}
-function startSync(gid,key){stopSync();document.getElementById('sync-dot').className='sync-dot sync-on';syncRef=fbDb.ref('groups/'+gid+'/ops').orderByChild('t');syncRef.on('child_added',async snap=>{try{const e=snap.val();if(!e||!e.d||!e.n)return;const op=await dec(key,e);const changed=await processOp(op,gid);if(changed&&curScreen==='gd'&&curGroup===gid)refreshTab()}catch(err){console.warn('Sync err:',err)}})}
+async function fullSync(gid,key){
+    // Pull ALL ops from Firebase and process them (ignoring processedOps cache)
+    try{
+        const snap=await fbDb.ref('groups/'+gid+'/ops').orderByChild('t').once('value');
+        const ops=snap.val();if(!ops)return;
+        let changed=false;
+        for(const[,enc] of Object.entries(ops)){
+            try{
+                if(!enc||!enc.d||!enc.n)continue;
+                const op=await dec(key,enc);
+                // Force-process: skip processedOps check
+                if(op.type==='member_join'){
+                    const k=gid+'_'+op.data.memberId;
+                    const ex=await iG('members',k);
+                    if(!ex||op.hlc>ex.hlcTimestamp){await iP('members',{_key:k,groupId:gid,memberId:op.data.memberId,displayName:op.data.displayName,joinedAt:op.data.joinedAt,isDeleted:false,hlcTimestamp:op.hlc});changed=true}
+                }else if(op.type==='expense'){
+                    const ex=await iG('expenses',op.data.expenseId);
+                    if(!ex||op.hlc>ex.hlcTimestamp){await iP('expenses',{...op.data,hlcTimestamp:op.hlc});changed=true}
+                }else if(op.type==='settlement'){
+                    const ex=await iG('settlements',op.data.settlementId);
+                    if(!ex||op.hlc>ex.hlcTimestamp){await iP('settlements',{...op.data,hlcTimestamp:op.hlc});changed=true}
+                }
+                await iPK('processedOps',op.id,true);
+            }catch(e){console.warn('Op decrypt failed:',e)}
+        }
+        if(changed)refreshTab();
+    }catch(e){console.error('Full sync failed:',e)}
+}
+
+function startSync(gid,key){
+    stopSync();
+    document.getElementById('sync-dot').className='sync-dot sync-on';
+    // Do a full pull first
+    fullSync(gid,key);
+    // Then listen for new ops
+    syncRef=fbDb.ref('groups/'+gid+'/ops').orderByChild('t');
+    syncRef.on('child_added',async snap=>{
+        try{
+            const e=snap.val();if(!e||!e.d||!e.n)return;
+            const op=await dec(key,e);
+            const changed=await processOp(op,gid);
+            if(changed&&curScreen==='gd'&&curGroup===gid)refreshTab();
+        }catch(err){console.warn('Sync err:',err)}
+    });
+}
 function stopSync(){if(syncRef){syncRef.off();syncRef=null}const d=document.getElementById('sync-dot');if(d)d.className='sync-dot sync-off'}
 function refreshTab(){const a=document.querySelector('.tab.active');if(!a)return;const t=a.dataset.tab;if(t==='exp')renderExpenses();else if(t==='bal')renderBalances();else renderMembers()}
 

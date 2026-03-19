@@ -8,6 +8,7 @@ import com.akeshari.splitblind.data.database.dao.ExpenseDao
 import com.akeshari.splitblind.data.database.dao.GroupDao
 import com.akeshari.splitblind.data.database.entity.ExpenseEntity
 import com.akeshari.splitblind.data.database.entity.MemberEntity
+import com.akeshari.splitblind.sync.OpData
 import com.akeshari.splitblind.sync.OpPayload
 import com.akeshari.splitblind.sync.SyncEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -119,16 +120,20 @@ class AddExpenseViewModel @Inject constructor(
                     groupId = groupId,
                     groupKeyBase64 = group.groupKeyBase64,
                     payload = OpPayload(
+                        id = UUID.randomUUID().toString(),
                         type = "expense",
-                        id = expenseId,
-                        groupId = groupId,
-                        description = s.description.trim(),
-                        amountCents = amountCents,
-                        currency = "INR",
-                        paidBy = s.paidBy,
-                        splitAmong = splitList,
-                        createdAt = now,
-                        hlcTimestamp = now
+                        data = OpData(
+                            expenseId = expenseId,
+                            groupId = groupId,
+                            description = s.description.trim(),
+                            amountCents = amountCents,
+                            currency = "INR",
+                            paidBy = s.paidBy,
+                            splitAmong = splitList,
+                            createdAt = now
+                        ),
+                        hlc = now,
+                        author = identity.memberId
                     )
                 )
             }

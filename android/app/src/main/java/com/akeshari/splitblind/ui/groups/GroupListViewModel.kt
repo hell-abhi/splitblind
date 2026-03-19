@@ -7,6 +7,7 @@ import com.akeshari.splitblind.crypto.Identity
 import com.akeshari.splitblind.data.database.dao.GroupDao
 import com.akeshari.splitblind.data.database.entity.GroupEntity
 import com.akeshari.splitblind.data.database.entity.MemberEntity
+import com.akeshari.splitblind.sync.OpData
 import com.akeshari.splitblind.sync.OpPayload
 import com.akeshari.splitblind.sync.SyncEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -59,13 +60,15 @@ class GroupListViewModel @Inject constructor(
                 groupId = groupId,
                 groupKeyBase64 = groupKeyBase64,
                 payload = OpPayload(
+                    id = UUID.randomUUID().toString(),
                     type = "member_join",
-                    id = UUID.randomUUID().toString().take(16),
-                    groupId = groupId,
-                    memberId = identity.memberId,
-                    displayName = identity.displayName,
-                    createdAt = now,
-                    hlcTimestamp = now
+                    data = OpData(
+                        memberId = identity.memberId,
+                        displayName = identity.displayName,
+                        joinedAt = now
+                    ),
+                    hlc = now,
+                    author = identity.memberId
                 )
             )
         }
