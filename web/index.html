@@ -318,82 +318,104 @@
             font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;
         }
 
-        /* Tag pills */
-        .tag-row {
-            display:flex; gap:8px; overflow-x:auto; padding:4px 0 12px;
-            -webkit-overflow-scrolling:touch; scrollbar-width:none;
+        /* Tag grid (no scroll, wrap) */
+        .tag-grid {
+            display:flex; flex-wrap:wrap; gap:8px; padding:4px 0 8px;
         }
-        .tag-row::-webkit-scrollbar { display:none; }
         .tag-pill {
-            display:flex; align-items:center; gap:5px; padding:7px 14px;
-            border-radius:20px; font-size:13px; font-weight:600;
-            border:2px solid transparent; cursor:pointer; white-space:nowrap;
-            transition:all .2s; flex-shrink:0;
-            font-family:'Inter',sans-serif; background:var(--card);
+            display:flex; align-items:center; gap:6px; padding:8px 14px;
+            border-radius:14px; font-size:13px; font-weight:600;
+            border:2px solid transparent; cursor:pointer;
+            transition:all .2s; font-family:'Inter',sans-serif;
         }
-        .tag-pill.active { border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-bg); }
-        .tag-pill .tag-icon { font-size:15px; }
+        .tag-pill:active { transform:scale(.95); }
+        .tag-pill.active {
+            border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-bg);
+            transform:scale(1.02);
+        }
+        .tag-pill .tag-icon { font-size:16px; }
         .tag-pill-sm {
-            display:inline-flex; align-items:center; gap:3px; padding:2px 8px;
-            border-radius:10px; font-size:10px; font-weight:700; margin-top:3px;
-            text-transform:uppercase; letter-spacing:0.3px;
+            display:inline-flex; align-items:center; gap:3px; padding:3px 8px;
+            border-radius:8px; font-size:10px; font-weight:700; margin-top:4px;
+            letter-spacing:0.3px;
         }
 
-        /* Split modes segmented control */
-        .split-modes {
-            display:flex; gap:4px; padding:4px; background:var(--border);
-            border-radius:14px; margin-bottom:14px;
+        /* Section cards for Add Expense */
+        .ae-section {
+            background:var(--card); border:1px solid var(--border);
+            border-radius:var(--r); padding:18px; margin-bottom:16px;
+            box-shadow:var(--shadow);
         }
-        .split-mode-btn {
-            flex:1; padding:9px 6px; text-align:center; font-weight:700; font-size:12px;
-            cursor:pointer; border-radius:10px; color:var(--text-secondary);
-            transition:all .25s; letter-spacing:-0.2px;
-            font-family:'Inter',sans-serif; border:none; background:transparent;
+        .ae-section-title {
+            font-size:12px; font-weight:800; color:var(--text-secondary);
+            text-transform:uppercase; letter-spacing:1px; margin-bottom:14px;
+            display:flex; align-items:center; gap:8px;
         }
-        .split-mode-btn.active {
-            color:var(--primary); background:var(--card);
-            box-shadow:0 2px 8px rgba(0,0,0,0.08);
-        }
+        .ae-section-title .sec-emoji { font-size:16px; }
 
-        /* Payer toggle */
-        .payer-toggle {
-            display:flex; gap:4px; padding:4px; background:var(--border);
-            border-radius:14px; margin-bottom:14px;
+        /* Segmented control (shared by split modes and payer toggle) */
+        .seg-control {
+            display:flex; gap:3px; padding:3px; background:var(--border);
+            border-radius:12px; margin-bottom:14px;
         }
-        .payer-toggle-btn {
-            flex:1; padding:9px 6px; text-align:center; font-weight:700; font-size:12px;
+        .seg-btn {
+            flex:1; padding:10px 4px; text-align:center; font-weight:700; font-size:12px;
             cursor:pointer; border-radius:10px; color:var(--text-secondary);
             transition:all .25s; font-family:'Inter',sans-serif; border:none; background:transparent;
         }
-        .payer-toggle-btn.active {
-            color:var(--primary); background:var(--card);
-            box-shadow:0 2px 8px rgba(0,0,0,0.08);
+        .seg-btn:active { transform:scale(.96); }
+        .seg-btn.active {
+            color:#fff; background:var(--primary);
+            box-shadow:0 3px 10px rgba(124,111,224,0.3);
         }
 
         /* Member input rows */
         .member-input-row {
-            display:flex; align-items:center; gap:10px; padding:8px 0;
+            display:flex; align-items:center; gap:10px; padding:10px 0;
+            border-bottom:1px solid var(--border);
         }
-        .member-input-row span { font-weight:600; font-size:14px; flex:1; }
+        .member-input-row:last-of-type { border-bottom:none; }
+        .member-input-row .mi-avatar {
+            width:32px; height:32px; border-radius:10px;
+            display:flex; align-items:center; justify-content:center;
+            font-size:13px; font-weight:800; color:#fff; flex-shrink:0;
+        }
+        .member-input-row .mi-name { font-weight:600; font-size:14px; flex:1; }
         .member-input-row input {
-            width:90px; padding:8px 10px; border:2px solid var(--border);
-            border-radius:10px; font-size:14px; font-weight:600;
-            background:var(--card); color:var(--text); outline:none;
+            width:88px; padding:9px 10px; border:2px solid var(--border);
+            border-radius:10px; font-size:15px; font-weight:700;
+            background:var(--surface); color:var(--text); outline:none;
             transition:all .2s; font-family:'Inter',sans-serif;
             text-align:right;
         }
         .member-input-row input:focus { border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-bg); }
-        .split-validation {
-            font-size:12px; font-weight:700; padding:6px 0; margin-top:4px;
+        .member-input-row .mi-suffix {
+            font-size:12px; color:var(--text-secondary); font-weight:700; width:16px; flex-shrink:0;
         }
-        .split-validation.error { color:var(--negative); }
-        .split-validation.ok { color:var(--positive); }
+        .split-validation {
+            font-size:12px; font-weight:700; padding:8px 12px; margin-top:8px;
+            border-radius:10px;
+        }
+        .split-validation.error { color:var(--negative); background:rgba(255,107,107,0.08); }
+        .split-validation.ok { color:var(--positive); background:rgba(107,203,119,0.08); }
 
         /* Split info pill on expense card */
         .exp-split-info {
             font-size:10px; font-weight:700; color:var(--text-secondary);
             margin-top:2px; text-transform:uppercase; letter-spacing:0.3px;
         }
+
+        /* Sync button */
+        .sync-btn {
+            background:var(--primary-bg); border:none; height:34px; padding:0 14px;
+            border-radius:10px; font-size:12px; font-weight:700;
+            cursor:pointer; color:var(--primary); display:flex; align-items:center; gap:6px;
+            font-family:'Inter',sans-serif; transition:all .2s;
+        }
+        .sync-btn:active { transform:scale(.93); }
+        .sync-btn .sync-icon { display:inline-block; transition:transform .5s; }
+        .sync-btn.syncing .sync-icon { animation:spin .8s linear infinite; }
+        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
     </style>
 </head>
 <body>
@@ -451,7 +473,7 @@
         <div class="topbar">
             <button class="back" id="gd-back">&#x2190;</button>
             <h1 id="gd-title">Group</h1>
-            <button class="icon-btn" id="btn-refresh" title="Refresh" style="font-size:16px">&#x1F504;</button>
+            <button class="sync-btn" id="btn-refresh"><span class="sync-icon">&#x21BB;</span> Sync</button>
             <span class="sync-dot sync-off" id="sync-dot" title="Sync status"></span>
         </div>
         <div class="tabs">
@@ -469,31 +491,45 @@
     <div class="screen" id="s-ae">
         <div class="topbar"><button class="back" id="ae-back">&#x2190;</button><h1>Add Expense</h1></div>
         <div class="content">
-            <div class="fg"><label>Description</label><input type="text" id="ae-desc" placeholder="Dinner, cab, groceries..."></div>
-            <div class="fg"><label>Tag</label><div class="tag-row" id="ae-tags"></div></div>
-            <div class="fg"><label>Amount (&#x20B9;)</label><input type="number" id="ae-amt" placeholder="0.00" step="0.01" min="0" inputmode="decimal"></div>
-            <div class="fg">
-                <label>Paid By</label>
-                <div class="payer-toggle">
-                    <button class="payer-toggle-btn active" data-mode="single">Single Payer</button>
-                    <button class="payer-toggle-btn" data-mode="multi">Multiple Payers</button>
+            <!-- What & How Much -->
+            <div class="ae-section">
+                <div class="ae-section-title"><span class="sec-emoji">&#x1F4DD;</span> What & How Much</div>
+                <div class="fg" style="margin-bottom:14px"><input type="text" id="ae-desc" placeholder="What's this expense for?"></div>
+                <div class="fg" style="margin-bottom:0"><input type="number" id="ae-amt" placeholder="0.00" step="0.01" min="0" inputmode="decimal" style="font-size:24px;font-weight:800;letter-spacing:-0.5px"></div>
+            </div>
+
+            <!-- Tag -->
+            <div class="ae-section">
+                <div class="ae-section-title"><span class="sec-emoji">&#x1F3F7;</span> Category</div>
+                <div class="tag-grid" id="ae-tags"></div>
+            </div>
+
+            <!-- Paid By -->
+            <div class="ae-section">
+                <div class="ae-section-title"><span class="sec-emoji">&#x1F4B3;</span> Paid By</div>
+                <div class="seg-control payer-toggle">
+                    <button class="seg-btn active" data-mode="single">One Person</button>
+                    <button class="seg-btn" data-mode="multi">Split Payment</button>
                 </div>
                 <div id="ae-paidby"></div>
                 <div id="ae-paidby-multi" style="display:none"></div>
                 <div id="ae-paidby-validation" class="split-validation" style="display:none"></div>
             </div>
-            <div class="fg">
-                <label>Split Among</label>
-                <div class="split-modes" id="ae-split-modes">
-                    <button class="split-mode-btn active" data-mode="equal">Equal</button>
-                    <button class="split-mode-btn" data-mode="amount">By Amount</button>
-                    <button class="split-mode-btn" data-mode="percentage">By %</button>
-                    <button class="split-mode-btn" data-mode="ratio">By Ratio</button>
+
+            <!-- Split Among -->
+            <div class="ae-section">
+                <div class="ae-section-title"><span class="sec-emoji">&#x2702;</span> Split Among</div>
+                <div class="seg-control" id="ae-split-modes">
+                    <button class="seg-btn active" data-mode="equal">Equal</button>
+                    <button class="seg-btn" data-mode="amount">Amount</button>
+                    <button class="seg-btn" data-mode="percentage">%</button>
+                    <button class="seg-btn" data-mode="ratio">Ratio</button>
                 </div>
                 <div id="ae-split"></div>
                 <div id="ae-split-detail" style="display:none"></div>
                 <div id="ae-split-validation" class="split-validation" style="display:none"></div>
             </div>
+
             <button class="btn btn-p" id="ae-btn" disabled>Add Expense</button>
         </div>
     </div>
@@ -851,14 +887,14 @@ async function renderAddExpense(){
     document.getElementById('ae-tags').innerHTML=Object.entries(TAGS).map(([k,v])=>`<button class="tag-pill${k==='other'?' active':''}" data-tag="${k}" style="background:${v.color}"><span class="tag-icon">${v.icon}</span>${v.label}</button>`).join('');
     document.getElementById('ae-tags').querySelectorAll('.tag-pill').forEach(p=>p.addEventListener('click',()=>{document.querySelectorAll('#ae-tags .tag-pill').forEach(t=>t.classList.remove('active'));p.classList.add('active')}));
     // Payer toggle
-    document.querySelectorAll('.payer-toggle-btn').forEach(b=>{b.classList.toggle('active',b.dataset.mode==='single');b.onclick=()=>{aePayerMode=b.dataset.mode;document.querySelectorAll('.payer-toggle-btn').forEach(x=>x.classList.toggle('active',x===b));document.getElementById('ae-paidby').style.display=aePayerMode==='single'?'':'none';document.getElementById('ae-paidby-multi').style.display=aePayerMode==='multi'?'':'none';renderMultiPayer();updAe()}});
+    document.querySelectorAll('.payer-toggle .seg-btn').forEach(b=>{b.classList.toggle('active',b.dataset.mode==='single');b.onclick=()=>{aePayerMode=b.dataset.mode;document.querySelectorAll('.payer-toggle .seg-btn').forEach(x=>x.classList.toggle('active',x===b));document.getElementById('ae-paidby').style.display=aePayerMode==='single'?'':'none';document.getElementById('ae-paidby-multi').style.display=aePayerMode==='multi'?'':'none';renderMultiPayer();updAe()}});
     // Single payer radios
     document.getElementById('ae-paidby').innerHTML=aeMembers.map(m=>`<div class="chk-r"><input type="radio" name="pb" value="${m.memberId}" ${m.memberId===myId?'checked':''}><span>${esc(m.displayName)}${m.memberId===myId?' (you)':''}</span></div>`).join('');
     document.getElementById('ae-paidby').style.display='';
     document.getElementById('ae-paidby-multi').style.display='none';
     document.getElementById('ae-paidby-validation').style.display='none';
     // Split mode buttons
-    document.querySelectorAll('.split-mode-btn').forEach(b=>{b.classList.toggle('active',b.dataset.mode==='equal');b.onclick=()=>{aeSplitMode=b.dataset.mode;document.querySelectorAll('.split-mode-btn').forEach(x=>x.classList.toggle('active',x===b));renderSplitDetail();updAe()}});
+    document.querySelectorAll('#ae-split-modes .seg-btn').forEach(b=>{b.classList.toggle('active',b.dataset.mode==='equal');b.onclick=()=>{aeSplitMode=b.dataset.mode;document.querySelectorAll('#ae-split-modes .seg-btn').forEach(x=>x.classList.toggle('active',x===b));renderSplitDetail();updAe()}});
     // Split checkboxes
     document.getElementById('ae-split').innerHTML=aeMembers.map(m=>`<div class="chk-r"><input type="checkbox" class="sc" value="${m.memberId}" checked><span>${esc(m.displayName)}${m.memberId===myId?' (you)':''}</span></div>`).join('');
     document.getElementById('ae-split-detail').style.display='none';
@@ -869,7 +905,7 @@ async function renderAddExpense(){
 function renderMultiPayer(){
     if(aePayerMode!=='multi')return;
     const el=document.getElementById('ae-paidby-multi');
-    el.innerHTML=aeMembers.map(m=>`<div class="member-input-row"><span>${esc(m.displayName)}${m.memberId===myId?' (you)':''}</span><input type="number" class="mp-amt" data-mid="${m.memberId}" placeholder="0.00" step="0.01" min="0" inputmode="decimal"></div>`).join('')+'<div id="mp-remaining" class="split-validation" style="display:none"></div>';
+    el.innerHTML=aeMembers.map(m=>{const col=getColor(m.memberId);return`<div class="member-input-row"><div class="mi-avatar" style="background:${col}">${getInitial(m.displayName)}</div><span class="mi-name">${esc(m.displayName)}${m.memberId===myId?' (you)':''}</span><span style="font-size:14px;color:var(--text-secondary);font-weight:700">&#x20B9;</span><input type="number" class="mp-amt" data-mid="${m.memberId}" placeholder="0.00" step="0.01" min="0" inputmode="decimal"></div>`}).join('')+'<div id="mp-remaining" class="split-validation" style="display:none"></div>';
     el.querySelectorAll('.mp-amt').forEach(i=>i.addEventListener('input',()=>{updateMultiPayerValidation();updAe()}));
 }
 function updateMultiPayerValidation(){
@@ -890,7 +926,8 @@ function renderSplitDetail(){
     const suffix=aeSplitMode==='percentage'?'%':aeSplitMode==='ratio'?'x':'';
     const placeholder=aeSplitMode==='percentage'?'0':aeSplitMode==='ratio'?'1':'0.00';
     const step=aeSplitMode==='amount'?'0.01':'1';
-    detailEl.innerHTML=checked.map(m=>`<div class="member-input-row"><span>${esc(m.name)}</span><input type="number" class="sd-val" data-mid="${m.id}" placeholder="${placeholder}" step="${step}" min="0" inputmode="decimal"><span style="flex:none;font-size:12px;color:var(--text-secondary);width:16px">${suffix}</span></div>`).join('');
+    const pre=aeSplitMode==='amount'?'<span style="font-size:14px;color:var(--text-secondary);font-weight:700">&#x20B9;</span>':'';
+    detailEl.innerHTML=checked.map(m=>{const col=getColor(m.id);return`<div class="member-input-row"><div class="mi-avatar" style="background:${col}">${getInitial(m.name)}</div><span class="mi-name">${esc(m.name)}</span>${pre}<input type="number" class="sd-val" data-mid="${m.id}" placeholder="${placeholder}" step="${step}" min="0" inputmode="decimal"><span class="mi-suffix">${suffix}</span></div>`}).join('');
     detailEl.querySelectorAll('.sd-val').forEach(i=>i.addEventListener('input',()=>{updateSplitValidation();updAe()}));
     updateSplitValidation();
 }
@@ -983,7 +1020,7 @@ async function handleJoin(){
 function wireEvents(){
     document.getElementById('cg-back').onclick=goBack;
     document.getElementById('gd-back').onclick=goHome;
-    document.getElementById('btn-refresh').onclick=async()=>{if(curGroup&&curGroupKey){toast('Refreshing...');await fullSync(curGroup,curGroupKey);toast('Synced!')}};
+    document.getElementById('btn-refresh').onclick=async()=>{if(curGroup&&curGroupKey){const btn=document.getElementById('btn-refresh');btn.classList.add('syncing');await fullSync(curGroup,curGroupKey);setTimeout(()=>btn.classList.remove('syncing'),600);toast('Synced!')}};
     document.getElementById('ae-back').onclick=goBack;
     document.getElementById('stl-back').onclick=goBack;
     document.getElementById('inv-back').onclick=goBack;
