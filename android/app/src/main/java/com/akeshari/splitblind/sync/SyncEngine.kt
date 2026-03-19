@@ -181,10 +181,10 @@ class SyncEngine @Inject constructor(
      * Create a short invite code in Firebase at links/{code} = {g: groupId, n: name}.
      * Returns the 8-char code.
      */
-    fun createShortCode(groupId: String, groupName: String): String {
+    fun createShortCode(groupId: String, groupName: String, groupKey: String): String {
         val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
         val code = (1..8).map { chars.random() }.joinToString("")
-        val data = mapOf("g" to groupId, "n" to groupName)
+        val data = mapOf("g" to groupId, "n" to groupName, "k" to groupKey)
         firebaseDatabase.getReference("links/$code").setValue(data)
             .addOnFailureListener { e -> Log.e(TAG, "Failed to create short link", e) }
         return code
@@ -194,13 +194,14 @@ class SyncEngine @Inject constructor(
      * Resolve a short code from Firebase at links/{code}.
      * Calls onResult with (groupId, groupName) or null if not found.
      */
-    fun resolveShortCode(code: String, onResult: (Pair<String, String>?) -> Unit) {
+    fun resolveShortCode(code: String, onResult: (Triple<String, String, String?>?) -> Unit) {
         firebaseDatabase.getReference("links/$code").get()
             .addOnSuccessListener { snapshot ->
                 val groupId = snapshot.child("g").getValue(String::class.java)
                 val name = snapshot.child("n").getValue(String::class.java) ?: "Shared Group"
+                val key = snapshot.child("k").getValue(String::class.java)
                 if (groupId != null) {
-                    onResult(Pair(groupId, name))
+                    onResult(Triple(groupId, name, key))
                 } else {
                     onResult(null)
                 }

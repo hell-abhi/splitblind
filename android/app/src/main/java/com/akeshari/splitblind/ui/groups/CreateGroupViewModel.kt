@@ -86,7 +86,7 @@ class CreateGroupViewModel @Inject constructor(
             )
 
             // Create a short code in Firebase for a cleaner invite link
-            val shortCode = syncEngine.createShortCode(groupId, name)
+            val shortCode = syncEngine.createShortCode(groupId, name, groupKeyBase64)
             val inviteLink = "https://hell-abhi.github.io/splitblind/?c=$shortCode#$groupKeyBase64"
 
             _state.value = _state.value.copy(

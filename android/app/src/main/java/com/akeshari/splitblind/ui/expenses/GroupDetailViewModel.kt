@@ -85,7 +85,7 @@ class GroupDetailViewModel @Inject constructor(
             _group.value = group
             syncEngine.startListening(groupId, group.groupKeyBase64)
             // Generate a short code for invite links
-            val code = syncEngine.createShortCode(groupId, group.name)
+            val code = syncEngine.createShortCode(groupId, group.name, group.groupKeyBase64)
             _shortCode.value = code
         }
     }

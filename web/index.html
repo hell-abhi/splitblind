@@ -612,8 +612,8 @@ async function applyRestore(bundle){
     }
 }
 
-// Short links
-async function makeShortLink(gid,key,name){const code=shortId();await fbDb.ref('links/'+code).set({g:gid,n:name});return location.origin+location.pathname+'?c='+code+'#'+encodeURIComponent(key)}
+// Short links — key stored in Firebase as fallback (short code is unguessable + link is shared privately)
+async function makeShortLink(gid,key,name){const code=shortId();await fbDb.ref('links/'+code).set({g:gid,n:name,k:key});return location.origin+location.pathname+'?c='+code+'#'+encodeURIComponent(key)}
 async function resolveShort(code){const s=await fbDb.ref('links/'+code).once('value');return s.val()}
 function shareLink(link,name){if(navigator.share){navigator.share({title:'Join "'+name+'" on SplitBlind',text:link}).catch(()=>{})}else{navigator.clipboard.writeText(link).then(()=>toast('Link copied!'))}}
 
@@ -684,15 +684,28 @@ async function handleJoin(){
     const params=new URLSearchParams(location.search);const sc=params.get('c'),gid=params.get('g'),hash=location.hash.substring(1);
     if(sc||gid)history.replaceState({},'',location.pathname);
     let g,k,n;
-    if(sc&&hash){const d=await resolveShort(sc);if(!d)return null;g=d.g;n=d.n||'Group';k=decodeURIComponent(hash)}
-    else if(gid&&hash){g=gid;const p=hash.split('|');k=decodeURIComponent(p[0]);n=p[1]?decodeURIComponent(p[1]):'Group'}
-    else return null;
+    if(sc){
+        // Short link: ?c=code#key (key might be missing if # was stripped)
+        const d=await resolveShort(sc);if(!d)return null;
+        g=d.g;n=d.n||'Group';
+        k=hash?decodeURIComponent(hash):(d.k||null);
+        if(!k){toast('Invalid invite link — key missing');return null}
+    }else if(gid&&hash){
+        // Full link: ?g=uuid#key|name
+        g=gid;const p=hash.split('|');k=decodeURIComponent(p[0]);n=p[1]?decodeURIComponent(p[1]):'Group';
+    }else if(gid&&!hash){
+        // Full link but # stripped — can't recover key
+        toast('Invalid invite link — ask for a new one');return null;
+    }else{return null}
+
     const ex=await iG('groups',g);if(ex)return{groupId:g,action:'existing'};
     const now=Date.now();
-    await iP('groups',{groupId:g,name:n,createdBy:'',createdAt:now,inviteToken:'',groupKeyBase64:k,hlcTimestamp:now,hlcNodeId:myId});
-    await iP('members',{_key:g+'_'+myId,groupId:g,memberId:myId,displayName:myName,joinedAt:now,isDeleted:false,hlcTimestamp:now});
-    await pushOp(g,k,{id:uid(),type:'member_join',data:{memberId:myId,displayName:myName,joinedAt:now},hlc:now,author:myId});
-    return{groupId:g,action:'joined'};
+    try{
+        await iP('groups',{groupId:g,name:n,createdBy:'',createdAt:now,inviteToken:'',groupKeyBase64:k,hlcTimestamp:now,hlcNodeId:myId});
+        await iP('members',{_key:g+'_'+myId,groupId:g,memberId:myId,displayName:myName,joinedAt:now,isDeleted:false,hlcTimestamp:now});
+        await pushOp(g,k,{id:uid(),type:'member_join',data:{memberId:myId,displayName:myName,joinedAt:now},hlc:now,author:myId});
+        return{groupId:g,action:'joined'};
+    }catch(e){console.error('Join failed:',e);toast('Failed to join group');return null}
 }
 
 // Wire events

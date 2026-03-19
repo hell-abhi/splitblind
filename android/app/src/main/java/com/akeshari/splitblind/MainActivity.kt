@@ -37,7 +37,7 @@ class MainActivity : ComponentActivity() {
                     val resolved = if (result != null) {
                         DeepLinkData(
                             groupId = result.first,
-                            groupKey = deepLink.groupKey,
+                            groupKey = deepLink.groupKey.ifEmpty { result.third ?: "" },
                             groupName = result.second
                         )
                     } else {
@@ -62,7 +62,7 @@ class MainActivity : ComponentActivity() {
                     val resolved = if (result != null) {
                         DeepLinkData(
                             groupId = result.first,
-                            groupKey = deepLink.groupKey,
+                            groupKey = deepLink.groupKey.ifEmpty { result.third ?: "" },
                             groupName = result.second
                         )
                     } else null
