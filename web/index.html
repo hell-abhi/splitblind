@@ -86,7 +86,7 @@
 
     <!-- Group List -->
     <div class="screen" id="s-groups">
-        <div class="topbar"><h1>SplitBlind</h1></div>
+        <div class="topbar"><h1>SplitBlind</h1><button class="back" onclick="show('security')" title="How your data is protected" style="font-size:20px">&#x1F512;</button></div>
         <div class="content" id="grp-list"></div>
         <button class="fab" id="fab-cg">+</button>
     </div>
@@ -160,6 +160,59 @@
             <div class="inv-box" id="inv-display2"></div>
             <button class="btn btn-o" id="share-btn2" style="margin-bottom:12px">Share Invite Link</button>
             <button class="btn btn-p" onclick="goBack()">Done</button>
+        </div>
+    </div>
+
+    <!-- How Your Data is Protected -->
+    <div class="screen" id="s-security">
+        <div class="topbar"><button class="back" onclick="goBack()">&larr;</button><h1>Your Data</h1></div>
+        <div class="content">
+            <div style="text-align:center;padding:20px 0">
+                <div style="font-size:48px">&#x1F512;</div>
+                <h2 style="color:var(--primary);margin:12px 0">End-to-End Encrypted</h2>
+                <p style="color:var(--dim);line-height:1.6">Your expenses are encrypted on your device before they leave it. No one — not even us — can read your data.</p>
+            </div>
+
+            <div class="sec-t">How it works</div>
+
+            <div class="card" style="cursor:default">
+                <div class="card-t">&#x1F511; A unique key is created per group</div>
+                <div class="card-s">When you create a group, a random AES-256 encryption key is generated on your device. This is the same encryption standard used by banks and governments.</div>
+            </div>
+
+            <div class="card" style="cursor:default">
+                <div class="card-t">&#x1F517; The key lives in the invite link</div>
+                <div class="card-s">The key is embedded in the # part of the invite URL. This part is never sent to any server — it stays in your browser. Only people you share the link with can decrypt the group's data.</div>
+            </div>
+
+            <div class="card" style="cursor:default">
+                <div class="card-t">&#x1F4E6; Firebase stores only encrypted blobs</div>
+                <div class="card-s">Your expenses are encrypted into unreadable gibberish before being sent to Firebase for syncing. Firebase acts as a blind mailbox — it delivers data but cannot read it.</div>
+            </div>
+
+            <div class="card" style="cursor:default">
+                <div class="card-t">&#x1F4F1; Your device holds the truth</div>
+                <div class="card-s">All your data is stored locally on your device. Firebase is just a sync pipe. Even if Firebase disappears tomorrow, your local data remains intact.</div>
+            </div>
+
+            <div class="sec-t">See for yourself</div>
+
+            <div class="card" style="cursor:default">
+                <div class="card-t">&#x1F50D; Inspect the raw data on Firebase</div>
+                <div class="card-s">You can see exactly what's stored on the server. It's all encrypted — no names, no amounts, no group names. Just random characters.</div>
+                <a href="https://console.firebase.google.com/project/splitblind/database/splitblind-default-rtdb/data" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;color:var(--primary);font-weight:600;font-size:14px">Open Firebase Console &rarr;</a>
+            </div>
+
+            <div class="card" style="cursor:default">
+                <div class="card-t">&#x1F4BB; This app is open source</div>
+                <div class="card-s">Every line of code is public. You can verify that encryption happens on your device, that no data is sent unencrypted, and that no analytics or tracking exists.</div>
+                <a href="https://github.com/hell-abhi/splitblind" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;color:var(--primary);font-weight:600;font-size:14px">View Source Code &rarr;</a>
+            </div>
+
+            <div class="card" style="cursor:default;background:var(--primary-c)">
+                <div class="card-t">&#x2705; The bottom line</div>
+                <div class="card-s" style="color:var(--text)">Even if someone has the source code AND full access to Firebase, they cannot read your data without your group's invite link. The encryption key never touches any server.</div>
+            </div>
         </div>
     </div>
 </div>
