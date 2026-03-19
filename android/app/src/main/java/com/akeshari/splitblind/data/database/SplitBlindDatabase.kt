@@ -3,6 +3,8 @@ package com.akeshari.splitblind.data.database
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.akeshari.splitblind.data.database.converter.Converters
 import com.akeshari.splitblind.data.database.dao.ExpenseDao
 import com.akeshari.splitblind.data.database.dao.GroupDao
@@ -22,7 +24,7 @@ import com.akeshari.splitblind.data.database.entity.SettlementEntity
         SettlementEntity::class,
         ProcessedOpEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -31,4 +33,15 @@ abstract class SplitBlindDatabase : RoomDatabase() {
     abstract fun expenseDao(): ExpenseDao
     abstract fun settlementDao(): SettlementDao
     abstract fun processedOpDao(): ProcessedOpDao
+
+    companion object {
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE expenses ADD COLUMN tag TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE expenses ADD COLUMN paidByMap TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE expenses ADD COLUMN splitMode TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE expenses ADD COLUMN splitDetails TEXT DEFAULT NULL")
+            }
+        }
+    }
 }

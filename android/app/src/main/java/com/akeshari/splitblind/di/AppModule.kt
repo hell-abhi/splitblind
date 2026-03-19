@@ -26,7 +26,7 @@ object AppModule {
             context,
             SplitBlindDatabase::class.java,
             "splitblind.db"
-        ).build()
+        ).addMigrations(SplitBlindDatabase.MIGRATION_1_2).build()
     }
 
     @Provides

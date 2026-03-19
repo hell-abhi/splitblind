@@ -14,5 +14,9 @@ data class ExpenseEntity(
     val splitAmong: String,
     val createdAt: Long,
     val isDeleted: Boolean = false,
-    val hlcTimestamp: Long
+    val hlcTimestamp: Long,
+    val tag: String? = null,
+    val paidByMap: String? = null,       // JSON: {"memberId": cents}
+    val splitMode: String? = null,       // "equal", "amount", "percentage", "ratio"
+    val splitDetails: String? = null     // JSON: {"memberId": cents}
 )

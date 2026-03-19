@@ -47,9 +47,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.akeshari.splitblind.data.database.entity.ExpenseEntity
 import com.akeshari.splitblind.data.database.entity.MemberEntity
 import com.akeshari.splitblind.util.Debt
+import kotlinx.serialization.json.Json
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -174,12 +176,51 @@ private fun ExpensesTab(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    expense.description,
+                                    style = MaterialTheme.typography.titleSmall
+                                )
+                                // Tag pill
+                                val tag = ExpenseTag.fromSlug(expense.tag)
+                                if (tag != null) {
+                                    Box(
+                                        modifier = Modifier
+                                            .background(
+                                                Color(tag.color),
+                                                RoundedCornerShape(12.dp)
+                                            )
+                                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            "${tag.emoji} ${tag.label}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color.Black
+                                        )
+                                    }
+                                }
+                            }
+                            // Paid by line
+                            val paidByText = run {
+                                val paidByMap: Map<String, Long>? = expense.paidByMap?.let {
+                                    try {
+                                        Json.decodeFromString<Map<String, Long>>(it)
+                                    } catch (_: Exception) { null }
+                                }
+                                if (paidByMap != null && paidByMap.size > 1) {
+                                    val names = paidByMap.keys.map { id ->
+                                        memberNames[id] ?: id.take(6)
+                                    }
+                                    "${names.joinToString(" + ")} paid"
+                                } else {
+                                    "Paid by ${memberNames[expense.paidBy] ?: expense.paidBy}"
+                                }
+                            }
                             Text(
-                                expense.description,
-                                style = MaterialTheme.typography.titleSmall
-                            )
-                            Text(
-                                "Paid by ${memberNames[expense.paidBy] ?: expense.paidBy}",
+                                paidByText,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

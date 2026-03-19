@@ -6,17 +6,41 @@ import kotlinx.serialization.json.Json
 
 data class Debt(val from: String, val to: String, val amountCents: Long)
 
+private val json = Json { ignoreUnknownKeys = true }
+
 object BalanceCalculator {
     fun computeNetBalances(expenses: List<ExpenseEntity>, settlements: List<SettlementEntity>): Map<String, Long> {
         val balances = mutableMapOf<String, Long>()
         for (expense in expenses) {
-            val splitMembers: List<String> = Json.decodeFromString(expense.splitAmong)
-            val share = expense.amountCents / splitMembers.size
-            val remainder = expense.amountCents % splitMembers.size
-            balances[expense.paidBy] = (balances[expense.paidBy] ?: 0) + expense.amountCents
-            for ((index, member) in splitMembers.withIndex()) {
-                val memberShare = share + if (index < remainder) 1 else 0
-                balances[member] = (balances[member] ?: 0) - memberShare
+            // --- Credit payers ---
+            val paidByMap: Map<String, Long>? = expense.paidByMap?.let {
+                try { json.decodeFromString<Map<String, Long>>(it) } catch (_: Exception) { null }
+            }
+            if (paidByMap != null && paidByMap.isNotEmpty()) {
+                for ((memberId, amount) in paidByMap) {
+                    balances[memberId] = (balances[memberId] ?: 0) + amount
+                }
+            } else {
+                balances[expense.paidBy] = (balances[expense.paidBy] ?: 0) + expense.amountCents
+            }
+
+            // --- Debit split members ---
+            val splitDetailsMap: Map<String, Long>? = expense.splitDetails?.let {
+                try { json.decodeFromString<Map<String, Long>>(it) } catch (_: Exception) { null }
+            }
+            if (splitDetailsMap != null && splitDetailsMap.isNotEmpty()) {
+                for ((memberId, amount) in splitDetailsMap) {
+                    balances[memberId] = (balances[memberId] ?: 0) - amount
+                }
+            } else {
+                // Fall back to equal split
+                val splitMembers: List<String> = json.decodeFromString(expense.splitAmong)
+                val share = expense.amountCents / splitMembers.size
+                val remainder = expense.amountCents % splitMembers.size
+                for ((index, member) in splitMembers.withIndex()) {
+                    val memberShare = share + if (index < remainder) 1 else 0
+                    balances[member] = (balances[member] ?: 0) - memberShare
+                }
             }
         }
         for (settlement in settlements) {

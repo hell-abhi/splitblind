@@ -54,6 +54,10 @@ data class OpData(
     val splitAmong: List<String>? = null,
     val createdAt: Long? = null,
     val isDeleted: Boolean = false,
+    val tag: String? = null,
+    val paidByMap: Map<String, Long>? = null,
+    val splitMode: String? = null,
+    val splitDetails: Map<String, Long>? = null,
     // settlement
     val settlementId: String? = null,
     val fromMember: String? = null,
@@ -197,7 +201,11 @@ class SyncEngine @Inject constructor(
                         paidBy = d.paidBy ?: "",
                         splitAmong = json.encodeToString(d.splitAmong ?: emptyList()),
                         createdAt = d.createdAt ?: now,
-                        hlcTimestamp = op.hlc
+                        hlcTimestamp = op.hlc,
+                        tag = d.tag,
+                        paidByMap = d.paidByMap?.let { json.encodeToString(it) },
+                        splitMode = d.splitMode,
+                        splitDetails = d.splitDetails?.let { json.encodeToString(it) }
                     )
                 )
             }
