@@ -26,6 +26,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 fun OnboardingScreen(
     onComplete: () -> Unit,
     onRestore: () -> Unit = {},
+    onRecover: () -> Unit = {},
     viewModel: OnboardingViewModel = hiltViewModel()
 ) {
     val name by viewModel.name.collectAsState()
@@ -74,16 +75,25 @@ fun OnboardingScreen(
                 enabled = name.isNotBlank(),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Continue")
+                Text("Let's Go")
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedButton(
+                onClick = onRecover,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Recover with Passphrase")
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedButton(
                 onClick = onRestore,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Already using SplitBlind? Restore")
+                Text("Sync from Another Device")
             }
         }
     }

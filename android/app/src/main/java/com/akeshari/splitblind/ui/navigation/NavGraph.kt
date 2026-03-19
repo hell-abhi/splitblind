@@ -11,6 +11,8 @@ import com.akeshari.splitblind.ui.expenses.GroupDetailScreen
 import com.akeshari.splitblind.ui.groups.CreateGroupScreen
 import com.akeshari.splitblind.ui.groups.GroupListScreen
 import com.akeshari.splitblind.ui.onboarding.OnboardingScreen
+import com.akeshari.splitblind.ui.recovery.RecoverScreen
+import com.akeshari.splitblind.ui.recovery.SetupPassphraseScreen
 import com.akeshari.splitblind.ui.security.SecurityScreen
 import com.akeshari.splitblind.ui.settle.SettleUpScreen
 import com.akeshari.splitblind.ui.sync.SyncDeviceScreen
@@ -23,6 +25,8 @@ object Routes {
     const val ADD_EXPENSE = "add_expense/{groupId}"
     const val SETTLE = "settle/{groupId}/{from}/{to}/{amountCents}"
     const val SECURITY = "security"
+    const val SETUP_PASSPHRASE = "setup_passphrase"
+    const val RECOVER = "recover"
     const val SYNC_GENERATE = "sync_generate"
     const val SYNC_RESTORE = "sync_restore"
 
@@ -46,12 +50,15 @@ fun NavGraph(
         composable(Routes.ONBOARDING) {
             OnboardingScreen(
                 onComplete = {
-                    navController.navigate(Routes.GROUPS) {
+                    navController.navigate(Routes.SETUP_PASSPHRASE) {
                         popUpTo(Routes.ONBOARDING) { inclusive = true }
                     }
                 },
                 onRestore = {
                     navController.navigate(Routes.SYNC_RESTORE)
+                },
+                onRecover = {
+                    navController.navigate(Routes.RECOVER)
                 }
             )
         }
@@ -128,6 +135,32 @@ fun NavGraph(
         composable(Routes.SECURITY) {
             SecurityScreen(
                 onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Routes.SETUP_PASSPHRASE) {
+            SetupPassphraseScreen(
+                onComplete = {
+                    navController.navigate(Routes.GROUPS) {
+                        popUpTo(Routes.SETUP_PASSPHRASE) { inclusive = true }
+                    }
+                },
+                onSkip = {
+                    navController.navigate(Routes.GROUPS) {
+                        popUpTo(Routes.SETUP_PASSPHRASE) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(Routes.RECOVER) {
+            RecoverScreen(
+                onBack = { navController.popBackStack() },
+                onRecoverComplete = {
+                    navController.navigate(Routes.GROUPS) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
 
