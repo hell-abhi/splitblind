@@ -1,9 +1,0 @@
--keep,allowobfuscation,allowshrinking class com.akeshari.splitblind.ui.expenses.GroupDetailViewModel
--keep,allowobfuscation,allowshrinking class com.akeshari.splitblind.ui.expenses.GroupDetailViewModel
--keep,allowobfuscation,allowshrinking class com.akeshari.splitblind.ui.expenses.AddExpenseViewModel
--keep,allowobfuscation,allowshrinking class com.akeshari.splitblind.ui.expenses.AddExpenseViewModel
--keep,allowobfuscation,allowshrinking class com.akeshari.splitblind.ui.groups.GroupListViewModel
--keep,allowobfuscation,allowshrinking class com.akeshari.splitblind.ui.groups.GroupListViewModel
--keep,allowobfuscation,allowshrinking class com.akeshari.splitblind.ui.groups.CreateGroupViewModel
--keep,allowobfuscation,allowshrinking class com.akeshari.splitblind.ui.groups.CreateGroupViewModel
--keep,allowobfuscation,allowshrinking class com.akeshari.splitblind.ui.settle.SettleUpViewModel
