@@ -2,20 +2,38 @@ package com.akeshari.splitblind.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Green10 = Color(0xFF002106)
-val Green20 = Color(0xFF00390E)
-val Green30 = Color(0xFF005318)
-val Green40 = Color(0xFF006E23)
-val Green50 = Color(0xFF008A2E)
-val Green60 = Color(0xFF1FA44A)
-val Green70 = Color(0xFF4CC06A)
-val Green80 = Color(0xFF73DC87)
-val Green90 = Color(0xFFA0F9A3)
-val Green95 = Color(0xFFC8FFC6)
-val Green99 = Color(0xFFF5FFF0)
+// Primary
+val PastelPrimary = Color(0xFF7C6FE0)
+val PastelPrimarySoft = Color(0xFFA89AF2)
+val PastelPrimaryContainer = Color(0xFFEDE9FC)
 
-val GreenGrey30 = Color(0xFF374B39)
-val GreenGrey50 = Color(0xFF5A7D5E)
-val GreenGrey60 = Color(0xFF739777)
-val GreenGrey80 = Color(0xFFB5CCB8)
-val GreenGrey90 = Color(0xFFD1E8D3)
+// Accent colors
+val AccentPink = Color(0xFFF2A0C4)
+val AccentMint = Color(0xFF8DDCC5)
+val AccentPeach = Color(0xFFF8C4A4)
+val AccentSky = Color(0xFF89C4F4)
+
+// Surface / Background
+val SurfaceLight = Color(0xFFFDF8F4)
+val CardLight = Color(0xFFFFFFFF)
+
+// Text
+val TextPrimary = Color(0xFF2D3436)
+val TextSecondary = Color(0xFF7F8C8D)
+
+// Border
+val BorderLight = Color(0xFFF0ECE6)
+
+// Semantic
+val Positive = Color(0xFF6BCB77)
+val Negative = Color(0xFFFF6B6B)
+
+// Dark mode
+val PastelPrimaryDark = Color(0xFFA89AF2)
+val PastelPrimarySoftDark = Color(0xFF7C6FE0)
+val PastelPrimaryBgDark = Color(0xFF2A2540)
+val SurfaceDark = Color(0xFF1A1720)
+val CardDark = Color(0xFF252230)
+val TextPrimaryDark = Color(0xFFEDE9FC)
+val TextSecondaryDark = Color(0xFF8E8A9E)
+val BorderDark = Color(0xFF342F45)
