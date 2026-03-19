@@ -429,10 +429,62 @@
             <div style="width:100%">
                 <div class="fg"><input type="text" id="ob-name" placeholder="What's your name?" autocomplete="name"></div>
                 <button class="btn btn-p" id="ob-btn" disabled>Let's Go</button>
-                <div style="margin-top:20px;text-align:center">
-                    <button class="btn btn-o" id="ob-restore" style="font-size:14px">Already using SplitBlind? Restore</button>
+                <div style="margin-top:20px;text-align:center;display:flex;flex-direction:column;gap:8px">
+                    <button class="btn btn-o" id="ob-recover-pp" style="font-size:13px">&#x1F511; Recover with Passphrase</button>
+                    <button class="btn" id="ob-restore" style="font-size:13px;color:var(--text-secondary);background:transparent">&#x1F4F1; Sync from Another Device</button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Onboarding Step 2: Recovery Passphrase -->
+    <div class="screen" id="s-ob-recovery">
+        <div class="topbar"><h1>Recovery Passphrase</h1></div>
+        <div class="content">
+            <div style="text-align:center;padding:16px 0">
+                <div class="ob-logo" style="margin:0 auto 16px;width:72px;height:72px;border-radius:22px;font-size:32px;background:linear-gradient(135deg,var(--accent-peach),var(--accent-pink))">&#x1F511;</div>
+                <h2 style="font-size:18px;font-weight:800;letter-spacing:-0.5px">Save Your Recovery Passphrase</h2>
+                <p style="color:var(--text-secondary);margin-top:8px;font-size:13px;font-weight:500;line-height:1.6">This is the <strong>only way</strong> to recover your data if you lose your device or clear browser data.</p>
+            </div>
+            <div class="ae-section">
+                <div class="ae-section-title"><span class="sec-emoji">&#x1F3B2;</span> Your Passphrase</div>
+                <div id="ob-pp-display" style="font-size:22px;font-weight:800;letter-spacing:1px;color:var(--primary);text-align:center;padding:16px;background:var(--primary-bg);border-radius:14px;word-spacing:6px;line-height:1.5"></div>
+                <div style="display:flex;gap:8px;margin-top:12px">
+                    <button class="btn btn-o" id="ob-pp-regen" style="flex:1;font-size:13px;padding:10px">&#x1F3B2; New Words</button>
+                    <button class="btn btn-o" id="ob-pp-custom" style="flex:1;font-size:13px;padding:10px">&#x270F; Custom</button>
+                </div>
+                <div id="ob-pp-custom-input" style="display:none;margin-top:12px">
+                    <input type="text" id="ob-pp-input" placeholder="Enter at least 3 words..." style="font-size:16px;font-weight:600">
+                    <p id="ob-pp-error" style="color:var(--negative);font-size:12px;font-weight:600;margin-top:6px;display:none"></p>
+                </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:16px">
+                <button class="btn btn-o" id="ob-pp-download" style="flex:1;font-size:13px">&#x1F4E5; Download</button>
+                <button class="btn btn-o" id="ob-pp-share" style="flex:1;font-size:13px">&#x1F4E4; Share</button>
+            </div>
+            <div class="chk-r" style="margin-bottom:16px">
+                <input type="checkbox" id="ob-pp-confirm">
+                <span style="font-size:13px">I've saved my passphrase safely</span>
+            </div>
+            <button class="btn btn-p" id="ob-pp-continue" disabled>Continue</button>
+            <button class="btn" id="ob-pp-skip" style="margin-top:8px;color:var(--text-secondary);font-size:13px;background:transparent">Skip for now (not recommended)</button>
+        </div>
+    </div>
+
+    <!-- Recovery: Enter Passphrase -->
+    <div class="screen" id="s-recover">
+        <div class="topbar"><button class="back" id="rec-back">&#x2190;</button><h1>Recover Account</h1></div>
+        <div class="content">
+            <div style="text-align:center;padding:24px 0">
+                <div class="ob-logo" style="margin:0 auto 16px;width:72px;height:72px;border-radius:22px;font-size:32px;background:linear-gradient(135deg,var(--accent-mint),var(--primary))">&#x1F511;</div>
+                <h2 style="font-size:18px;font-weight:800">Enter Recovery Passphrase</h2>
+                <p style="color:var(--text-secondary);margin-top:8px;font-size:13px;font-weight:500">Enter the passphrase you saved when you first set up SplitBlind</p>
+            </div>
+            <div class="fg">
+                <input type="text" id="rec-phrase" placeholder="e.g. mango pizza sunset" style="font-size:18px;font-weight:700;text-align:center">
+            </div>
+            <button class="btn btn-p" id="rec-btn" disabled>Recover My Data</button>
+            <p id="rec-status" style="text-align:center;margin-top:12px;font-size:14px;font-weight:600;display:none"></p>
         </div>
     </div>
 
@@ -754,6 +806,93 @@ function startSync(gid,key){
 function stopSync(){if(syncRef){syncRef.off();syncRef=null}const d=document.getElementById('sync-dot');if(d)d.className='sync-dot sync-off'}
 function refreshTab(){const a=document.querySelector('.tab.active');if(!a)return;const t=a.dataset.tab;if(t==='exp')renderExpenses();else if(t==='bal')renderBalances();else renderMembers()}
 
+// Recovery passphrase
+const WORDS='apple mango banana cherry grape lemon melon peach plum orange tiger eagle falcon panda koala whale shark dolphin kitten puppy river ocean sunset cloud mountain forest garden bridge castle island valley breeze thunder crystal diamond golden silver velvet marble puzzle rocket planet comet galaxy nebula compass anchor hammer shield lantern beacon mirror shadow flame frost ember coral maple bamboo lotus tulip daisy violet orchid pepper cinnamon ginger vanilla cocoa espresso latte mocha pillow blanket candle ribbon arrow feather acorn pebble meadow harbor lighthouse'.split(' ');
+
+function generatePassphrase(){return[WORDS[Math.floor(Math.random()*WORDS.length)],WORDS[Math.floor(Math.random()*WORDS.length)],WORDS[Math.floor(Math.random()*WORDS.length)]].join(' ')}
+
+function validatePassphrase(pp){const words=pp.trim().split(/\s+/);return words.length>=3&&pp.trim().length>=8}
+
+async function derivePpKey(passphrase,salt){
+    const raw=new TextEncoder().encode(passphrase.trim().toLowerCase()+salt);
+    const hash=await crypto.subtle.digest('SHA-256',raw);
+    return crypto.subtle.importKey('raw',hash,{name:'AES-GCM'},false,['encrypt','decrypt']);
+}
+
+async function ppHash(passphrase){
+    const raw=new TextEncoder().encode(passphrase.trim().toLowerCase()+'splitblind-recovery');
+    const hash=await crypto.subtle.digest('SHA-256',raw);
+    return bufB64(new Uint8Array(hash)).replace(/[+/=]/g,'').substring(0,24);
+}
+
+async function backupToRecovery(passphrase){
+    const groups=await iA('groups');
+    const bundle={id:myId,name:myName,groups:groups.map(g=>({i:g.groupId,k:g.groupKeyBase64,n:g.name})),ts:Date.now()};
+    const salt=bufB64(crypto.getRandomValues(new Uint8Array(16)));
+    const key=await derivePpKey(passphrase,salt);
+    const iv=crypto.getRandomValues(new Uint8Array(12));
+    const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(JSON.stringify(bundle)));
+    const entry={s:salt,d:bufB64(new Uint8Array(ct)),n:bufB64(iv),ts:Date.now()};
+    const hash=await ppHash(passphrase);
+    // Store under recovery/{hash}/{unique_id}
+    await fbDb.ref('recovery/'+hash).push(entry);
+    // Save passphrase hash locally so we can auto-update
+    await iPK('identity','ppHash',hash);
+    await iPK('identity','pp',passphrase.trim().toLowerCase());
+}
+
+async function autoBackup(){
+    const pp=await iG('identity','pp');
+    if(!pp)return;
+    const hash=await ppHash(pp);
+    // Remove old entries for this user, push new one
+    const snap=await fbDb.ref('recovery/'+hash).once('value');
+    const entries=snap.val();
+    if(entries){
+        for(const[k,v] of Object.entries(entries)){
+            try{
+                const key=await derivePpKey(pp,v.s);
+                const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64Buf(v.n)},key,b64Buf(v.d));
+                const data=JSON.parse(new TextDecoder().decode(pt));
+                if(data.id===myId){await fbDb.ref('recovery/'+hash+'/'+k).remove()}
+            }catch(e){}
+        }
+    }
+    await backupToRecovery(pp);
+}
+
+async function recoverFromPassphrase(passphrase){
+    const hash=await ppHash(passphrase);
+    const snap=await fbDb.ref('recovery/'+hash).once('value');
+    const entries=snap.val();
+    if(!entries)return null;
+    for(const[,v] of Object.entries(entries)){
+        try{
+            const key=await derivePpKey(passphrase.trim().toLowerCase(),v.s);
+            const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64Buf(v.n)},key,b64Buf(v.d));
+            const data=JSON.parse(new TextDecoder().decode(pt));
+            if(data.id&&data.groups)return data;
+        }catch(e){/* wrong entry, try next */}
+    }
+    return null;
+}
+
+function downloadPassphrase(pp){
+    const text='SplitBlind Recovery Passphrase\n================================\n\nYour passphrase: '+pp+'\n\nKeep this safe! This is the only way to recover your\ngroups and data if you lose your device.\n\nTo recover: Open SplitBlind > "Recover with Passphrase" > Enter the words above.\n';
+    const blob=new Blob([text],{type:'text/plain'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='splitblind-recovery.txt';
+    a.click();
+    URL.revokeObjectURL(a.href);
+}
+
+function sharePassphrase(pp){
+    const text='My SplitBlind Recovery Passphrase: '+pp+'\n\nKeep this safe! Use it to recover your data on any device.';
+    if(navigator.share){navigator.share({title:'SplitBlind Recovery',text}).catch(()=>{})}
+    else{navigator.clipboard.writeText(text).then(()=>toast('Copied!'))}
+}
+
 // Device sync
 async function generateSyncBundle(pin){
     const groups=await iA('groups');
@@ -1029,6 +1168,59 @@ function wireEvents(){
     document.getElementById('btn-security').onclick=()=>show('security');
     document.getElementById('btn-sync-device').onclick=()=>{document.getElementById('sg-pin').value='';document.getElementById('sg-btn').disabled=true;document.getElementById('sg-result').style.display='none';show('sync-gen')};
     document.getElementById('sg-back').onclick=goBack;
+    document.getElementById('rec-back').onclick=goBack;
+
+    // Recovery passphrase setup (onboarding step 2)
+    let obPassphrase=generatePassphrase();
+    function showObPp(){document.getElementById('ob-pp-display').textContent=obPassphrase}
+    document.getElementById('ob-pp-regen').onclick=()=>{obPassphrase=generatePassphrase();showObPp();document.getElementById('ob-pp-custom-input').style.display='none'};
+    document.getElementById('ob-pp-custom').onclick=()=>{document.getElementById('ob-pp-custom-input').style.display='';document.getElementById('ob-pp-input').value='';document.getElementById('ob-pp-input').focus()};
+    document.getElementById('ob-pp-input').addEventListener('input',e=>{
+        const v=e.target.value;const errEl=document.getElementById('ob-pp-error');
+        if(v.trim()&&!validatePassphrase(v)){errEl.textContent='Need at least 3 words';errEl.style.display=''}
+        else{errEl.style.display='none';if(v.trim())obPassphrase=v.trim()}
+        document.getElementById('ob-pp-display').textContent=validatePassphrase(v)?v.trim():obPassphrase;
+    });
+    document.getElementById('ob-pp-download').onclick=()=>downloadPassphrase(obPassphrase);
+    document.getElementById('ob-pp-share').onclick=()=>sharePassphrase(obPassphrase);
+    document.getElementById('ob-pp-confirm').addEventListener('change',e=>{document.getElementById('ob-pp-continue').disabled=!e.target.checked});
+    document.getElementById('ob-pp-continue').onclick=async()=>{
+        if(!validatePassphrase(obPassphrase)){toast('Passphrase needs at least 3 words');return}
+        await backupToRecovery(obPassphrase);
+        toast('Backed up!');
+        const jr=await handleJoin();
+        show('groups',false);await renderGroups();
+        if(jr){await openGroup(jr.groupId);if(jr.action==='joined')toast('Joined group!')}
+    };
+    document.getElementById('ob-pp-skip').onclick=async()=>{
+        const jr=await handleJoin();
+        show('groups',false);await renderGroups();
+        if(jr){await openGroup(jr.groupId);if(jr.action==='joined')toast('Joined group!')}
+    };
+
+    // Recovery from passphrase
+    document.getElementById('rec-phrase').addEventListener('input',e=>{document.getElementById('rec-btn').disabled=!validatePassphrase(e.target.value)});
+    document.getElementById('rec-btn').onclick=async()=>{
+        const pp=document.getElementById('rec-phrase').value;
+        const statusEl=document.getElementById('rec-status');
+        statusEl.style.display='';statusEl.style.color='#7F8C8D';statusEl.textContent='Searching...';
+        const bundle=await recoverFromPassphrase(pp);
+        if(!bundle){statusEl.style.color='var(--negative)';statusEl.textContent='No backup found for this passphrase';return}
+        // Apply restore
+        myId=bundle.id;myName=bundle.name;
+        await iPK('identity','id',myId);await iPK('identity','name',myName);
+        await iPK('identity','pp',pp.trim().toLowerCase());
+        const now=Date.now();
+        for(const g of bundle.groups){
+            const ex=await iG('groups',g.i);
+            if(!ex){
+                await iP('groups',{groupId:g.i,name:g.n,createdBy:'',createdAt:now,inviteToken:'',groupKeyBase64:g.k,hlcTimestamp:now,hlcNodeId:myId});
+                await iP('members',{_key:g.i+'_'+myId,groupId:g.i,memberId:myId,displayName:myName,joinedAt:now,isDeleted:false,hlcTimestamp:now});
+            }
+        }
+        show('groups',false);hist=[];await renderGroups();
+        toast('Recovered '+bundle.groups.length+' group'+(bundle.groups.length!==1?'s':'')+'!');
+    };
     document.getElementById('sr-back').onclick=goBack;
 
     // Sync generate
@@ -1072,7 +1264,7 @@ function wireEvents(){
     document.getElementById('fab-cg').addEventListener('click',()=>{document.getElementById('cg-form').style.display='';document.getElementById('cg-done').style.display='none';document.getElementById('cg-name').value='';document.getElementById('cg-btn').disabled=true;show('cg')});
     document.getElementById('cg-name').addEventListener('input',e=>{document.getElementById('cg-btn').disabled=!e.target.value.trim()});
     let newGid='';
-    document.getElementById('cg-btn').addEventListener('click',async()=>{const name=document.getElementById('cg-name').value.trim(),gid=uid(),now=Date.now(),key=await genKey();await iP('groups',{groupId:gid,name,createdBy:myId,createdAt:now,inviteToken:uid(),groupKeyBase64:key,hlcTimestamp:now,hlcNodeId:myId});await iP('members',{_key:gid+'_'+myId,groupId:gid,memberId:myId,displayName:myName,joinedAt:now,isDeleted:false,hlcTimestamp:now});await pushOp(gid,key,{id:uid(),type:'member_join',data:{memberId:myId,displayName:myName,joinedAt:now},hlc:now,author:myId});newGid=gid;const link=await makeShortLink(gid,key,name);document.getElementById('inv-display').textContent=link;document.getElementById('cg-form').style.display='none';document.getElementById('cg-done').style.display='';document.getElementById('share-btn').onclick=()=>shareLink(link,name);document.getElementById('goto-btn').onclick=async()=>{await renderGroups();openGroup(newGid)}});
+    document.getElementById('cg-btn').addEventListener('click',async()=>{const name=document.getElementById('cg-name').value.trim(),gid=uid(),now=Date.now(),key=await genKey();await iP('groups',{groupId:gid,name,createdBy:myId,createdAt:now,inviteToken:uid(),groupKeyBase64:key,hlcTimestamp:now,hlcNodeId:myId});await iP('members',{_key:gid+'_'+myId,groupId:gid,memberId:myId,displayName:myName,joinedAt:now,isDeleted:false,hlcTimestamp:now});await pushOp(gid,key,{id:uid(),type:'member_join',data:{memberId:myId,displayName:myName,joinedAt:now},hlc:now,author:myId});newGid=gid;const link=await makeShortLink(gid,key,name);document.getElementById('inv-display').textContent=link;document.getElementById('cg-form').style.display='none';document.getElementById('cg-done').style.display='';document.getElementById('share-btn').onclick=()=>shareLink(link,name);document.getElementById('goto-btn').onclick=async()=>{await renderGroups();openGroup(newGid)};autoBackup().catch(()=>{})});
     document.getElementById('fab-ae').addEventListener('click',()=>{show('ae');renderAddExpense()});
     document.getElementById('ae-desc').addEventListener('input',updAe);
     document.getElementById('ae-amt').addEventListener('input',updAe);
@@ -1116,7 +1308,16 @@ async function init(){
     await openDB();wireEvents();
     const ni=document.getElementById('ob-name'),nb=document.getElementById('ob-btn');
     ni.addEventListener('input',()=>{nb.disabled=!ni.value.trim()});
-    nb.addEventListener('click',async()=>{await saveId(ni.value.trim());const jr=await handleJoin();show('groups',false);await renderGroups();if(jr){await openGroup(jr.groupId);if(jr.action==='joined')toast('Joined group!')}});
+    nb.addEventListener('click',async()=>{
+        await saveId(ni.value.trim());
+        // Go to passphrase setup step
+        obPassphrase=generatePassphrase();showObPp();
+        document.getElementById('ob-pp-confirm').checked=false;
+        document.getElementById('ob-pp-continue').disabled=true;
+        document.getElementById('ob-pp-custom-input').style.display='none';
+        show('ob-recovery',false);
+    });
+    document.getElementById('ob-recover-pp').addEventListener('click',()=>{document.getElementById('rec-phrase').value='';document.getElementById('rec-btn').disabled=true;document.getElementById('rec-status').style.display='none';show('recover')});
     document.getElementById('ob-restore').addEventListener('click',()=>{document.getElementById('sr-code').value='';document.getElementById('sr-pin').value='';document.getElementById('sr-btn').disabled=true;document.getElementById('sr-error').style.display='none';show('sync-restore')});
     if(!(await loadId())){show('onboard',false);return}
     const jr=await handleJoin();show('groups',false);await renderGroups();
