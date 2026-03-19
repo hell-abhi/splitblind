@@ -317,6 +317,83 @@
             display:inline-block; padding:4px 12px; border-radius:20px;
             font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;
         }
+
+        /* Tag pills */
+        .tag-row {
+            display:flex; gap:8px; overflow-x:auto; padding:4px 0 12px;
+            -webkit-overflow-scrolling:touch; scrollbar-width:none;
+        }
+        .tag-row::-webkit-scrollbar { display:none; }
+        .tag-pill {
+            display:flex; align-items:center; gap:5px; padding:7px 14px;
+            border-radius:20px; font-size:13px; font-weight:600;
+            border:2px solid transparent; cursor:pointer; white-space:nowrap;
+            transition:all .2s; flex-shrink:0;
+            font-family:'Inter',sans-serif; background:var(--card);
+        }
+        .tag-pill.active { border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-bg); }
+        .tag-pill .tag-icon { font-size:15px; }
+        .tag-pill-sm {
+            display:inline-flex; align-items:center; gap:3px; padding:2px 8px;
+            border-radius:10px; font-size:10px; font-weight:700; margin-top:3px;
+            text-transform:uppercase; letter-spacing:0.3px;
+        }
+
+        /* Split modes segmented control */
+        .split-modes {
+            display:flex; gap:4px; padding:4px; background:var(--border);
+            border-radius:14px; margin-bottom:14px;
+        }
+        .split-mode-btn {
+            flex:1; padding:9px 6px; text-align:center; font-weight:700; font-size:12px;
+            cursor:pointer; border-radius:10px; color:var(--text-secondary);
+            transition:all .25s; letter-spacing:-0.2px;
+            font-family:'Inter',sans-serif; border:none; background:transparent;
+        }
+        .split-mode-btn.active {
+            color:var(--primary); background:var(--card);
+            box-shadow:0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        /* Payer toggle */
+        .payer-toggle {
+            display:flex; gap:4px; padding:4px; background:var(--border);
+            border-radius:14px; margin-bottom:14px;
+        }
+        .payer-toggle-btn {
+            flex:1; padding:9px 6px; text-align:center; font-weight:700; font-size:12px;
+            cursor:pointer; border-radius:10px; color:var(--text-secondary);
+            transition:all .25s; font-family:'Inter',sans-serif; border:none; background:transparent;
+        }
+        .payer-toggle-btn.active {
+            color:var(--primary); background:var(--card);
+            box-shadow:0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        /* Member input rows */
+        .member-input-row {
+            display:flex; align-items:center; gap:10px; padding:8px 0;
+        }
+        .member-input-row span { font-weight:600; font-size:14px; flex:1; }
+        .member-input-row input {
+            width:90px; padding:8px 10px; border:2px solid var(--border);
+            border-radius:10px; font-size:14px; font-weight:600;
+            background:var(--card); color:var(--text); outline:none;
+            transition:all .2s; font-family:'Inter',sans-serif;
+            text-align:right;
+        }
+        .member-input-row input:focus { border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-bg); }
+        .split-validation {
+            font-size:12px; font-weight:700; padding:6px 0; margin-top:4px;
+        }
+        .split-validation.error { color:var(--negative); }
+        .split-validation.ok { color:var(--positive); }
+
+        /* Split info pill on expense card */
+        .exp-split-info {
+            font-size:10px; font-weight:700; color:var(--text-secondary);
+            margin-top:2px; text-transform:uppercase; letter-spacing:0.3px;
+        }
     </style>
 </head>
 <body>
@@ -392,9 +469,30 @@
         <div class="topbar"><button class="back" id="ae-back">&#x2190;</button><h1>Add Expense</h1></div>
         <div class="content">
             <div class="fg"><label>Description</label><input type="text" id="ae-desc" placeholder="Dinner, cab, groceries..."></div>
+            <div class="fg"><label>Tag</label><div class="tag-row" id="ae-tags"></div></div>
             <div class="fg"><label>Amount (&#x20B9;)</label><input type="number" id="ae-amt" placeholder="0.00" step="0.01" min="0" inputmode="decimal"></div>
-            <div class="fg"><label>Paid By</label><div id="ae-paidby"></div></div>
-            <div class="fg"><label>Split Among</label><div id="ae-split"></div></div>
+            <div class="fg">
+                <label>Paid By</label>
+                <div class="payer-toggle">
+                    <button class="payer-toggle-btn active" data-mode="single">Single Payer</button>
+                    <button class="payer-toggle-btn" data-mode="multi">Multiple Payers</button>
+                </div>
+                <div id="ae-paidby"></div>
+                <div id="ae-paidby-multi" style="display:none"></div>
+                <div id="ae-paidby-validation" class="split-validation" style="display:none"></div>
+            </div>
+            <div class="fg">
+                <label>Split Among</label>
+                <div class="split-modes" id="ae-split-modes">
+                    <button class="split-mode-btn active" data-mode="equal">Equal</button>
+                    <button class="split-mode-btn" data-mode="amount">By Amount</button>
+                    <button class="split-mode-btn" data-mode="percentage">By %</button>
+                    <button class="split-mode-btn" data-mode="ratio">By Ratio</button>
+                </div>
+                <div id="ae-split"></div>
+                <div id="ae-split-detail" style="display:none"></div>
+                <div id="ae-split-validation" class="split-validation" style="display:none"></div>
+            </div>
             <button class="btn btn-p" id="ae-btn" disabled>Add Expense</button>
         </div>
     </div>
@@ -525,7 +623,14 @@ async function loadId(){myId=await iG('identity','id');myName=await iG('identity
 async function saveId(n){myId=uid().substring(0,16);myName=n;await iPK('identity','id',myId);await iPK('identity','name',myName)}
 
 // Balance
-function calcBal(exps,sets){const b={};for(const e of exps){if(e.isDeleted)continue;const s=e.splitAmong,sh=Math.floor(e.amountCents/s.length),rem=e.amountCents%s.length;b[e.paidBy]=(b[e.paidBy]||0)+e.amountCents;s.forEach((m,i)=>{b[m]=(b[m]||0)-sh-(i<rem?1:0)})}for(const s of sets){if(s.isDeleted)continue;b[s.fromMember]=(b[s.fromMember]||0)+s.amountCents;b[s.toMember]=(b[s.toMember]||0)-s.amountCents}return b}
+function calcBal(exps,sets){const b={};for(const e of exps){if(e.isDeleted)continue;
+    // CREDIT: multi-payer or single payer
+    if(e.paidByMap){for(const[m,a] of Object.entries(e.paidByMap))b[m]=(b[m]||0)+a}
+    else{b[e.paidBy]=(b[e.paidBy]||0)+e.amountCents}
+    // DEBIT: splitDetails or equal split
+    if(e.splitDetails){for(const[m,a] of Object.entries(e.splitDetails))b[m]=(b[m]||0)-a}
+    else{const s=e.splitAmong,sh=Math.floor(e.amountCents/s.length),rem=e.amountCents%s.length;s.forEach((m,i)=>{b[m]=(b[m]||0)-sh-(i<rem?1:0)})}
+}for(const s of sets){if(s.isDeleted)continue;b[s.fromMember]=(b[s.fromMember]||0)+s.amountCents;b[s.toMember]=(b[s.toMember]||0)-s.amountCents}return b}
 function simplify(bal){const cr=[],dr=[];for(const[m,b] of Object.entries(bal)){if(b>0)cr.push({id:m,a:b});else if(b<0)dr.push({id:m,a:-b})}cr.sort((a,b)=>b.a-a.a);dr.sort((a,b)=>b.a-a.a);const debts=[];let i=0,j=0;while(i<cr.length&&j<dr.length){const a=Math.min(cr[i].a,dr[j].a);if(a>0)debts.push({from:dr[j].id,to:cr[i].id,amountCents:a});cr[i].a-=a;dr[j].a-=a;if(!cr[i].a)i++;if(!dr[j].a)j++}return debts}
 function fmt(c){const w=Math.floor(Math.abs(c)/100),f=Math.abs(c)%100;return(c<0?'-':'')+'\u20B9'+w+'.'+String(f).padStart(2,'0')}
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
@@ -537,6 +642,21 @@ function getInitial(name){return(name||'?')[0].toUpperCase()}
 const expIcons=['&#x1F37D;','&#x1F697;','&#x1F6D2;','&#x1F3AC;','&#x2708;','&#x1F3E0;','&#x1F4B3;','&#x1F381;'];
 const expBgs=['#EDE9FC','#FCE4EC','#E0F2F1','#FFF3E0','#E8EAF6','#F3E5F5','#E0F7FA','#FBE9E7'];
 function getExpStyle(desc){let h=0;for(let i=0;i<desc.length;i++)h=desc.charCodeAt(i)+((h<<5)-h);const idx=Math.abs(h)%expIcons.length;return{icon:expIcons[idx],bg:expBgs[idx]}}
+
+// Tags
+const TAGS={
+    food:{icon:'\u{1F37D}\uFE0F',color:'#EDE9FC',label:'Food'},
+    transport:{icon:'\u{1F697}',color:'#E0F7FA',label:'Transport'},
+    shopping:{icon:'\u{1F6CD}\uFE0F',color:'#FCE4EC',label:'Shopping'},
+    entertainment:{icon:'\u{1F3AC}',color:'#FFF3E0',label:'Entertainment'},
+    travel:{icon:'\u2708\uFE0F',color:'#E8EAF6',label:'Travel'},
+    bills:{icon:'\u{1F4C4}',color:'#F3E5F5',label:'Bills'},
+    groceries:{icon:'\u{1F6D2}',color:'#E0F2F1',label:'Groceries'},
+    health:{icon:'\u{1F48A}',color:'#FBE9E7',label:'Health'},
+    rent:{icon:'\u{1F3E0}',color:'#FFF8E1',label:'Rent'},
+    other:{icon:'\u{1F4CC}',color:'#F5F5F5',label:'Other'}
+};
+function getTagStyle(tag){if(tag&&TAGS[tag])return{icon:TAGS[tag].icon,bg:TAGS[tag].color,label:TAGS[tag].label};return null}
 
 // Nav
 let curScreen='',curGroup='',curGroupKey='',hist=[];
@@ -681,7 +801,17 @@ async function renderExpenses(){
     const mems=(await iA('members')).filter(m=>m.groupId===curGroup);const nm={};mems.forEach(m=>nm[m.memberId]=m.displayName);
     const el=document.getElementById('t-exp');
     if(!exps.length){el.innerHTML='<div class="empty"><div class="ic">&#x1F9FE;</div><h3>No expenses yet</h3><p>Tap + to add your first expense</p></div>';return}
-    el.innerHTML=exps.map(e=>{const st=getExpStyle(e.description);return`<div class="card exp-c"><div class="exp-left"><div class="exp-icon" style="background:${st.bg}">${st.icon}</div><div><div class="card-t">${esc(e.description)}</div><div class="card-s">Paid by ${esc(nm[e.paidBy]||e.paidBy.slice(0,8))}</div></div></div><div><div class="exp-a">${fmt(e.amountCents)}</div><div class="exp-d">${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div>`}).join('');
+    el.innerHTML=exps.map(e=>{
+        const ts=getTagStyle(e.tag);const st=ts?{icon:ts.icon,bg:ts.bg}:getExpStyle(e.description);
+        // Paid by display
+        let paidStr;
+        if(e.paidByMap){const names=Object.keys(e.paidByMap).map(id=>esc(nm[id]||id.slice(0,8)));paidStr='Paid by '+names.join(', ')}
+        else{paidStr='Paid by '+esc(nm[e.paidBy]||e.paidBy.slice(0,8))}
+        // Tag pill
+        const tagHtml=ts?`<div class="tag-pill-sm" style="background:${ts.bg};color:var(--text)">${ts.icon} ${ts.label}</div>`:'';
+        // Split mode indicator
+        const splitHtml=e.splitMode&&e.splitMode!=='equal'?`<div class="exp-split-info">${e.splitMode==='amount'?'By amount':e.splitMode==='percentage'?'By %':'By ratio'}</div>`:'';
+        return`<div class="card exp-c"><div class="exp-left"><div class="exp-icon" style="background:${st.bg}">${st.icon}</div><div><div class="card-t">${esc(e.description)}</div><div class="card-s">${paidStr}</div>${tagHtml}${splitHtml}</div></div><div><div class="exp-a">${fmt(e.amountCents)}</div><div class="exp-d">${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div>`}).join('');
 }
 
 async function renderBalances(){
@@ -712,13 +842,109 @@ async function renderMembers(){
 
 function switchTab(tab){document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));document.getElementById('t-exp').style.display=tab==='exp'?'':'none';document.getElementById('t-bal').style.display=tab==='bal'?'':'none';document.getElementById('t-mem').style.display=tab==='members'?'':'none';document.getElementById('fab-ae').style.display=tab==='exp'?'':'none';if(tab==='exp')renderExpenses();else if(tab==='bal')renderBalances();else renderMembers()}
 
+let aePayerMode='single',aeSplitMode='equal',aeMembers=[];
 async function renderAddExpense(){
-    const mems=(await iA('members')).filter(m=>m.groupId===curGroup&&!m.isDeleted);
-    document.getElementById('ae-paidby').innerHTML=mems.map(m=>`<div class="chk-r"><input type="radio" name="pb" value="${m.memberId}" ${m.memberId===myId?'checked':''}><span>${esc(m.displayName)}${m.memberId===myId?' (you)':''}</span></div>`).join('');
-    document.getElementById('ae-split').innerHTML=mems.map(m=>`<div class="chk-r"><input type="checkbox" class="sc" value="${m.memberId}" checked><span>${esc(m.displayName)}${m.memberId===myId?' (you)':''}</span></div>`).join('');
+    aePayerMode='single';aeSplitMode='equal';
+    aeMembers=(await iA('members')).filter(m=>m.groupId===curGroup&&!m.isDeleted);
+    // Tags
+    document.getElementById('ae-tags').innerHTML=Object.entries(TAGS).map(([k,v])=>`<button class="tag-pill${k==='other'?' active':''}" data-tag="${k}" style="background:${v.color}"><span class="tag-icon">${v.icon}</span>${v.label}</button>`).join('');
+    document.getElementById('ae-tags').querySelectorAll('.tag-pill').forEach(p=>p.addEventListener('click',()=>{document.querySelectorAll('#ae-tags .tag-pill').forEach(t=>t.classList.remove('active'));p.classList.add('active')}));
+    // Payer toggle
+    document.querySelectorAll('.payer-toggle-btn').forEach(b=>{b.classList.toggle('active',b.dataset.mode==='single');b.onclick=()=>{aePayerMode=b.dataset.mode;document.querySelectorAll('.payer-toggle-btn').forEach(x=>x.classList.toggle('active',x===b));document.getElementById('ae-paidby').style.display=aePayerMode==='single'?'':'none';document.getElementById('ae-paidby-multi').style.display=aePayerMode==='multi'?'':'none';renderMultiPayer();updAe()}});
+    // Single payer radios
+    document.getElementById('ae-paidby').innerHTML=aeMembers.map(m=>`<div class="chk-r"><input type="radio" name="pb" value="${m.memberId}" ${m.memberId===myId?'checked':''}><span>${esc(m.displayName)}${m.memberId===myId?' (you)':''}</span></div>`).join('');
+    document.getElementById('ae-paidby').style.display='';
+    document.getElementById('ae-paidby-multi').style.display='none';
+    document.getElementById('ae-paidby-validation').style.display='none';
+    // Split mode buttons
+    document.querySelectorAll('.split-mode-btn').forEach(b=>{b.classList.toggle('active',b.dataset.mode==='equal');b.onclick=()=>{aeSplitMode=b.dataset.mode;document.querySelectorAll('.split-mode-btn').forEach(x=>x.classList.toggle('active',x===b));renderSplitDetail();updAe()}});
+    // Split checkboxes
+    document.getElementById('ae-split').innerHTML=aeMembers.map(m=>`<div class="chk-r"><input type="checkbox" class="sc" value="${m.memberId}" checked><span>${esc(m.displayName)}${m.memberId===myId?' (you)':''}</span></div>`).join('');
+    document.getElementById('ae-split-detail').style.display='none';
+    document.getElementById('ae-split-detail').innerHTML='';
+    document.getElementById('ae-split-validation').style.display='none';
     document.getElementById('ae-desc').value='';document.getElementById('ae-amt').value='';updAe();
 }
-function updAe(){const d=document.getElementById('ae-desc').value.trim(),a=parseFloat(document.getElementById('ae-amt').value)||0,c=document.querySelectorAll('.sc:checked').length;document.getElementById('ae-btn').disabled=!d||a<=0||c===0}
+function renderMultiPayer(){
+    if(aePayerMode!=='multi')return;
+    const el=document.getElementById('ae-paidby-multi');
+    el.innerHTML=aeMembers.map(m=>`<div class="member-input-row"><span>${esc(m.displayName)}${m.memberId===myId?' (you)':''}</span><input type="number" class="mp-amt" data-mid="${m.memberId}" placeholder="0.00" step="0.01" min="0" inputmode="decimal"></div>`).join('')+'<div id="mp-remaining" class="split-validation" style="display:none"></div>';
+    el.querySelectorAll('.mp-amt').forEach(i=>i.addEventListener('input',()=>{updateMultiPayerValidation();updAe()}));
+}
+function updateMultiPayerValidation(){
+    const total=Math.round((parseFloat(document.getElementById('ae-amt').value)||0)*100);
+    const inputs=document.querySelectorAll('.mp-amt');
+    let sum=0;inputs.forEach(i=>sum+=Math.round((parseFloat(i.value)||0)*100));
+    const rem=total-sum;const el=document.getElementById('mp-remaining');const valEl=document.getElementById('ae-paidby-validation');
+    if(total<=0){if(el)el.style.display='none';valEl.style.display='none';return}
+    if(el){el.style.display='';el.className='split-validation'+(rem===0?' ok':' error');el.textContent=rem===0?'\u2713 Fully allocated':'Remaining: '+fmt(rem)}
+    valEl.style.display=rem!==0?'':'none';valEl.className='split-validation error';valEl.textContent=rem!==0?'Amounts don\'t add up to total':'';
+}
+function renderSplitDetail(){
+    const detailEl=document.getElementById('ae-split-detail');const valEl=document.getElementById('ae-split-validation');
+    if(aeSplitMode==='equal'){detailEl.style.display='none';detailEl.innerHTML='';valEl.style.display='none';document.getElementById('ae-split').style.display='';return}
+    document.getElementById('ae-split').style.display='';
+    detailEl.style.display='';
+    const checked=getCheckedSplitMembers();
+    const suffix=aeSplitMode==='percentage'?'%':aeSplitMode==='ratio'?'x':'';
+    const placeholder=aeSplitMode==='percentage'?'0':aeSplitMode==='ratio'?'1':'0.00';
+    const step=aeSplitMode==='amount'?'0.01':'1';
+    detailEl.innerHTML=checked.map(m=>`<div class="member-input-row"><span>${esc(m.name)}</span><input type="number" class="sd-val" data-mid="${m.id}" placeholder="${placeholder}" step="${step}" min="0" inputmode="decimal"><span style="flex:none;font-size:12px;color:var(--text-secondary);width:16px">${suffix}</span></div>`).join('');
+    detailEl.querySelectorAll('.sd-val').forEach(i=>i.addEventListener('input',()=>{updateSplitValidation();updAe()}));
+    updateSplitValidation();
+}
+function getCheckedSplitMembers(){
+    const checked=[...document.querySelectorAll('.sc:checked')].map(c=>c.value);
+    return aeMembers.filter(m=>checked.includes(m.memberId)).map(m=>({id:m.memberId,name:m.displayName+(m.memberId===myId?' (you)':'')}));
+}
+function updateSplitValidation(){
+    const valEl=document.getElementById('ae-split-validation');
+    if(aeSplitMode==='equal'){valEl.style.display='none';return}
+    const total=Math.round((parseFloat(document.getElementById('ae-amt').value)||0)*100);
+    const inputs=document.querySelectorAll('.sd-val');
+    if(aeSplitMode==='amount'){
+        let sum=0;inputs.forEach(i=>sum+=Math.round((parseFloat(i.value)||0)*100));
+        const rem=total-sum;
+        if(total<=0){valEl.style.display='none';return}
+        valEl.style.display='';valEl.className='split-validation'+(rem===0?' ok':' error');
+        valEl.textContent=rem===0?'\u2713 Fully allocated':'Remaining: '+fmt(rem);
+    }else if(aeSplitMode==='percentage'){
+        let sum=0;inputs.forEach(i=>sum+=(parseFloat(i.value)||0));
+        valEl.style.display='';valEl.className='split-validation'+(Math.abs(sum-100)<0.01?' ok':' error');
+        valEl.textContent=Math.abs(sum-100)<0.01?'\u2713 Total 100%':'Total: '+sum.toFixed(1)+'% (need 100%)';
+    }else if(aeSplitMode==='ratio'){
+        let any=false;inputs.forEach(i=>{if(parseFloat(i.value)>0)any=true});
+        valEl.style.display='';valEl.className='split-validation'+(any?' ok':' error');
+        valEl.textContent=any?'\u2713 Ratio set':'Enter at least one ratio';
+    }
+}
+function updAe(){
+    const d=document.getElementById('ae-desc').value.trim();
+    const a=parseFloat(document.getElementById('ae-amt').value)||0;
+    const amtC=Math.round(a*100);
+    const c=document.querySelectorAll('.sc:checked').length;
+    let valid=!!d&&a>0&&c>0;
+    // Multi-payer validation
+    if(aePayerMode==='multi'&&amtC>0){
+        let sum=0;document.querySelectorAll('.mp-amt').forEach(i=>sum+=Math.round((parseFloat(i.value)||0)*100));
+        if(sum!==amtC)valid=false;
+    }
+    // Split validation
+    if(aeSplitMode==='amount'&&amtC>0){
+        let sum=0;document.querySelectorAll('.sd-val').forEach(i=>sum+=Math.round((parseFloat(i.value)||0)*100));
+        if(sum!==amtC)valid=false;
+    }else if(aeSplitMode==='percentage'){
+        let sum=0;document.querySelectorAll('.sd-val').forEach(i=>sum+=(parseFloat(i.value)||0));
+        if(Math.abs(sum-100)>=0.01)valid=false;
+    }else if(aeSplitMode==='ratio'){
+        const inputs=document.querySelectorAll('.sd-val');
+        if(inputs.length>0){let any=false;inputs.forEach(i=>{if(parseFloat(i.value)>0)any=true});if(!any)valid=false}
+    }
+    document.getElementById('ae-btn').disabled=!valid;
+    // Re-validate displays when amount changes
+    if(aePayerMode==='multi')updateMultiPayerValidation();
+    if(aeSplitMode!=='equal')updateSplitValidation();
+}
 
 let settleData={};
 async function openSettle(from,to,amt){settleData={from,to,amountCents:amt};const mems=(await iA('members')).filter(m=>m.groupId===curGroup);const nm={};mems.forEach(m=>nm[m.memberId]=m.displayName);document.getElementById('stl-who').textContent=`${nm[from]||from.slice(0,8)} pays ${nm[to]||to.slice(0,8)}`;document.getElementById('stl-amt').textContent=fmt(amt);show('settle')}
@@ -811,8 +1037,38 @@ function wireEvents(){
     document.getElementById('fab-ae').addEventListener('click',()=>{show('ae');renderAddExpense()});
     document.getElementById('ae-desc').addEventListener('input',updAe);
     document.getElementById('ae-amt').addEventListener('input',updAe);
-    document.addEventListener('change',e=>{if(e.target.classList.contains('sc'))updAe()});
-    document.getElementById('ae-btn').addEventListener('click',async()=>{const desc=document.getElementById('ae-desc').value.trim(),amtC=Math.round((parseFloat(document.getElementById('ae-amt').value)||0)*100),paidBy=document.querySelector('input[name=pb]:checked')?.value||myId,split=[...document.querySelectorAll('.sc:checked')].map(c=>c.value),now=Date.now(),eid=uid();const data={expenseId:eid,groupId:curGroup,description:desc,amountCents:amtC,currency:'INR',paidBy,splitAmong:split,createdAt:now,isDeleted:false};await iP('expenses',{...data,hlcTimestamp:now});await pushOp(curGroup,curGroupKey,{id:uid(),type:'expense',data,hlc:now,author:myId});goBack();switchTab('exp');toast('Expense added!')});
+    document.addEventListener('change',e=>{if(e.target.classList.contains('sc')){if(aeSplitMode!=='equal')renderSplitDetail();updAe()}});
+    document.getElementById('ae-btn').addEventListener('click',async()=>{
+        const desc=document.getElementById('ae-desc').value.trim();
+        const amtC=Math.round((parseFloat(document.getElementById('ae-amt').value)||0)*100);
+        const split=[...document.querySelectorAll('.sc:checked')].map(c=>c.value);
+        const now=Date.now(),eid=uid();
+        // Tag
+        const activeTag=document.querySelector('#ae-tags .tag-pill.active');
+        const tag=activeTag?activeTag.dataset.tag:null;
+        // Paid by — always populate paidBy for backward compat
+        let paidBy,paidByMap=null;
+        if(aePayerMode==='multi'){
+            paidByMap={};document.querySelectorAll('.mp-amt').forEach(i=>{const v=Math.round((parseFloat(i.value)||0)*100);if(v>0)paidByMap[i.dataset.mid]=v});
+            paidBy=Object.keys(paidByMap)[0]||myId;
+        }else{paidBy=document.querySelector('input[name=pb]:checked')?.value||myId}
+        // Split — always populate splitAmong for backward compat; compute splitDetails in cents
+        let splitMode=aeSplitMode!=='equal'?aeSplitMode:null;
+        let splitDetails=null;
+        if(aeSplitMode==='amount'){
+            splitDetails={};document.querySelectorAll('.sd-val').forEach(i=>{const v=Math.round((parseFloat(i.value)||0)*100);if(v>0)splitDetails[i.dataset.mid]=v});
+        }else if(aeSplitMode==='percentage'){
+            splitDetails={};const inputs=[...document.querySelectorAll('.sd-val')];
+            let allocated=0;
+            inputs.forEach((i,idx)=>{const pct=parseFloat(i.value)||0;let cents=Math.floor(amtC*pct/100);if(idx===inputs.length-1)cents=amtC-allocated;splitDetails[i.dataset.mid]=cents;allocated+=cents});
+        }else if(aeSplitMode==='ratio'){
+            splitDetails={};const inputs=[...document.querySelectorAll('.sd-val')];
+            let totalR=0;inputs.forEach(i=>totalR+=(parseFloat(i.value)||0));
+            if(totalR>0){let allocated=0;inputs.forEach((i,idx)=>{const r=parseFloat(i.value)||0;let cents=Math.floor(amtC*r/totalR);if(idx===inputs.length-1)cents=amtC-allocated;splitDetails[i.dataset.mid]=cents;allocated+=cents})}
+        }
+        const data={expenseId:eid,groupId:curGroup,description:desc,amountCents:amtC,currency:'INR',paidBy,splitAmong:split,createdAt:now,isDeleted:false,tag,paidByMap,splitMode,splitDetails};
+        await iP('expenses',{...data,hlcTimestamp:now});await pushOp(curGroup,curGroupKey,{id:uid(),type:'expense',data,hlc:now,author:myId});goBack();switchTab('exp');toast('Expense added!')
+    });
     document.getElementById('stl-btn').addEventListener('click',async()=>{const now=Date.now(),sid=uid(),data={settlementId:sid,groupId:curGroup,fromMember:settleData.from,toMember:settleData.to,amountCents:settleData.amountCents,createdAt:now,isDeleted:false};await iP('settlements',{...data,hlcTimestamp:now});await pushOp(curGroup,curGroupKey,{id:uid(),type:'settlement',data,hlc:now,author:myId});goBack();switchTab('bal');toast('Settled!')});
 }
 
