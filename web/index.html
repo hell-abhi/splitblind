@@ -973,21 +973,33 @@ async function renderGroups(){
 async function openGroup(gid){curGroup=gid;const g=await iG('groups',gid);if(!g)return;curGroupKey=g.groupKeyBase64;document.getElementById('gd-title').textContent=g.name;show('gd');startSync(gid,curGroupKey);switchTab('exp')}
 
 async function renderExpenses(){
-    const exps=(await iA('expenses')).filter(e=>e.groupId===curGroup&&!e.isDeleted).sort((a,b)=>b.createdAt-a.createdAt);
+    const exps=(await iA('expenses')).filter(e=>e.groupId===curGroup&&!e.isDeleted);
+    const sets=(await iA('settlements')).filter(s=>s.groupId===curGroup&&!s.isDeleted);
     const mems=(await iA('members')).filter(m=>m.groupId===curGroup);const nm={};mems.forEach(m=>nm[m.memberId]=m.displayName);
+    // Merge expenses and settlements into one timeline
+    const items=[];
+    exps.forEach(e=>items.push({type:'expense',data:e,ts:e.createdAt}));
+    sets.forEach(s=>items.push({type:'settlement',data:s,ts:s.createdAt}));
+    items.sort((a,b)=>b.ts-a.ts);
     const el=document.getElementById('t-exp');
-    if(!exps.length){el.innerHTML='<div class="empty"><div class="ic">&#x1F9FE;</div><h3>No expenses yet</h3><p>Tap + to add your first expense</p></div>';return}
-    el.innerHTML=exps.map(e=>{
-        const ts=getTagStyle(e.tag);const st=ts?{icon:ts.icon,bg:ts.bg}:getExpStyle(e.description);
-        // Paid by display
-        let paidStr;
-        if(e.paidByMap){const names=Object.keys(e.paidByMap).map(id=>esc(nm[id]||id.slice(0,8)));paidStr='Paid by '+names.join(', ')}
-        else{paidStr='Paid by '+esc(nm[e.paidBy]||e.paidBy.slice(0,8))}
-        // Tag pill
-        const tagHtml=ts?`<div class="tag-pill-sm" style="background:${ts.bg};color:var(--text)">${ts.icon} ${ts.label}</div>`:'';
-        // Split mode indicator
-        const splitHtml=e.splitMode&&e.splitMode!=='equal'?`<div class="exp-split-info">${e.splitMode==='amount'?'By amount':e.splitMode==='percentage'?'By %':'By ratio'}</div>`:'';
-        return`<div class="card exp-c"><div class="exp-left"><div class="exp-icon" style="background:${st.bg}">${st.icon}</div><div><div class="card-t">${esc(e.description)}</div><div class="card-s">${paidStr}</div>${tagHtml}${splitHtml}</div></div><div><div class="exp-a">${fmt(e.amountCents)}</div><div class="exp-d">${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div>`}).join('');
+    if(!items.length){el.innerHTML='<div class="empty"><div class="ic">&#x1F9FE;</div><h3>No activity yet</h3><p>Tap + to add your first expense</p></div>';return}
+    el.innerHTML=items.map(item=>{
+        if(item.type==='expense'){
+            const e=item.data;
+            const ts=getTagStyle(e.tag);const st=ts?{icon:ts.icon,bg:ts.bg}:getExpStyle(e.description);
+            let paidStr;
+            if(e.paidByMap){const names=Object.keys(e.paidByMap).map(id=>esc(nm[id]||id.slice(0,8)));paidStr='Paid by '+names.join(', ')}
+            else{paidStr='Paid by '+esc(nm[e.paidBy]||e.paidBy.slice(0,8))}
+            const tagHtml=ts?`<div class="tag-pill-sm" style="background:${ts.bg};color:var(--text)">${ts.icon} ${ts.label}</div>`:'';
+            const splitHtml=e.splitMode&&e.splitMode!=='equal'?`<div class="exp-split-info">${e.splitMode==='amount'?'By amount':e.splitMode==='percentage'?'By %':'By ratio'}</div>`:'';
+            return`<div class="card exp-c"><div class="exp-left"><div class="exp-icon" style="background:${st.bg}">${st.icon}</div><div><div class="card-t">${esc(e.description)}</div><div class="card-s">${paidStr}</div>${tagHtml}${splitHtml}</div></div><div><div class="exp-a">${fmt(e.amountCents)}</div><div class="exp-d">${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div>`;
+        }else{
+            const s=item.data;
+            const fromName=esc(nm[s.fromMember]||s.fromMember.slice(0,8));
+            const toName=esc(nm[s.toMember]||s.toMember.slice(0,8));
+            return`<div class="card exp-c" style="border-left:3px solid var(--positive)"><div class="exp-left"><div class="exp-icon" style="background:rgba(107,203,119,0.12)">&#x1F91D;</div><div><div class="card-t">Settlement</div><div class="card-s">${fromName} paid ${toName}</div></div></div><div><div class="exp-a" style="color:var(--positive)">${fmt(s.amountCents)}</div><div class="exp-d">${new Date(s.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div>`;
+        }
+    }).join('');
 }
 
 async function renderBalances(){

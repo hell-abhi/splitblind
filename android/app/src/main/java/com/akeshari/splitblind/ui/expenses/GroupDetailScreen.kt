@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.akeshari.splitblind.data.database.entity.ExpenseEntity
+import com.akeshari.splitblind.data.database.entity.SettlementEntity
 import com.akeshari.splitblind.data.database.entity.MemberEntity
 import com.akeshari.splitblind.util.Debt
 import kotlinx.serialization.json.Json
@@ -136,6 +137,7 @@ fun GroupDetailScreen(
             when (selectedTab) {
                 0 -> ExpensesTab(
                     expenses = state.expenses,
+                    settlements = state.settlements,
                     memberNames = state.memberNames
                 )
                 1 -> BalancesTab(
@@ -158,15 +160,23 @@ fun GroupDetailScreen(
 @Composable
 private fun ExpensesTab(
     expenses: List<ExpenseEntity>,
+    settlements: List<SettlementEntity>,
     memberNames: Map<String, String>
 ) {
-    if (expenses.isEmpty()) {
+    // Merge expenses and settlements into one timeline
+    data class TimelineItem(val type: String, val ts: Long, val expense: ExpenseEntity? = null, val settlement: SettlementEntity? = null)
+    val items = mutableListOf<TimelineItem>()
+    expenses.forEach { items.add(TimelineItem("expense", it.createdAt, expense = it)) }
+    settlements.forEach { items.add(TimelineItem("settlement", it.createdAt, settlement = it)) }
+    items.sortByDescending { it.ts }
+
+    if (items.isEmpty()) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                "No expenses yet",
+                "No activity yet",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -179,76 +189,95 @@ private fun ExpensesTab(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(expenses) { expense ->
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(
-                                    expense.description,
-                                    style = MaterialTheme.typography.titleSmall
-                                )
-                                // Tag pill
-                                val tag = ExpenseTag.fromSlug(expense.tag)
-                                if (tag != null) {
-                                    Box(
-                                        modifier = Modifier
-                                            .background(
-                                                Color(tag.color),
-                                                RoundedCornerShape(12.dp)
+            items(items.size) { index ->
+                val item = items[index]
+                if (item.type == "expense" && item.expense != null) {
+                    val expense = item.expense
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        expense.description,
+                                        style = MaterialTheme.typography.titleSmall
+                                    )
+                                    val tag = ExpenseTag.fromSlug(expense.tag)
+                                    if (tag != null) {
+                                        Box(
+                                            modifier = Modifier
+                                                .background(
+                                                    Color(tag.color),
+                                                    RoundedCornerShape(12.dp)
+                                                )
+                                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                "${tag.emoji} ${tag.label}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = Color.Black
                                             )
-                                            .padding(horizontal = 8.dp, vertical = 2.dp)
-                                    ) {
-                                        Text(
-                                            "${tag.emoji} ${tag.label}",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = Color.Black
-                                        )
+                                        }
                                     }
                                 }
-                            }
-                            // Paid by line
-                            val paidByText = run {
-                                val paidByMap: Map<String, Long>? = expense.paidByMap?.let {
-                                    try {
-                                        Json.decodeFromString<Map<String, Long>>(it)
-                                    } catch (_: Exception) { null }
-                                }
-                                if (paidByMap != null && paidByMap.size > 1) {
-                                    val names = paidByMap.keys.map { id ->
-                                        memberNames[id] ?: id.take(6)
+                                val paidByText = run {
+                                    val paidByMap: Map<String, Long>? = expense.paidByMap?.let {
+                                        try { Json.decodeFromString<Map<String, Long>>(it) } catch (_: Exception) { null }
                                     }
-                                    "${names.joinToString(" + ")} paid"
-                                } else {
-                                    "Paid by ${memberNames[expense.paidBy] ?: expense.paidBy}"
+                                    if (paidByMap != null && paidByMap.size > 1) {
+                                        "${paidByMap.keys.map { id -> memberNames[id] ?: id.take(6) }.joinToString(" + ")} paid"
+                                    } else {
+                                        "Paid by ${memberNames[expense.paidBy] ?: expense.paidBy}"
+                                    }
                                 }
+                                Text(paidByText, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(dateFormat.format(Date(expense.createdAt)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Text(
-                                paidByText,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                dateFormat.format(Date(expense.createdAt)),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                formatAmount(expense.amountCents),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
-                        Text(
-                            formatAmount(expense.amountCents),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                    }
+                } else if (item.type == "settlement" && item.settlement != null) {
+                    val s = item.settlement
+                    val fromName = memberNames[s.fromMember] ?: s.fromMember.take(8)
+                    val toName = memberNames[s.toMember] ?: s.toMember.take(8)
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = androidx.compose.material3.CardDefaults.cardColors(
+                            containerColor = Color(0x1A6BCB77)
                         )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("\uD83E\uDD1D Settlement", style = MaterialTheme.typography.titleSmall)
+                                Text("$fromName paid $toName", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(dateFormat.format(Date(s.createdAt)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Text(
+                                formatAmount(s.amountCents),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF6BCB77)
+                            )
+                        }
                     }
                 }
             }
