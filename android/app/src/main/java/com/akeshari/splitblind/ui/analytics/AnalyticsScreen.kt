@@ -1,10 +1,13 @@
 package com.akeshari.splitblind.ui.analytics
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,8 +40,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,7 +57,162 @@ private fun formatAmount(cents: Long): String {
     return String.format(Locale.getDefault(), "\u20B9%.2f", rupees)
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+private fun formatAmountShort(cents: Long): String {
+    val rupees = cents / 100.0
+    return if (rupees >= 100000) {
+        String.format(Locale.getDefault(), "\u20B9%.1fL", rupees / 100000)
+    } else if (rupees >= 1000) {
+        String.format(Locale.getDefault(), "\u20B9%.1fK", rupees / 1000)
+    } else {
+        String.format(Locale.getDefault(), "\u20B9%.0f", rupees)
+    }
+}
+
+// Reusable member/donut colors
+val donutColors = listOf(
+    0xFF42A5F5, 0xFFEF5350, 0xFF66BB6A, 0xFFFFCA28,
+    0xFFAB47BC, 0xFF26C6DA, 0xFFFF7043, 0xFF8D6E63,
+    0xFFEC407A, 0xFF5C6BC0
+)
+
+@Composable
+fun ChartToggle(
+    options: List<Pair<String, String>>, // mode to label
+    selected: String,
+    onSelect: (String) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+        horizontalArrangement = Arrangement.Center
+    ) {
+        options.forEach { (mode, label) ->
+            val isActive = selected == mode
+            Box(
+                modifier = Modifier
+                    .padding(2.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(
+                        if (isActive) MaterialTheme.colorScheme.primary
+                        else Color.Transparent
+                    )
+                    .clickable { onSelect(mode) }
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    label,
+                    fontSize = 11.sp,
+                    fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                    color = if (isActive) Color.White
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun DonutChart(
+    segments: List<Triple<String, Long, Long>>, // label, amount, color
+    total: Long,
+    centerText: String,
+    centerSubText: String? = null,
+    modifier: Modifier = Modifier
+) {
+    if (total <= 0) return
+
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Donut
+        Box(
+            modifier = Modifier.size(140.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Canvas(modifier = Modifier.size(140.dp)) {
+                val strokeWidth = 28.dp.toPx()
+                val diameter = size.minDimension - strokeWidth
+                val topLeft = Offset(strokeWidth / 2, strokeWidth / 2)
+                var startAngle = -90f
+                segments.forEach { (_, amount, color) ->
+                    val sweep = (amount.toFloat() / total) * 360f
+                    drawArc(
+                        color = Color(color),
+                        startAngle = startAngle,
+                        sweepAngle = sweep,
+                        useCenter = false,
+                        topLeft = topLeft,
+                        size = Size(diameter, diameter),
+                        style = Stroke(width = strokeWidth)
+                    )
+                    startAngle += sweep
+                }
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    centerText,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+                if (centerSubText != null) {
+                    Text(
+                        centerSubText,
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        // Legend
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            segments.forEach { (label, amount, color) ->
+                val pct = if (total > 0) ((amount.toFloat() / total) * 100).toInt() else 0
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(Color(color))
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        label,
+                        fontSize = 13.sp,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1
+                    )
+                    Text(
+                        "$pct%",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        formatAmountShort(amount),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AnalyticsScreen(
     viewModel: AnalyticsViewModel = hiltViewModel()
@@ -179,7 +341,7 @@ fun AnalyticsScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Total spending - single value based on toggle
+                // ===== Rich Summary Card =====
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -193,144 +355,280 @@ fun AnalyticsScreen(
                                 .fillMaxWidth(),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text(
-                                if (isYours) "Your Spending" else "Total Group Spending",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            // Big number
                             Text(
                                 formatAmount(if (isYours) state.yourTotalShare else state.totalSpent),
-                                style = MaterialTheme.typography.headlineSmall,
+                                style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isYours) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.onPrimaryContainer
                             )
+                            // Subtext: complementary amount
+                            Text(
+                                if (isYours) "Group Total: ${formatAmount(state.totalSpent)}"
+                                else "Your Share: ${formatAmount(state.yourTotalShare)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            )
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Stats row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    "${formatAmountShort(state.monthlyAvg)}/mo avg",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                )
+                                Text(
+                                    " \u00B7 ",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.5f)
+                                )
+                                Text(
+                                    "${state.expenseCount} expenses",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            // Top category
+                            if (state.topCategory != null) {
+                                Text(
+                                    "${state.topCategory} is top (${state.topCategoryPercent}%)",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                )
+                            }
+
+                            // Trend
+                            if (state.monthTrend != 0) {
+                                val trendIcon = if (state.monthTrend > 0) "\uD83D\uDCC8" else "\uD83D\uDCC9"
+                                val trendSign = if (state.monthTrend > 0) "+" else ""
+                                Text(
+                                    "$trendIcon ${trendSign}${state.monthTrend}% vs last month",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                )
+                            }
+
+                            // Settlement summary
+                            if (state.totalSettled > 0 || state.totalOutstanding > 0) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    "${formatAmountShort(state.totalSettled)} settled \u00B7 ${formatAmountShort(state.totalOutstanding)} outstanding",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                )
+                            }
                         }
                     }
                 }
 
-                // By Category (single bar)
+                // ===== By Category with Donut/Bars toggle =====
                 item {
-                    Text(
-                        "By Category",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "By Category",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        ChartToggle(
+                            options = listOf("donut" to "Donut", "bars" to "Bars"),
+                            selected = state.chartModes["category"] ?: "donut",
+                            onSelect = { viewModel.setChartMode("category", it) }
+                        )
+                    }
                 }
 
                 item {
-                    val maxCat = state.categoryStats.maxOfOrNull {
-                        if (isYours) it.yourCents else it.totalCents
-                    } ?: 1L
+                    val catMode = state.chartModes["category"] ?: "donut"
                     Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            state.categoryStats.forEach { stat ->
-                                val amt = if (isYours) stat.yourCents else stat.totalCents
-                                Column {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            if (catMode == "donut") {
+                                val total = if (isYours) state.yourTotalShare else state.totalSpent
+                                val segments = state.categoryStats.map { stat ->
+                                    val amt = if (isYours) stat.yourCents else stat.totalCents
+                                    Triple(
+                                        "${stat.tag?.emoji ?: ""} ${stat.tag?.label ?: stat.slug}",
+                                        amt,
+                                        stat.color
+                                    )
+                                }
+                                DonutChart(
+                                    segments = segments,
+                                    total = total,
+                                    centerText = formatAmountShort(total)
+                                )
+                            } else {
+                                // Bars view (enhanced with colored dot and percentage)
+                                val maxCat = state.categoryStats.maxOfOrNull {
+                                    if (isYours) it.yourCents else it.totalCents
+                                } ?: 1L
+                                val total = if (isYours) state.yourTotalShare else state.totalSpent
+                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    state.categoryStats.forEach { stat ->
+                                        val amt = if (isYours) stat.yourCents else stat.totalCents
+                                        val pct = if (total > 0) ((amt.toFloat() / total) * 100).toInt() else 0
+                                        Column {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(12.dp)
+                                                            .clip(CircleShape)
+                                                            .background(Color(stat.color))
+                                                    )
+                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                    Text(
+                                                        "${stat.tag?.emoji ?: ""} ${stat.tag?.label ?: stat.slug}",
+                                                        style = MaterialTheme.typography.bodyMedium
+                                                    )
+                                                }
+                                                Text(
+                                                    "$pct% \u00B7 ${formatAmount(amt)}",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(4.dp))
                                             Box(
                                                 modifier = Modifier
-                                                    .size(12.dp)
-                                                    .clip(CircleShape)
-                                                    .background(Color(stat.color))
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
+                                                    .fillMaxWidth()
+                                                    .height(8.dp)
+                                                    .clip(RoundedCornerShape(4.dp))
+                                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                            ) {
+                                                val fraction = if (maxCat > 0) (amt.toFloat() / maxCat) else 0f
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth(fraction = fraction.coerceIn(0f, 1f))
+                                                        .height(8.dp)
+                                                        .clip(RoundedCornerShape(4.dp))
+                                                        .background(Color(stat.color))
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ===== By Month with Chart/Table toggle =====
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "By Month (Last 6 Months)",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        ChartToggle(
+                            options = listOf("chart" to "Chart", "table" to "Table"),
+                            selected = state.chartModes["month"] ?: "chart",
+                            onSelect = { viewModel.setChartMode("month", it) }
+                        )
+                    }
+                }
+
+                item {
+                    val monthMode = state.chartModes["month"] ?: "chart"
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        if (monthMode == "chart") {
+                            // Current bars view
+                            val maxMonth = state.monthStats.maxOfOrNull {
+                                if (isYours) it.yourCents else it.totalCents
+                            } ?: 1L
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                state.monthStats.forEach { month ->
+                                    val amt = if (isYours) month.yourCents else month.totalCents
+                                    Column {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
                                             Text(
-                                                "${stat.tag?.emoji ?: ""} ${stat.tag?.label ?: stat.slug}",
-                                                style = MaterialTheme.typography.bodyMedium
+                                                month.label,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                            Text(
+                                                formatAmount(amt),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
-                                        Text(
-                                            formatAmount(amt),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(8.dp)
-                                            .clip(RoundedCornerShape(4.dp))
-                                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                                    ) {
-                                        val fraction = if (maxCat > 0) (amt.toFloat() / maxCat) else 0f
+                                        Spacer(modifier = Modifier.height(4.dp))
                                         Box(
                                             modifier = Modifier
-                                                .fillMaxWidth(fraction = fraction.coerceIn(0f, 1f))
-                                                .height(8.dp)
-                                                .clip(RoundedCornerShape(4.dp))
-                                                .background(Color(stat.color))
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // By Month (single bar)
-                item {
-                    Text(
-                        "By Month (Last 6 Months)",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                item {
-                    val maxMonth = state.monthStats.maxOfOrNull {
-                        if (isYours) it.yourCents else it.totalCents
-                    } ?: 1L
-
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            state.monthStats.forEach { month ->
-                                val amt = if (isYours) month.yourCents else month.totalCents
-                                Column {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            month.label,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                        Text(
-                                            formatAmount(amt),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(14.dp)
-                                            .clip(RoundedCornerShape(4.dp))
-                                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                                    ) {
-                                        val fraction = if (maxMonth > 0) (amt.toFloat() / maxMonth) else 0f
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth(fraction = fraction.coerceIn(0f, 1f))
+                                                .fillMaxWidth()
                                                 .height(14.dp)
                                                 .clip(RoundedCornerShape(4.dp))
-                                                .background(MaterialTheme.colorScheme.primary)
-                                        )
+                                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                        ) {
+                                            val fraction = if (maxMonth > 0) (amt.toFloat() / maxMonth) else 0f
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth(fraction = fraction.coerceIn(0f, 1f))
+                                                    .height(14.dp)
+                                                    .clip(RoundedCornerShape(4.dp))
+                                                    .background(MaterialTheme.colorScheme.primary)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            // Table view
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                // Header
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                                        .padding(horizontal = 8.dp, vertical = 8.dp)
+                                ) {
+                                    Text("Month", fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.2f))
+                                    Text("#", fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.5f), textAlign = TextAlign.End)
+                                    Text("Amount", fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.3f), textAlign = TextAlign.End)
+                                    Text("Avg", fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
+                                }
+                                state.monthStats.forEachIndexed { index, month ->
+                                    val amt = if (isYours) month.yourCents else month.totalCents
+                                    val avg = if (month.expenseCount > 0) amt / month.expenseCount else 0L
+                                    val bgColor = if (index % 2 == 0) MaterialTheme.colorScheme.surface
+                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(bgColor)
+                                            .padding(horizontal = 8.dp, vertical = 8.dp)
+                                    ) {
+                                        Text(month.label, fontSize = 12.sp, modifier = Modifier.weight(1.2f))
+                                        Text("${month.expenseCount}", fontSize = 12.sp, modifier = Modifier.weight(0.5f), textAlign = TextAlign.End)
+                                        Text(formatAmountShort(amt), fontSize = 12.sp, modifier = Modifier.weight(1.3f), textAlign = TextAlign.End)
+                                        Text(formatAmountShort(avg), fontSize = 12.sp, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
                                     }
                                 }
                             }
@@ -338,7 +636,7 @@ fun AnalyticsScreen(
                     }
                 }
 
-                // Category by Month (stacked bars)
+                // ===== Category by Month (stacked bars + legend) =====
                 item {
                     Text(
                         "Category by Month",
@@ -349,11 +647,40 @@ fun AnalyticsScreen(
 
                 item {
                     val maxMonthCat = state.monthCategoryStats.maxOfOrNull { it.totalCents } ?: 1L
+                    // Collect all unique categories for legend
+                    val allCats = state.monthCategoryStats.flatMap { it.categories }
+                        .map { it.first }
+                        .distinct()
+
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(
                             modifier = Modifier.padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
+                            // Legend
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            ) {
+                                allCats.forEach { tag ->
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(10.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(tag?.color ?: 0xFFCFD8DC))
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            "${tag?.emoji ?: ""} ${tag?.label ?: "Other"}",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+
                             state.monthCategoryStats.forEach { monthCat ->
                                 Column {
                                     Row(
@@ -398,7 +725,7 @@ fun AnalyticsScreen(
                     }
                 }
 
-                // By Member (hidden in "yours" mode)
+                // ===== By Member (Donut) - hidden in "yours" mode =====
                 if (!isYours) {
                     item {
                         Text(
@@ -409,56 +736,22 @@ fun AnalyticsScreen(
                     }
 
                     item {
-                        val maxPaid = state.memberStats.maxOfOrNull { it.totalPaid } ?: 1L
-
                         Card(modifier = Modifier.fillMaxWidth()) {
-                            Column(
-                                modifier = Modifier.padding(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                state.memberStats.forEach { member ->
-                                    Column {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text(
-                                                member.name,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = FontWeight.Medium
-                                            )
-                                            Column(horizontalAlignment = Alignment.End) {
-                                                Text(
-                                                    "Paid: ${formatAmount(member.totalPaid)}",
-                                                    style = MaterialTheme.typography.bodySmall
-                                                )
-                                                Text(
-                                                    "Balance: ${(if (member.netBalance >= 0) "+" else "") + formatAmount(member.netBalance)}",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = if (member.netBalance >= 0) Color(0xFF6BCB77) else Color(0xFFFF6B6B)
-                                                )
-                                            }
-                                        }
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(8.dp)
-                                                .clip(RoundedCornerShape(4.dp))
-                                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                                        ) {
-                                            val fraction = if (maxPaid > 0) (member.totalPaid.toFloat() / maxPaid) else 0f
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxWidth(fraction = fraction.coerceIn(0f, 1f))
-                                                    .height(8.dp)
-                                                    .clip(RoundedCornerShape(4.dp))
-                                                    .background(Color(0xFF89C4F4))
-                                            )
-                                        }
-                                    }
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                val totalPaid = state.memberStats.sumOf { it.totalPaid }
+                                val segments = state.memberStats.mapIndexed { index, member ->
+                                    Triple(
+                                        member.name,
+                                        member.totalPaid,
+                                        donutColors[index % donutColors.size]
+                                    )
                                 }
+                                DonutChart(
+                                    segments = segments,
+                                    total = totalPaid,
+                                    centerText = "${state.memberStats.size}",
+                                    centerSubText = "members"
+                                )
                             }
                         }
                     }

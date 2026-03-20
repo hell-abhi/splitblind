@@ -29,7 +29,8 @@ data class CategoryStat(
 data class MonthStat(
     val label: String,
     val totalCents: Long,
-    val yourCents: Long
+    val yourCents: Long,
+    val expenseCount: Int
 )
 
 data class MonthCategoryStat(
@@ -58,7 +59,21 @@ data class AnalyticsState(
     val totalSpent: Long = 0,
     val yourTotalShare: Long = 0,
     val groups: List<GroupOption> = emptyList(),
-    val selectedGroupId: String? = null
+    val selectedGroupId: String? = null,
+    // New rich summary fields
+    val topCategory: String? = null,
+    val topCategoryPercent: Int = 0,
+    val monthlyAvg: Long = 0,
+    val expenseCount: Int = 0,
+    val monthTrend: Int = 0, // percentage change vs last month
+    val totalSettled: Long = 0,
+    val totalOutstanding: Long = 0,
+    // Chart mode toggles
+    val chartModes: Map<String, String> = mapOf(
+        "category" to "donut",
+        "month" to "chart",
+        "member" to "donut"
+    )
 )
 
 @HiltViewModel
@@ -79,6 +94,12 @@ class AnalyticsViewModel @Inject constructor(
     fun selectGroup(groupId: String?) {
         _state.value = _state.value.copy(selectedGroupId = groupId)
         loadAnalytics()
+    }
+
+    fun setChartMode(chart: String, mode: String) {
+        _state.value = _state.value.copy(
+            chartModes = _state.value.chartModes + (chart to mode)
+        )
     }
 
     private fun getMyShare(expense: ExpenseEntity): Long {
@@ -119,6 +140,7 @@ class AnalyticsViewModel @Inject constructor(
 
             val totalSpent = expenses.sumOf { it.amountCents }
             val yourTotalShare = expenses.sumOf { getMyShare(it) }
+            val expenseCount = expenses.size
 
             // --- By Category ---
             val byCat = expenses.groupBy { it.tag ?: "other" }
@@ -135,6 +157,11 @@ class AnalyticsViewModel @Inject constructor(
                     color = tag?.color ?: 0xFFCFD8DC
                 )
             }.sortedByDescending { it.totalCents }
+
+            // Top category
+            val topCat = categoryStats.firstOrNull()
+            val topCategory = topCat?.let { "${it.tag?.emoji ?: ""} ${it.tag?.label ?: it.slug}" }
+            val topCategoryPercent = topCat?.percentage?.toInt() ?: 0
 
             // --- By Month (last 6 months) ---
             val monthStats = mutableListOf<MonthStat>()
@@ -159,7 +186,7 @@ class AnalyticsViewModel @Inject constructor(
                 val monthExpenses = expenses.filter { it.createdAt in start until end }
                 val total = monthExpenses.sumOf { it.amountCents }
                 val yourTotal = monthExpenses.sumOf { getMyShare(it) }
-                monthStats.add(MonthStat(label, total, yourTotal))
+                monthStats.add(MonthStat(label, total, yourTotal, monthExpenses.size))
 
                 // Category breakdown per month
                 val catBreakdown = monthExpenses.groupBy { it.tag ?: "other" }
@@ -171,9 +198,25 @@ class AnalyticsViewModel @Inject constructor(
                 monthCategoryStats.add(MonthCategoryStat(label, total, catBreakdown))
             }
 
-            // --- By Member ---
+            // Monthly average (over months that have expenses)
+            val monthsWithExpenses = monthStats.filter { it.totalCents > 0 }
+            val monthlyAvg = if (monthsWithExpenses.isNotEmpty()) {
+                totalSpent / monthsWithExpenses.size
+            } else 0L
+
+            // Month trend: compare current month to previous month
+            val currentMonthTotal = monthStats.lastOrNull()?.totalCents ?: 0L
+            val prevMonthTotal = if (monthStats.size >= 2) monthStats[monthStats.size - 2].totalCents else 0L
+            val monthTrend = if (prevMonthTotal > 0) {
+                (((currentMonthTotal - prevMonthTotal).toFloat() / prevMonthTotal) * 100).toInt()
+            } else if (currentMonthTotal > 0) 100 else 0
+
+            // --- Settlement summary ---
+            val totalSettled = settlements.sumOf { it.amountCents }
             val netBalances = BalanceCalculator.computeNetBalances(expenses, settlements)
-            // Track total paid per member
+            val totalOutstanding = netBalances.values.filter { it > 0 }.sum()
+
+            // --- By Member ---
             val paidByMember = mutableMapOf<String, Long>()
             for (expense in expenses) {
                 val paidByMap: Map<String, Long>? = expense.paidByMap?.let {
@@ -188,7 +231,7 @@ class AnalyticsViewModel @Inject constructor(
                 }
             }
 
-            val memberStats = (paidByMember.keys + netBalances.keys).distinct().map { memberId ->
+            val memberStatsList = (paidByMember.keys + netBalances.keys).distinct().map { memberId ->
                 MemberStat(
                     memberId = memberId,
                     name = memberNames[memberId] ?: memberId.take(8),
@@ -201,10 +244,17 @@ class AnalyticsViewModel @Inject constructor(
                 categoryStats = categoryStats,
                 monthStats = monthStats,
                 monthCategoryStats = monthCategoryStats,
-                memberStats = memberStats,
+                memberStats = memberStatsList,
                 totalSpent = totalSpent,
                 yourTotalShare = yourTotalShare,
-                groups = groups.map { GroupOption(it.groupId, it.name) }
+                groups = groups.map { GroupOption(it.groupId, it.name) },
+                topCategory = topCategory,
+                topCategoryPercent = topCategoryPercent,
+                monthlyAvg = monthlyAvg,
+                expenseCount = expenseCount,
+                monthTrend = monthTrend,
+                totalSettled = totalSettled,
+                totalOutstanding = totalOutstanding
             )
         }
     }
