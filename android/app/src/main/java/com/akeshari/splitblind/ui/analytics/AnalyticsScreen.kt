@@ -17,8 +17,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -26,6 +30,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,11 +65,62 @@ fun AnalyticsScreen(
             )
         }
     ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            // Group selector dropdown
+            if (state.groups.isNotEmpty()) {
+                var expanded by remember { mutableStateOf(false) }
+                val selectedLabel = if (state.selectedGroupId == null) "Overall (All Groups)"
+                    else state.groups.find { it.groupId == state.selectedGroupId }?.name ?: "Overall"
+
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = selectedLabel,
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Overall (All Groups)") },
+                            onClick = {
+                                viewModel.selectGroup(null)
+                                expanded = false
+                            }
+                        )
+                        state.groups.forEach { group ->
+                            DropdownMenuItem(
+                                text = { Text(group.name) },
+                                onClick = {
+                                    viewModel.selectGroup(group.groupId)
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
         if (state.totalSpent == 0L) {
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
+                    .fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -75,7 +133,6 @@ fun AnalyticsScreen(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -294,5 +351,6 @@ fun AnalyticsScreen(
                 item { Spacer(modifier = Modifier.height(16.dp)) }
             }
         }
+        } // Column
     }
 }

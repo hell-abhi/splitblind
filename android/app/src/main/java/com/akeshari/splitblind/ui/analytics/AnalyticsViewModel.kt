@@ -37,11 +37,18 @@ data class MemberStat(
     val netBalance: Long
 )
 
+data class GroupOption(
+    val groupId: String,
+    val name: String
+)
+
 data class AnalyticsState(
     val categoryStats: List<CategoryStat> = emptyList(),
     val monthStats: List<MonthStat> = emptyList(),
     val memberStats: List<MemberStat> = emptyList(),
-    val totalSpent: Long = 0
+    val totalSpent: Long = 0,
+    val groups: List<GroupOption> = emptyList(),
+    val selectedGroupId: String? = null
 )
 
 @HiltViewModel
@@ -56,10 +63,23 @@ class AnalyticsViewModel @Inject constructor(
     val state: StateFlow<AnalyticsState> = _state
 
     init {
+        loadAnalytics()
+    }
+
+    fun selectGroup(groupId: String?) {
+        _state.value = _state.value.copy(selectedGroupId = groupId)
+        loadAnalytics()
+    }
+
+    private fun loadAnalytics() {
         viewModelScope.launch {
-            val expenses = expenseDao.getAllActiveExpensesList()
-            val settlements = settlementDao.getAllActiveSettlementsList()
+            val selectedGroupId = _state.value.selectedGroupId
+            val allExpenses = expenseDao.getAllActiveExpensesList()
+            val allSettlements = settlementDao.getAllActiveSettlementsList()
             val groups = groupDao.getAllGroupsList()
+
+            val expenses = if (selectedGroupId != null) allExpenses.filter { it.groupId == selectedGroupId } else allExpenses
+            val settlements = if (selectedGroupId != null) allSettlements.filter { it.groupId == selectedGroupId } else allSettlements
 
             // Gather all member names
             val memberNames = mutableMapOf<String, String>()
@@ -85,7 +105,6 @@ class AnalyticsViewModel @Inject constructor(
             }.sortedByDescending { it.totalCents }
 
             // --- By Month (last 6 months) ---
-            val cal = Calendar.getInstance()
             val monthStats = mutableListOf<MonthStat>()
             val monthNames = arrayOf("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")
             for (i in 5 downTo 0) {
@@ -134,11 +153,12 @@ class AnalyticsViewModel @Inject constructor(
                 )
             }.sortedByDescending { it.totalPaid }
 
-            _state.value = AnalyticsState(
+            _state.value = _state.value.copy(
                 categoryStats = categoryStats,
                 monthStats = monthStats,
                 memberStats = memberStats,
-                totalSpent = totalSpent
+                totalSpent = totalSpent,
+                groups = groups.map { GroupOption(it.groupId, it.name) }
             )
         }
     }

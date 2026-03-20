@@ -90,7 +90,7 @@ fun GroupDetailScreen(
     val state by viewModel.state.collectAsState()
     val isPersonal = state.group?.groupType == "personal"
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = if (isPersonal) listOf("Expenses", "Balances") else listOf("Expenses", "Balances", "Members")
+    val tabs = if (isPersonal) listOf("Expenses", "Balances", "Analytics") else listOf("Expenses", "Balances", "Members", "Analytics")
 
     Scaffold(
         topBar = {
@@ -150,8 +150,8 @@ fun GroupDetailScreen(
                 }
             }
 
-            when (selectedTab) {
-                0 -> ExpensesTab(
+            when {
+                selectedTab == 0 -> ExpensesTab(
                     expenses = state.allExpenses,
                     settlements = state.allSettlements,
                     memberNames = state.memberNames,
@@ -162,7 +162,7 @@ fun GroupDetailScreen(
                     onUndoSettlement = { settlement -> viewModel.undoSettlement(settlement) },
                     onRestoreExpense = { expense -> viewModel.restoreExpense(expense) }
                 )
-                1 -> BalancesTab(
+                selectedTab == 1 -> BalancesTab(
                     debts = state.debts,
                     netBalances = state.netBalances,
                     memberNames = state.memberNames,
@@ -170,11 +170,16 @@ fun GroupDetailScreen(
                     groupId = viewModel.groupId,
                     onSettle = onSettle
                 )
-                2 -> MembersTab(
+                !isPersonal && selectedTab == 2 -> MembersTab(
                     members = state.members,
                     myId = state.myId,
                     inviteLink = state.inviteLink,
                     groupName = state.group?.name ?: ""
+                )
+                else -> GroupAnalyticsTab(
+                    expenses = state.expenses,
+                    memberNames = state.memberNames,
+                    isPersonal = isPersonal
                 )
             }
         }
@@ -987,5 +992,178 @@ private fun MembersTab(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun GroupAnalyticsTab(
+    expenses: List<ExpenseEntity>,
+    memberNames: Map<String, String>,
+    isPersonal: Boolean
+) {
+    if (expenses.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                "No expenses to analyze yet",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        return
+    }
+
+    val totalSpent = expenses.sumOf { it.amountCents }
+
+    // By Category
+    val byCat = expenses.groupBy { it.tag ?: "other" }
+    val categoryStats = byCat.map { (slug, exps) ->
+        val total = exps.sumOf { it.amountCents }
+        val tag = ExpenseTag.fromSlug(slug)
+        Triple(tag, total, if (totalSpent > 0) (total.toFloat() / totalSpent) * 100f else 0f)
+    }.sortedByDescending { it.second }
+
+    // By Month (last 6 months)
+    val monthNames = arrayOf("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")
+    val monthStats = mutableListOf<Pair<String, Long>>()
+    for (i in 5 downTo 0) {
+        val c = Calendar.getInstance()
+        c.add(Calendar.MONTH, -i)
+        val year = c.get(Calendar.YEAR)
+        val month = c.get(Calendar.MONTH)
+        val label = "${monthNames[month]} ${year % 100}"
+        val start = Calendar.getInstance().apply {
+            set(year, month, 1, 0, 0, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        val end = Calendar.getInstance().apply {
+            set(year, month, 1, 0, 0, 0)
+            set(Calendar.MILLISECOND, 0)
+            add(Calendar.MONTH, 1)
+        }.timeInMillis
+        val total = expenses.filter { it.createdAt in start until end }.sumOf { it.amountCents }
+        monthStats.add(label to total)
+    }
+
+    // By Member
+    val paidByMember = mutableMapOf<String, Long>()
+    if (!isPersonal) {
+        for (expense in expenses) {
+            val paidByMap: Map<String, Long>? = expense.paidByMap?.let {
+                try { Json.decodeFromString(it) } catch (_: Exception) { null }
+            }
+            if (paidByMap != null) {
+                for ((id, amt) in paidByMap) {
+                    paidByMember[id] = (paidByMember[id] ?: 0) + amt
+                }
+            } else {
+                paidByMember[expense.paidBy] = (paidByMember[expense.paidBy] ?: 0) + expense.amountCents
+            }
+        }
+    }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Total spending
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Total Spending", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(formatAmount(totalSpent), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                }
+            }
+        }
+
+        // By Category
+        item {
+            Text("By Category", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        }
+        item {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    categoryStats.forEach { (tag, total, percentage) ->
+                        val color = tag?.color ?: 0xFFCFD8DC
+                        Column {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(Color(color)))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("${tag?.emoji ?: ""} ${tag?.label ?: "Other"}", style = MaterialTheme.typography.bodyMedium)
+                                }
+                                Text("${formatAmount(total)} (${String.format("%.1f", percentage)}%)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Box(modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                                Box(modifier = Modifier.fillMaxWidth(fraction = (percentage / 100f).coerceIn(0f, 1f)).height(8.dp).clip(RoundedCornerShape(4.dp)).background(Color(color)))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // By Month
+        item {
+            Text("By Month (Last 6 Months)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        }
+        item {
+            val maxMonth = monthStats.maxOfOrNull { it.second } ?: 1L
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    monthStats.forEach { (label, total) ->
+                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text(label, style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(50.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Box(modifier = Modifier.weight(1f).height(20.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                                val fraction = if (maxMonth > 0) (total.toFloat() / maxMonth) else 0f
+                                Box(modifier = Modifier.fillMaxWidth(fraction = fraction.coerceIn(0f, 1f)).height(20.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.primary))
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(formatAmount(total), style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(80.dp))
+                        }
+                    }
+                }
+            }
+        }
+
+        // By Member (skip for personal)
+        if (!isPersonal && paidByMember.isNotEmpty()) {
+            item {
+                Text("By Member", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            }
+            item {
+                val maxPaid = paidByMember.values.maxOrNull() ?: 1L
+                val sortedMembers = paidByMember.entries.sortedByDescending { it.value }
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        sortedMembers.forEach { (memberId, totalPaid) ->
+                            Column {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                    Text(memberNames[memberId] ?: memberId.take(8), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                    Text(formatAmount(totalPaid), style = MaterialTheme.typography.bodySmall)
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Box(modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                                    val fraction = if (maxPaid > 0) (totalPaid.toFloat() / maxPaid) else 0f
+                                    Box(modifier = Modifier.fillMaxWidth(fraction = fraction.coerceIn(0f, 1f)).height(8.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF89C4F4)))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item { Spacer(modifier = Modifier.height(16.dp)) }
     }
 }

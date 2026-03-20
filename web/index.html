@@ -1002,10 +1002,12 @@
             <button class="tab active" data-tab="exp">Expenses</button>
             <button class="tab" data-tab="bal">Balances</button>
             <button class="tab" data-tab="members">People</button>
+            <button class="tab" data-tab="analytics">Analytics</button>
         </div>
         <div class="content" id="t-exp"></div>
         <div class="content" id="t-bal" style="display:none"></div>
         <div class="content" id="t-mem" style="display:none"></div>
+        <div class="content" id="t-analytics" style="display:none"></div>
         <button class="fab" id="fab-ae">+</button>
     </div>
 
@@ -1365,7 +1367,7 @@ function startSync(gid,key){
     });
 }
 function stopSync(){if(syncRef){syncRef.off();syncRef=null}const d=document.getElementById('sync-dot');if(d)d.className='sync-dot sync-off'}
-function refreshTab(){const a=document.querySelector('.tab.active');if(!a)return;const t=a.dataset.tab;if(t==='exp')renderExpenses();else if(t==='bal')renderBalances();else renderMembers()}
+function refreshTab(){const a=document.querySelector('.tab.active');if(!a)return;const t=a.dataset.tab;if(t==='exp')renderExpenses();else if(t==='bal')renderBalances();else if(t==='analytics')renderGroupAnalytics();else renderMembers()}
 
 // Recovery passphrase
 const WORDS='apple mango banana cherry grape lemon melon peach plum orange tiger eagle falcon panda koala whale shark dolphin kitten puppy river ocean sunset cloud mountain forest garden bridge castle island valley breeze thunder crystal diamond golden silver velvet marble puzzle rocket planet comet galaxy nebula compass anchor hammer shield lantern beacon mirror shadow flame frost ember coral maple bamboo lotus tulip daisy violet orchid pepper cinnamon ginger vanilla cocoa espresso latte mocha pillow blanket candle ribbon arrow feather acorn pebble meadow harbor lighthouse'.split(' ');
@@ -1909,17 +1911,26 @@ async function createPersonalGroup(){
 }
 
 // Analytics tab render
+let analyticsGroupFilter='';
 async function renderAnalyticsTab(){
-    // Reuse the analytics rendering but target the tab content element
-    const allExps=(await iA('expenses')).filter(e=>!e.isDeleted);
-    const allSets=(await iA('settlements')).filter(s=>!s.isDeleted);
+    const allExpsRaw=(await iA('expenses')).filter(e=>!e.isDeleted);
+    const allSetsRaw=(await iA('settlements')).filter(s=>!s.isDeleted);
     const allMems=await iA('members');
+    const groups=await iA('groups');
     const globalNm={};allMems.forEach(m=>globalNm[m.memberId]=m.displayName);
     const el=document.getElementById('analytics-tab-content');
 
-    if(!allExps.length){el.innerHTML='<div class="empty"><div class="ic">&#x1F4CA;</div><h3>No data yet</h3><p>Add expenses to see analytics</p></div>';return}
+    // Filter by group if selected
+    const allExps=analyticsGroupFilter?allExpsRaw.filter(e=>e.groupId===analyticsGroupFilter):allExpsRaw;
+    const allSets=analyticsGroupFilter?allSetsRaw.filter(s=>s.groupId===analyticsGroupFilter):allSetsRaw;
 
-    let html='';
+    // Group selector
+    let html='<div style="margin-bottom:16px"><select id="analytics-group-select" style="width:100%;padding:12px 16px;border:2px solid var(--border);border-radius:var(--rs);font-size:14px;font-weight:600;background:var(--card);color:var(--text);font-family:Inter,sans-serif;cursor:pointer">';
+    html+=`<option value=""${!analyticsGroupFilter?' selected':''}>Overall (All Groups)</option>`;
+    groups.forEach(g=>{html+=`<option value="${g.groupId}"${analyticsGroupFilter===g.groupId?' selected':''}>${esc(g.name)}</option>`});
+    html+='</select></div>';
+
+    if(!allExps.length){html+='<div class="empty"><div class="ic">&#x1F4CA;</div><h3>No data yet</h3><p>Add expenses to see analytics</p></div>';el.innerHTML=html;el.querySelector('#analytics-group-select').addEventListener('change',e=>{analyticsGroupFilter=e.target.value;renderAnalyticsTab()});return}
 
     // By Category
     const tagTotals={};
@@ -1969,8 +1980,8 @@ async function renderAnalyticsTab(){
         else{memberPaid[e.paidBy]=(memberPaid[e.paidBy]||0)+e.amountCents}
     });
     const memberOwes={};
-    const groups=await iA('groups');
-    for(const g of groups){
+    const grpsToCheck=analyticsGroupFilter?groups.filter(g=>g.groupId===analyticsGroupFilter):groups;
+    for(const g of grpsToCheck){
         const gExps=allExps.filter(e=>e.groupId===g.groupId);
         const gSets=allSets.filter(s=>s.groupId===g.groupId);
         const bal=calcBal(gExps,gSets);
@@ -2002,6 +2013,7 @@ async function renderAnalyticsTab(){
     }
 
     el.innerHTML=html;
+    el.querySelector('#analytics-group-select').addEventListener('change',e=>{analyticsGroupFilter=e.target.value;renderAnalyticsTab()});
 }
 
 // Profile tab render
@@ -2160,7 +2172,7 @@ async function renderProfile(){
     };
 }
 
-async function openGroup(gid){curGroup=gid;const g=await iG('groups',gid);if(!g)return;curGroupKey=g.groupKeyBase64;curGroupType=g.groupType||'';document.getElementById('gd-title').textContent=g.name;const isPersonal=g.groupType==='personal'||g.isPersonal;const pplTab=document.querySelector('.tab[data-tab="members"]');if(pplTab)pplTab.style.display=isPersonal?'none':'';show('gd');startSync(gid,curGroupKey);switchGroupTab('exp')}
+async function openGroup(gid){curGroup=gid;const g=await iG('groups',gid);if(!g)return;curGroupKey=g.groupKeyBase64;curGroupType=g.groupType||'';document.getElementById('gd-title').textContent=g.name;const isPersonal=g.groupType==='personal'||g.isPersonal;const pplTab=document.querySelector('.tab[data-tab="members"]');if(pplTab)pplTab.style.display=isPersonal?'none':'';const analyticsTab=document.querySelector('.tab[data-tab="analytics"]');if(analyticsTab)analyticsTab.style.display='';show('gd');startSync(gid,curGroupKey);switchGroupTab('exp')}
 
 async function restoreExpense(eid){
     const expense=await iG('expenses',eid);if(!expense)return;
@@ -2383,7 +2395,79 @@ async function renderMembers(){
     document.getElementById('invite-btn').addEventListener('click',async()=>{const link=await makeShortLink(curGroup,curGroupKey,g.name);document.getElementById('inv-display2').textContent=link;document.getElementById('share-btn2').onclick=()=>shareLink(link,g.name);show('invite')});
 }
 
-function switchGroupTab(tab){expSearchQuery='';expTagFilter=null;expDateFilter='all';document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));document.getElementById('t-exp').style.display=tab==='exp'?'':'none';document.getElementById('t-bal').style.display=tab==='bal'?'':'none';document.getElementById('t-mem').style.display=tab==='members'?'':'none';document.getElementById('fab-ae').style.display=tab==='exp'?'':'none';if(tab==='exp')renderExpenses();else if(tab==='bal')renderBalances();else renderMembers()}
+async function renderGroupAnalytics(){
+    const isPersonal=curGroupType==='personal';
+    const exps=(await iA('expenses')).filter(e=>e.groupId===curGroup&&!e.isDeleted);
+    const sets=(await iA('settlements')).filter(s=>s.groupId===curGroup&&!s.isDeleted);
+    const mems=(await iA('members')).filter(m=>m.groupId===curGroup);
+    const nm={};mems.forEach(m=>nm[m.memberId]=m.displayName);
+    const el=document.getElementById('t-analytics');
+
+    if(!exps.length){el.innerHTML='<div class="empty"><div class="ic">&#x1F4CA;</div><h3>No data yet</h3><p>Add expenses to see analytics</p></div>';return}
+
+    const tagColors={'food':'#7C6FE0','transport':'#89C4F4','shopping':'#F2A0C4','entertainment':'#F8C4A4',
+        'travel':'#BB8FCE','bills':'#F7DC6F','groceries':'#8DDCC5','health':'#F1948A','rent':'#F8C4A4','other':'#BDC3C7'};
+    let html='';
+
+    // By Category
+    const tagTotals={};
+    exps.forEach(e=>{const t=e.tag||'other';tagTotals[t]=(tagTotals[t]||0)+e.amountCents});
+    const totalSpend=Object.values(tagTotals).reduce((a,b)=>a+b,0);
+    const tagSorted=Object.entries(tagTotals).sort((a,b)=>b[1]-a[1]);
+    html+=`<div class="analytics-card"><h3>&#x1F3F7; By Category</h3>`;
+    tagSorted.forEach(([tag,amt])=>{
+        const pct=totalSpend>0?(amt/totalSpend*100):0;
+        const t=TAGS[tag]||TAGS.other;
+        const color=tagColors[tag]||'#BDC3C7';
+        html+=`<div class="chart-bar-row"><div class="chart-bar-label">${t.icon} ${t.label}</div><div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,5)}%;background:${color}"><span>${pct.toFixed(0)}%</span></div></div><div class="chart-bar-value">${fmt(amt)}</div></div>`;
+    });
+    html+=`</div>`;
+
+    // By Month (last 6 months)
+    const monthTotals={};
+    const now=new Date();
+    for(let i=5;i>=0;i--){
+        const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+        const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+        monthTotals[key]=0;
+    }
+    exps.forEach(e=>{
+        const d=new Date(e.createdAt);
+        const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+        if(key in monthTotals)monthTotals[key]+=e.amountCents;
+    });
+    const monthMax=Math.max(...Object.values(monthTotals),1);
+    const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    html+=`<div class="analytics-card"><h3>&#x1F4C5; By Month</h3><div class="chart-months-row">`;
+    Object.entries(monthTotals).forEach(([key,amt])=>{
+        const pct=monthMax>0?(amt/monthMax*100):0;
+        const m=parseInt(key.split('-')[1])-1;
+        html+=`<div class="chart-month-bar"><div class="chart-month-col"><div class="chart-month-fill" style="height:${Math.max(pct,3)}%;background:linear-gradient(to top,var(--primary),var(--primary-soft))"></div></div><div class="chart-month-label">${monthNames[m]}</div><div class="chart-month-amount">${fmt(amt)}</div></div>`;
+    });
+    html+=`</div></div>`;
+
+    // By Member (skip for personal groups)
+    if(!isPersonal){
+        const memberPaid={};
+        exps.forEach(e=>{
+            if(e.paidByMap){for(const[id,a] of Object.entries(e.paidByMap))memberPaid[id]=(memberPaid[id]||0)+a}
+            else{memberPaid[e.paidBy]=(memberPaid[e.paidBy]||0)+e.amountCents}
+        });
+        const paidSorted=Object.entries(memberPaid).sort((a,b)=>b[1]-a[1]);
+        const paidMax=paidSorted.length?paidSorted[0][1]:1;
+        html+=`<div class="analytics-card"><h3>&#x1F4B3; Who Paid Most</h3>`;
+        paidSorted.forEach(([id,amt])=>{
+            const pct=paidMax>0?(amt/paidMax*100):0;
+            const col=getColor(id);
+            html+=`<div class="chart-bar-row"><div class="chart-bar-label">${esc(nm[id]||id.slice(0,8))}</div><div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,5)}%;background:${col}"><span>${fmt(amt)}</span></div></div><div class="chart-bar-value">${fmt(amt)}</div></div>`;
+        });
+        html+=`</div>`;
+    }
+
+    el.innerHTML=html;
+}
+
+function switchGroupTab(tab){expSearchQuery='';expTagFilter=null;expDateFilter='all';document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));document.getElementById('t-exp').style.display=tab==='exp'?'':'none';document.getElementById('t-bal').style.display=tab==='bal'?'':'none';document.getElementById('t-mem').style.display=tab==='members'?'':'none';document.getElementById('t-analytics').style.display=tab==='analytics'?'':'none';document.getElementById('fab-ae').style.display=tab==='exp'?'':'none';if(tab==='exp')renderExpenses();else if(tab==='bal')renderBalances();else if(tab==='analytics')renderGroupAnalytics();else renderMembers()}
 
 let aePayerMode='single',aeSplitMode='equal',aeMembers=[];
 async function renderAddExpense(){
