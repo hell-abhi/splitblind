@@ -133,7 +133,11 @@ fun GroupDetailScreen(
                     }
                 },
                 actions = {
-                    TextButton(onClick = { viewModel.refresh() }) {
+                    val context = LocalContext.current
+                    TextButton(onClick = {
+                        viewModel.refresh()
+                        android.widget.Toast.makeText(context, "Sync completed", android.widget.Toast.LENGTH_SHORT).show()
+                    }) {
                         Icon(
                             Icons.Default.Refresh,
                             contentDescription = "Sync",
