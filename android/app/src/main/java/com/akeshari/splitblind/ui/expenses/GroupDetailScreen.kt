@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.akeshari.splitblind.data.database.entity.ExpenseEntity
+import com.akeshari.splitblind.data.database.entity.HistoryEntity
 import com.akeshari.splitblind.data.database.entity.SettlementEntity
 import com.akeshari.splitblind.data.database.entity.MemberEntity
 import com.akeshari.splitblind.util.Debt
@@ -140,13 +141,15 @@ fun GroupDetailScreen(
 
             when (selectedTab) {
                 0 -> ExpensesTab(
-                    expenses = state.expenses,
-                    settlements = state.settlements,
+                    expenses = state.allExpenses,
+                    settlements = state.allSettlements,
                     memberNames = state.memberNames,
                     myId = state.myId,
+                    historyMap = state.historyMap,
                     onEditExpense = { expense -> onEditExpense(viewModel.groupId, expense.expenseId) },
                     onDeleteExpense = { expense -> viewModel.deleteExpense(expense) },
-                    onUndoSettlement = { settlement -> viewModel.undoSettlement(settlement) }
+                    onUndoSettlement = { settlement -> viewModel.undoSettlement(settlement) },
+                    onRestoreExpense = { expense -> viewModel.restoreExpense(expense) }
                 )
                 1 -> BalancesTab(
                     debts = state.debts,
@@ -173,9 +176,11 @@ private fun ExpensesTab(
     settlements: List<SettlementEntity>,
     memberNames: Map<String, String>,
     myId: String,
+    historyMap: Map<String, List<HistoryEntity>>,
     onEditExpense: (ExpenseEntity) -> Unit,
     onDeleteExpense: (ExpenseEntity) -> Unit,
-    onUndoSettlement: (SettlementEntity) -> Unit
+    onUndoSettlement: (SettlementEntity) -> Unit,
+    onRestoreExpense: (ExpenseEntity) -> Unit
 ) {
     // Dialog state
     var showExpenseDialog by remember { mutableStateOf(false) }
@@ -183,9 +188,11 @@ private fun ExpensesTab(
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showSettlementDialog by remember { mutableStateOf(false) }
     var selectedSettlement by remember { mutableStateOf<SettlementEntity?>(null) }
+    // Track which items have expanded history
+    var expandedHistoryIds by remember { mutableStateOf(setOf<String>()) }
 
-    // Expense actions dialog
-    if (showExpenseDialog && selectedExpense != null) {
+    // Expense actions dialog (only for non-deleted)
+    if (showExpenseDialog && selectedExpense != null && !selectedExpense!!.isDeleted) {
         AlertDialog(
             onDismissRequest = { showExpenseDialog = false; selectedExpense = null },
             title = { Text(selectedExpense!!.description) },
@@ -211,6 +218,29 @@ private fun ExpensesTab(
                     }) {
                         Text("Delete Expense", color = MaterialTheme.colorScheme.error)
                     }
+                }
+            }
+        )
+    }
+
+    // Restore dialog for deleted expenses
+    if (showExpenseDialog && selectedExpense != null && selectedExpense!!.isDeleted) {
+        AlertDialog(
+            onDismissRequest = { showExpenseDialog = false; selectedExpense = null },
+            title = { Text("Deleted Expense") },
+            text = { Text("${selectedExpense!!.description} - ${formatAmount(selectedExpense!!.amountCents)}") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onRestoreExpense(selectedExpense!!)
+                    showExpenseDialog = false
+                    selectedExpense = null
+                }) {
+                    Text("Restore")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExpenseDialog = false; selectedExpense = null }) {
+                    Text("Cancel")
                 }
             }
         )
@@ -244,25 +274,39 @@ private fun ExpensesTab(
         val s = selectedSettlement!!
         val fromName = if (s.fromMember == myId) "You" else (memberNames[s.fromMember] ?: s.fromMember.take(8))
         val toName = if (s.toMember == myId) "You" else (memberNames[s.toMember] ?: s.toMember.take(8))
-        AlertDialog(
-            onDismissRequest = { showSettlementDialog = false; selectedSettlement = null },
-            title = { Text("Undo Settlement") },
-            text = { Text("Undo this settlement ($fromName paid $toName ${formatAmount(s.amountCents)})? The debt will reappear.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    onUndoSettlement(selectedSettlement!!)
-                    showSettlementDialog = false
-                    selectedSettlement = null
-                }) {
-                    Text("Undo", color = MaterialTheme.colorScheme.error)
+        if (!s.isDeleted) {
+            AlertDialog(
+                onDismissRequest = { showSettlementDialog = false; selectedSettlement = null },
+                title = { Text("Undo Settlement") },
+                text = { Text("Undo this settlement ($fromName paid $toName ${formatAmount(s.amountCents)})? The debt will reappear.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        onUndoSettlement(selectedSettlement!!)
+                        showSettlementDialog = false
+                        selectedSettlement = null
+                    }) {
+                        Text("Undo", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showSettlementDialog = false; selectedSettlement = null }) {
+                        Text("Cancel")
+                    }
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showSettlementDialog = false; selectedSettlement = null }) {
-                    Text("Cancel")
+            )
+        } else {
+            AlertDialog(
+                onDismissRequest = { showSettlementDialog = false; selectedSettlement = null },
+                title = { Text("Deleted Settlement") },
+                text = { Text("$fromName paid $toName ${formatAmount(s.amountCents)}") },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = { showSettlementDialog = false; selectedSettlement = null }) {
+                        Text("Close")
+                    }
                 }
-            }
-        )
+            )
+        }
     }
 
     data class TimelineItem(val type: String, val ts: Long, val expense: ExpenseEntity? = null, val settlement: SettlementEntity? = null)
@@ -277,57 +321,142 @@ private fun ExpensesTab(
         }
     } else {
         val dateFormat = SimpleDateFormat("MMM d", Locale.getDefault())
+        val dateTimeFormat = SimpleDateFormat("MMM d, h:mm a", Locale.getDefault())
         LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(items.size) { index ->
                 val item = items[index]
                 if (item.type == "expense" && item.expense != null) {
                     val expense = item.expense
+                    val isDeleted = expense.isDeleted
                     // Check if user is involved (payer or in split)
                     val splitMembers: List<String> = try { Json.decodeFromString(expense.splitAmong) } catch (_: Exception) { emptyList() }
                     val paidByMap: Map<String, Long>? = expense.paidByMap?.let { try { Json.decodeFromString(it) } catch (_: Exception) { null } }
                     val isInvolved = expense.paidBy == myId || splitMembers.contains(myId) || paidByMap?.containsKey(myId) == true
-                    val cardAlpha = if (isInvolved) 1f else 0.55f
+                    val itemAlpha = if (isDeleted) 0.5f else 1f
 
-                    Card(
-                        modifier = Modifier.fillMaxWidth().clickable {
-                            selectedExpense = expense
-                            showExpenseDialog = true
-                        },
-                        colors = if (isInvolved) androidx.compose.material3.CardDefaults.cardColors()
-                        else androidx.compose.material3.CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-                    ) {
-                        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Text(expense.description, style = MaterialTheme.typography.titleSmall)
-                                    val tag = ExpenseTag.fromSlug(expense.tag)
-                                    if (tag != null) {
-                                        Box(modifier = Modifier.background(Color(tag.color), RoundedCornerShape(12.dp)).padding(horizontal = 8.dp, vertical = 2.dp)) {
-                                            Text("${tag.emoji} ${tag.label}", style = MaterialTheme.typography.labelSmall, color = Color.Black)
+                    val history = historyMap[expense.expenseId] ?: emptyList()
+                    val isHistoryExpanded = expense.expenseId in expandedHistoryIds
+
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selectedExpense = expense
+                                    showExpenseDialog = true
+                                },
+                            colors = if (isDeleted) {
+                                androidx.compose.material3.CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f))
+                            } else if (isInvolved) {
+                                androidx.compose.material3.CardDefaults.cardColors()
+                            } else {
+                                androidx.compose.material3.CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                            }
+                        ) {
+                            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Text(
+                                                expense.description,
+                                                style = MaterialTheme.typography.titleSmall,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = itemAlpha)
+                                            )
+                                            if (isDeleted) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .background(MaterialTheme.colorScheme.error.copy(alpha = 0.8f), RoundedCornerShape(8.dp))
+                                                        .padding(horizontal = 6.dp, vertical = 1.dp)
+                                                ) {
+                                                    Text("Deleted", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
+                                                }
+                                            }
+                                            val tag = ExpenseTag.fromSlug(expense.tag)
+                                            if (tag != null && !isDeleted) {
+                                                Box(modifier = Modifier.background(Color(tag.color), RoundedCornerShape(12.dp)).padding(horizontal = 8.dp, vertical = 2.dp)) {
+                                                    Text("${tag.emoji} ${tag.label}", style = MaterialTheme.typography.labelSmall, color = Color.Black)
+                                                }
+                                            }
+                                        }
+                                        // Paid by with "you" label
+                                        val paidByText = if (paidByMap != null && paidByMap.size > 1) {
+                                            paidByMap.keys.joinToString(" + ") { id -> if (id == myId) "You" else (memberNames[id] ?: id.take(6)) } + " paid"
+                                        } else {
+                                            if (expense.paidBy == myId) "Paid by You" else "Paid by ${memberNames[expense.paidBy] ?: expense.paidBy}"
+                                        }
+                                        Text(paidByText, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = itemAlpha))
+                                        if (!isInvolved && !isDeleted) {
+                                            Text("Not involved", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                                        }
+                                        Text(dateFormat.format(Date(expense.createdAt)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = itemAlpha))
+                                    }
+                                    Text(
+                                        formatAmount(expense.amountCents),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isDeleted) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                        else if (isInvolved) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+
+                                // History button
+                                if (history.isNotEmpty()) {
+                                    TextButton(
+                                        onClick = {
+                                            expandedHistoryIds = if (isHistoryExpanded) {
+                                                expandedHistoryIds - expense.expenseId
+                                            } else {
+                                                expandedHistoryIds + expense.expenseId
+                                            }
+                                        },
+                                        modifier = Modifier.padding(top = 4.dp)
+                                    ) {
+                                        Text(
+                                            if (isHistoryExpanded) "Hide History" else "History (${history.size})",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+
+                                    if (isHistoryExpanded) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(start = 8.dp, top = 4.dp),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            history.forEach { h ->
+                                                HistoryEntryRow(h, dateTimeFormat)
+                                            }
                                         }
                                     }
                                 }
-                                // Paid by with "you" label
-                                val paidByText = if (paidByMap != null && paidByMap.size > 1) {
-                                    paidByMap.keys.joinToString(" + ") { id -> if (id == myId) "You" else (memberNames[id] ?: id.take(6)) } + " paid"
-                                } else {
-                                    if (expense.paidBy == myId) "Paid by You" else "Paid by ${memberNames[expense.paidBy] ?: expense.paidBy}"
-                                }
-                                Text(paidByText, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                if (!isInvolved) {
-                                    Text("Not involved", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
-                                }
-                                Text(dateFormat.format(Date(expense.createdAt)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Text(formatAmount(expense.amountCents), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = if (isInvolved) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 } else if (item.type == "settlement" && item.settlement != null) {
                     val s = item.settlement
+                    val isDeleted = s.isDeleted
                     val isMySettlement = s.fromMember == myId || s.toMember == myId
                     val fromName = if (s.fromMember == myId) "You" else (memberNames[s.fromMember] ?: s.fromMember.take(8))
                     val toName = if (s.toMember == myId) "You" else (memberNames[s.toMember] ?: s.toMember.take(8))
-                    val bgColor = if (isMySettlement) Color(0x266BCB77) else Color(0x1A6BCB77)
+                    val itemAlpha = if (isDeleted) 0.5f else 1f
+
+                    val history = historyMap[s.settlementId] ?: emptyList()
+                    val isHistoryExpanded = s.settlementId in expandedHistoryIds
+
+                    val bgColor = if (isDeleted) {
+                        MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)
+                    } else if (isMySettlement) {
+                        Color(0x266BCB77)
+                    } else {
+                        Color(0x1A6BCB77)
+                    }
 
                     Card(
                         modifier = Modifier.fillMaxWidth().clickable {
@@ -336,24 +465,150 @@ private fun ExpensesTab(
                         },
                         colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = bgColor)
                     ) {
-                        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Text("\uD83E\uDD1D Settlement", style = MaterialTheme.typography.titleSmall)
-                                    if (isMySettlement) {
-                                        Box(modifier = Modifier.background(Color(0xFF6BCB77), RoundedCornerShape(8.dp)).padding(horizontal = 6.dp, vertical = 1.dp)) {
-                                            Text("YOU", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
+                        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Text(
+                                            "\uD83E\uDD1D Settlement",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = itemAlpha)
+                                        )
+                                        if (isDeleted) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .background(MaterialTheme.colorScheme.error.copy(alpha = 0.8f), RoundedCornerShape(8.dp))
+                                                    .padding(horizontal = 6.dp, vertical = 1.dp)
+                                            ) {
+                                                Text("Deleted", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
+                                            }
+                                        } else if (isMySettlement) {
+                                            Box(modifier = Modifier.background(Color(0xFF6BCB77), RoundedCornerShape(8.dp)).padding(horizontal = 6.dp, vertical = 1.dp)) {
+                                                Text("YOU", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                    }
+                                    Text("$fromName paid $toName", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = itemAlpha))
+                                    Text(dateFormat.format(Date(s.createdAt)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = itemAlpha))
+                                }
+                                Text(
+                                    formatAmount(s.amountCents),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isDeleted) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f) else Color(0xFF6BCB77)
+                                )
+                            }
+
+                            // History button
+                            if (history.isNotEmpty()) {
+                                TextButton(
+                                    onClick = {
+                                        expandedHistoryIds = if (isHistoryExpanded) {
+                                            expandedHistoryIds - s.settlementId
+                                        } else {
+                                            expandedHistoryIds + s.settlementId
+                                        }
+                                    },
+                                    modifier = Modifier.padding(top = 4.dp)
+                                ) {
+                                    Text(
+                                        if (isHistoryExpanded) "Hide History" else "History (${history.size})",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+
+                                if (isHistoryExpanded) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(start = 8.dp, top = 4.dp),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        history.forEach { h ->
+                                            HistoryEntryRow(h, dateTimeFormat)
                                         }
                                     }
                                 }
-                                Text("$fromName paid $toName", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text(dateFormat.format(Date(s.createdAt)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Text(formatAmount(s.amountCents), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color(0xFF6BCB77))
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun HistoryEntryRow(history: HistoryEntity, dateFormat: SimpleDateFormat) {
+    val icon = when (history.action) {
+        "created" -> "\uD83D\uDCDD"  // memo
+        "edited" -> "\u270F\uFE0F"    // pencil
+        "deleted" -> "\uD83D\uDDD1\uFE0F"  // wastebasket
+        "restored" -> "\u267B\uFE0F"  // recycling
+        else -> "\u2022"
+    }
+    val actionText = when (history.action) {
+        "created" -> "Created"
+        "edited" -> "Edited"
+        "deleted" -> "Deleted"
+        "restored" -> "Restored"
+        else -> history.action.replaceFirstChar { it.uppercase() }
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(icon, style = MaterialTheme.typography.labelSmall)
+        Text(
+            "$actionText by ${history.changedByName}",
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            "\u00B7",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+        )
+        Text(
+            dateFormat.format(Date(history.changedAt)),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+        )
+    }
+
+    // Show what changed for edits
+    if (history.action == "edited" && history.previousData != null && history.newData != null) {
+        val changesSummary = remember(history.historyId) {
+            try {
+                val prev: Map<String, String> = Json.decodeFromString(history.previousData)
+                val next: Map<String, String> = Json.decodeFromString(history.newData)
+                val changes = mutableListOf<String>()
+                if (prev["description"] != next["description"]) {
+                    changes.add("\"${prev["description"]}\" -> \"${next["description"]}\"")
+                }
+                if (prev["amountCents"] != next["amountCents"]) {
+                    val oldAmt = (prev["amountCents"]?.toLongOrNull() ?: 0) / 100.0
+                    val newAmt = (next["amountCents"]?.toLongOrNull() ?: 0) / 100.0
+                    changes.add(String.format(Locale.getDefault(), "\u20B9%.2f -> \u20B9%.2f", oldAmt, newAmt))
+                }
+                if (changes.isNotEmpty()) changes.joinToString(", ") else null
+            } catch (_: Exception) { null }
+        }
+        if (changesSummary != null) {
+            Text(
+                changesSummary,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.padding(start = 24.dp)
+            )
         }
     }
 }

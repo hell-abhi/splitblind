@@ -6,7 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.akeshari.splitblind.crypto.Identity
 import com.akeshari.splitblind.data.database.dao.ExpenseDao
 import com.akeshari.splitblind.data.database.dao.GroupDao
+import com.akeshari.splitblind.data.database.dao.HistoryDao
 import com.akeshari.splitblind.data.database.entity.ExpenseEntity
+import com.akeshari.splitblind.data.database.entity.HistoryEntity
 import com.akeshari.splitblind.data.database.entity.MemberEntity
 import com.akeshari.splitblind.sync.OpData
 import com.akeshari.splitblind.sync.OpPayload
@@ -78,6 +80,7 @@ class AddExpenseViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val groupDao: GroupDao,
     private val expenseDao: ExpenseDao,
+    private val historyDao: HistoryDao,
     private val identity: Identity,
     private val syncEngine: SyncEngine
 ) : ViewModel() {
@@ -303,6 +306,7 @@ class AddExpenseViewModel @Inject constructor(
             val expenseId = editExpenseId ?: UUID.randomUUID().toString().take(16)
             val now = System.currentTimeMillis()
             val splitList = splitMembers
+            val oldExpense = if (editExpenseId != null) expenseDao.getExpense(editExpenseId) else null
 
             // Legacy paidBy: first payer (or single payer)
             val legacyPaidBy = if (s.isMultiPayer && paidByMapCents != null) {
@@ -355,6 +359,67 @@ class AddExpenseViewModel @Inject constructor(
                             paidByMap = paidByMapCents,
                             splitMode = splitModeStr,
                             splitDetails = splitDetailsCents
+                        ),
+                        hlc = now,
+                        author = identity.memberId
+                    )
+                )
+
+                // Record history
+                val isEditing = oldExpense != null
+                val historyAction = if (isEditing) "edited" else "created"
+                val myName = identity.displayName.ifBlank { identity.memberId.take(8) }
+                val historyId = UUID.randomUUID().toString().take(16)
+                val previousDataJson = if (isEditing && oldExpense != null) {
+                    Json.encodeToString(
+                        mapOf(
+                            "description" to oldExpense.description,
+                            "amountCents" to oldExpense.amountCents.toString(),
+                            "paidBy" to oldExpense.paidBy,
+                            "splitAmong" to oldExpense.splitAmong,
+                            "tag" to (oldExpense.tag ?: "")
+                        )
+                    )
+                } else null
+                val newDataJson = Json.encodeToString(
+                    mapOf(
+                        "description" to s.description.trim(),
+                        "amountCents" to amountCents.toString(),
+                        "paidBy" to legacyPaidBy,
+                        "splitAmong" to Json.encodeToString(splitList),
+                        "tag" to s.selectedTag
+                    )
+                )
+
+                val historyEntry = HistoryEntity(
+                    historyId = historyId,
+                    expenseId = expenseId,
+                    entityType = "expense",
+                    action = historyAction,
+                    previousData = previousDataJson,
+                    newData = newDataJson,
+                    changedBy = identity.memberId,
+                    changedByName = myName,
+                    changedAt = now
+                )
+                historyDao.insert(historyEntry)
+
+                syncEngine.pushOp(
+                    groupId = groupId,
+                    groupKeyBase64 = group.groupKeyBase64,
+                    payload = OpPayload(
+                        id = UUID.randomUUID().toString(),
+                        type = "history",
+                        data = OpData(
+                            historyId = historyId,
+                            expenseId = expenseId,
+                            entityType = "expense",
+                            action = historyAction,
+                            previousDataJson = previousDataJson,
+                            newDataJson = newDataJson,
+                            changedBy = identity.memberId,
+                            changedByName = myName,
+                            changedAt = now
                         ),
                         hlc = now,
                         author = identity.memberId

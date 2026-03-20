@@ -6,6 +6,7 @@ import com.akeshari.splitblind.crypto.Identity
 import com.akeshari.splitblind.data.database.SplitBlindDatabase
 import com.akeshari.splitblind.data.database.dao.ExpenseDao
 import com.akeshari.splitblind.data.database.dao.GroupDao
+import com.akeshari.splitblind.data.database.dao.HistoryDao
 import com.akeshari.splitblind.data.database.dao.ProcessedOpDao
 import com.akeshari.splitblind.data.database.dao.SettlementDao
 import dagger.Module
@@ -26,7 +27,7 @@ object AppModule {
             context,
             SplitBlindDatabase::class.java,
             "splitblind.db"
-        ).addMigrations(SplitBlindDatabase.MIGRATION_1_2).build()
+        ).addMigrations(SplitBlindDatabase.MIGRATION_1_2, SplitBlindDatabase.MIGRATION_2_3).build()
     }
 
     @Provides
@@ -40,6 +41,9 @@ object AppModule {
 
     @Provides
     fun provideProcessedOpDao(db: SplitBlindDatabase): ProcessedOpDao = db.processedOpDao()
+
+    @Provides
+    fun provideHistoryDao(db: SplitBlindDatabase): HistoryDao = db.historyDao()
 
     @Provides
     @Singleton

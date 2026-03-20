@@ -5,9 +5,11 @@ import com.akeshari.splitblind.crypto.CryptoEngine
 import com.akeshari.splitblind.crypto.EncryptedEnvelope
 import com.akeshari.splitblind.data.database.dao.ExpenseDao
 import com.akeshari.splitblind.data.database.dao.GroupDao
+import com.akeshari.splitblind.data.database.dao.HistoryDao
 import com.akeshari.splitblind.data.database.dao.ProcessedOpDao
 import com.akeshari.splitblind.data.database.dao.SettlementDao
 import com.akeshari.splitblind.data.database.entity.ExpenseEntity
+import com.akeshari.splitblind.data.database.entity.HistoryEntity
 import com.akeshari.splitblind.data.database.entity.MemberEntity
 import com.akeshari.splitblind.data.database.entity.ProcessedOpEntity
 import com.akeshari.splitblind.data.database.entity.SettlementEntity
@@ -61,7 +63,16 @@ data class OpData(
     // settlement
     val settlementId: String? = null,
     val fromMember: String? = null,
-    val toMember: String? = null
+    val toMember: String? = null,
+    // history
+    val historyId: String? = null,
+    val entityType: String? = null,
+    val action: String? = null,
+    val previousDataJson: String? = null,
+    val newDataJson: String? = null,
+    val changedBy: String? = null,
+    val changedByName: String? = null,
+    val changedAt: Long? = null
 )
 
 private val json = Json { ignoreUnknownKeys = true }
@@ -72,7 +83,8 @@ class SyncEngine @Inject constructor(
     private val groupDao: GroupDao,
     private val expenseDao: ExpenseDao,
     private val settlementDao: SettlementDao,
-    private val processedOpDao: ProcessedOpDao
+    private val processedOpDao: ProcessedOpDao,
+    private val historyDao: HistoryDao
 ) {
     private val TAG = "SyncEngine"
     private val listeners = mutableMapOf<String, Pair<DatabaseReference, ChildEventListener>>()
@@ -233,6 +245,23 @@ class SyncEngine @Inject constructor(
                         )
                     )
                 }
+            }
+            "history" -> {
+                val historyId = d.historyId ?: op.id
+                historyDao.insert(
+                    HistoryEntity(
+                        historyId = historyId,
+                        expenseId = d.expenseId,
+                        settlementId = d.settlementId,
+                        entityType = d.entityType ?: "expense",
+                        action = d.action ?: "created",
+                        previousData = d.previousDataJson,
+                        newData = d.newDataJson,
+                        changedBy = d.changedBy ?: op.author,
+                        changedByName = d.changedByName ?: "Unknown",
+                        changedAt = d.changedAt ?: now
+                    )
+                )
             }
         }
     }

@@ -20,4 +20,7 @@ interface SettlementDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSettlement(settlement: SettlementEntity)
+
+    @Query("SELECT * FROM settlements WHERE groupId = :groupId ORDER BY createdAt DESC")
+    fun getAllSettlementsIncludingDeleted(groupId: String): Flow<List<SettlementEntity>>
 }

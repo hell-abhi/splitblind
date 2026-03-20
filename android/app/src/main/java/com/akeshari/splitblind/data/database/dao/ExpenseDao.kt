@@ -20,4 +20,7 @@ interface ExpenseDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertExpense(expense: ExpenseEntity)
+
+    @Query("SELECT * FROM expenses WHERE groupId = :groupId ORDER BY createdAt DESC")
+    fun getAllExpensesIncludingDeleted(groupId: String): Flow<List<ExpenseEntity>>
 }
