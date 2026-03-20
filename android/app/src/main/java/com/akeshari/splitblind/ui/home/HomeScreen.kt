@@ -351,8 +351,12 @@ fun HomeScreen(
                             modifier = Modifier.padding(top = 4.dp)
                         )
                     }
-                    items(dashboard.recentExpenses) { expense ->
-                        RecentExpenseCard(expense = expense)
+                    items(dashboard.recentExpenses) { ewg ->
+                        RecentExpenseCard(
+                            expense = ewg.expense,
+                            groupName = ewg.groupName,
+                            onClick = { onPersonalTrackerClick?.invoke(ewg.expense.groupId) }
+                        )
                     }
                 }
             }
@@ -546,12 +550,18 @@ private fun SummaryCard(totalOwed: Long, totalOwe: Long, netBalance: Long) {
 }
 
 @Composable
-private fun RecentExpenseCard(expense: ExpenseEntity) {
+private fun RecentExpenseCard(
+    expense: ExpenseEntity,
+    groupName: String = "",
+    onClick: () -> Unit = {}
+) {
     val dateFormat = SimpleDateFormat("MMM d", Locale.getDefault())
     val tag = ExpenseTag.fromSlug(expense.tag)
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
@@ -585,7 +595,10 @@ private fun RecentExpenseCard(expense: ExpenseEntity) {
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        dateFormat.format(Date(expense.createdAt)),
+                        buildString {
+                            if (groupName.isNotBlank()) { append(groupName); append(" \u00B7 ") }
+                            append(dateFormat.format(Date(expense.createdAt)))
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
