@@ -48,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.akeshari.splitblind.crypto.Identity
 import com.akeshari.splitblind.ui.theme.ThemeManager
 import com.akeshari.splitblind.ui.theme.ThemeMode
@@ -162,6 +163,29 @@ fun ProfileScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                )
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text(
+                                        "\uD83D\uDD12 How is this safe?",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        "\uD83D\uDD11 Your passphrase is hashed (SHA-256) before lookup — the server never sees the actual words.\n\n" +
+                                        "\uD83D\uDCE6 Your backup is AES-256 encrypted with a key derived from your passphrase + a unique random salt.\n\n" +
+                                        "\uD83D\uDEE1 No one can read it — not us, not Firebase, not anyone without your exact passphrase.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        lineHeight = 18.sp
+                                    )
+                                }
+                            }
                         }
                     },
                     confirmButton = {

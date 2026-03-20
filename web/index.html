@@ -850,6 +850,15 @@
                 <div class="ob-logo" style="margin:0 auto 16px;width:72px;height:72px;border-radius:22px;font-size:32px;background:linear-gradient(135deg,var(--accent-peach),var(--accent-pink))">&#x1F511;</div>
                 <h2 style="font-size:18px;font-weight:800;letter-spacing:-0.5px">Save Your Recovery Passphrase</h2>
                 <p style="color:var(--text-secondary);margin-top:8px;font-size:13px;font-weight:500;line-height:1.6">This is the <strong>only way</strong> to recover your data if you lose your device or clear browser data.</p>
+                <div class="ae-section" style="margin-top:16px;text-align:left">
+                    <div class="ae-section-title"><span class="sec-emoji">&#x1F512;</span> How is this safe?</div>
+                    <div style="font-size:12px;color:var(--text-secondary);line-height:1.7">
+                        <p style="margin-bottom:8px"><strong>&#x1F511; Your passphrase never leaves your device as-is.</strong> It is converted into an encryption key using SHA-256 hashing — the original words are never stored on any server.</p>
+                        <p style="margin-bottom:8px"><strong>&#x1F4E6; Your backup is encrypted before upload.</strong> Your identity and group keys are encrypted with AES-256-GCM (military-grade) using your passphrase-derived key + a unique random salt. The encrypted blob is then stored on Firebase.</p>
+                        <p style="margin-bottom:8px"><strong>&#x1F50D; Firebase sees only gibberish.</strong> The server stores your backup at a hashed path — it cannot determine whose backup it is, what's inside, or reverse the hash to find your passphrase.</p>
+                        <p style="margin-bottom:0"><strong>&#x1F6E1; Even identical passphrases are safe.</strong> Each backup uses a unique random salt, so two users with the same passphrase produce completely different encryption keys and ciphertext.</p>
+                    </div>
+                </div>
             </div>
             <div class="ae-section">
                 <div class="ae-section-title"><span class="sec-emoji">&#x1F3B2;</span> Your Passphrase</div>
@@ -1443,7 +1452,7 @@ async function recoverFromPassphrase(passphrase){
 }
 
 function downloadPassphrase(pp){
-    const text='SplitBlind Recovery Passphrase\n================================\n\nYour passphrase: '+pp+'\n\nKeep this safe! This is the only way to recover your\ngroups and data if you lose your device.\n\nTo recover: Open SplitBlind > "Recover with Passphrase" > Enter the words above.\n';
+    const text='SplitBlind Recovery Passphrase\n================================\n\nYour passphrase: '+pp+'\n\nKeep this safe! This is the only way to recover your\ngroups and data if you lose your device.\n\nTo recover: Open SplitBlind > "Recover with Passphrase" > Enter the words above.\n\nHow is this safe?\n- Your passphrase is hashed (SHA-256) before any server lookup\n- Your backup is encrypted with AES-256-GCM using your passphrase\n- Each backup uses a unique random salt (no collisions)\n- The server stores only encrypted gibberish — it cannot read your data\n- No one can recover your data without knowing your exact passphrase\n';
     const blob=new Blob([text],{type:'text/plain'});
     const a=document.createElement('a');
     a.href=URL.createObjectURL(blob);
@@ -2133,6 +2142,11 @@ async function renderProfile(){
                     <h3 style="font-size:17px;font-weight:800">Your Recovery Passphrase</h3>
                     <div style="font-size:20px;font-weight:800;color:var(--primary);padding:16px;background:var(--primary-bg);border-radius:14px;margin:16px 0;word-spacing:6px">${esc(pp)}</div>
                     <p style="color:var(--text-secondary);font-size:13px;font-weight:500;line-height:1.6">Keep this safe. It's the only way to recover your data.</p>
+                    <div style="text-align:left;margin-top:12px;padding:12px;background:var(--surface);border-radius:12px;font-size:11px;color:var(--text-secondary);line-height:1.6">
+                        &#x1F512; <strong>Your passphrase is hashed (SHA-256)</strong> before lookup — the server never sees the actual words.<br>
+                        &#x1F4E6; <strong>Your backup is AES-256 encrypted</strong> with a key derived from your passphrase + unique salt.<br>
+                        &#x1F6E1; <strong>No one can read it</strong> — not us, not Firebase, not anyone without your exact passphrase.
+                    </div>
                 </div>
                 <div style="display:flex;gap:8px;margin-bottom:10px">
                     <button class="modal-btn modal-btn-edit" style="flex:1" onclick="downloadPassphrase('${esc(pp)}');closeModal()">&#x1F4E5; Download</button>
