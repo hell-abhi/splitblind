@@ -701,6 +701,93 @@
         .chart-month-label { font-size:10px; font-weight:700; color:var(--text-secondary); margin-top:6px; }
         .chart-month-amount { font-size:10px; font-weight:700; margin-top:2px; }
         .chart-months-row { display:flex; gap:4px; }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+            max-width:480px; width:100%;
+            display:flex; justify-content:space-around; align-items:center;
+            background:var(--card); border-top:1px solid var(--border);
+            padding:6px 0 max(6px, env(safe-area-inset-bottom));
+            z-index:50; box-shadow:0 -2px 16px rgba(0,0,0,0.06);
+        }
+        .bottom-nav.hidden { display:none; }
+        .nav-tab {
+            display:flex; flex-direction:column; align-items:center; gap:2px;
+            background:none; border:none; padding:6px 12px; cursor:pointer;
+            font-family:'Inter',sans-serif; font-size:10px; font-weight:600;
+            color:var(--text-secondary); transition:all .2s;
+        }
+        .nav-tab.active { color:var(--primary); }
+        .nav-tab .nav-icon { font-size:20px; }
+
+        /* Profile screen */
+        .profile-section {
+            background:var(--card); border-radius:var(--r);
+            padding:18px 20px; margin-bottom:14px;
+            box-shadow:var(--shadow); border:1px solid var(--border);
+        }
+        .profile-section-title {
+            font-size:12px; font-weight:800; color:var(--text-secondary);
+            text-transform:uppercase; letter-spacing:1px; margin-bottom:14px;
+        }
+        .profile-row {
+            display:flex; align-items:center; justify-content:space-between;
+            padding:12px 0; border-bottom:1px solid var(--border);
+        }
+        .profile-row:last-child { border-bottom:none; }
+        .profile-row-left { display:flex; align-items:center; gap:12px; }
+        .profile-row-icon { font-size:20px; }
+        .profile-row-label { font-weight:600; font-size:14px; }
+        .profile-row-sublabel { font-size:12px; color:var(--text-secondary); font-weight:500; margin-top:2px; }
+        .profile-row-action {
+            background:var(--primary-bg); border:none; color:var(--primary);
+            font-size:13px; font-weight:700; padding:8px 16px; border-radius:10px;
+            cursor:pointer; font-family:'Inter',sans-serif; transition:all .2s;
+        }
+        .profile-row-action:active { transform:scale(.95); }
+        .profile-header {
+            text-align:center; padding:24px 0 8px;
+        }
+        .profile-avatar {
+            width:72px; height:72px; border-radius:24px;
+            display:flex; align-items:center; justify-content:center;
+            font-size:28px; font-weight:800; color:#fff;
+            margin:0 auto 12px;
+        }
+        .profile-name { font-size:20px; font-weight:800; letter-spacing:-0.5px; }
+        .profile-name-edit {
+            display:inline-flex; align-items:center; gap:6px;
+        }
+        .profile-name-edit-btn {
+            background:none; border:none; font-size:16px; cursor:pointer;
+            color:var(--primary); padding:4px;
+        }
+        .profile-about {
+            text-align:center; padding:20px 0; color:var(--text-secondary);
+            font-size:13px; font-weight:500; line-height:1.6;
+        }
+        .profile-about a { color:var(--primary); text-decoration:none; font-weight:700; }
+
+        /* Theme toggle switch */
+        .theme-toggle-row {
+            display:flex; align-items:center; justify-content:space-between; padding:12px 0;
+        }
+        .toggle-switch {
+            position:relative; width:48px; height:28px; cursor:pointer;
+        }
+        .toggle-switch input { opacity:0; width:0; height:0; }
+        .toggle-slider {
+            position:absolute; inset:0; background:var(--border);
+            border-radius:14px; transition:.3s;
+        }
+        .toggle-slider:before {
+            content:''; position:absolute; width:22px; height:22px;
+            left:3px; bottom:3px; background:#fff;
+            border-radius:50%; transition:.3s;
+        }
+        .toggle-switch input:checked + .toggle-slider { background:var(--primary); }
+        .toggle-switch input:checked + .toggle-slider:before { transform:translateX(20px); }
     </style>
 </head>
 <body>
@@ -773,19 +860,45 @@
         </div>
     </div>
 
-    <!-- Dashboard / Group List -->
-    <div class="screen" id="s-groups">
+    <!-- Home Tab -->
+    <div class="screen" id="s-home">
         <div class="topbar">
             <h1>SplitBlind</h1>
-            <button class="icon-btn" id="btn-theme" title="Toggle theme">&#x1F319;</button>
-            <button class="icon-btn" id="btn-sync-device" title="Use on another device">&#x1F504;</button>
-            <button class="icon-btn" id="btn-security">&#x1F512;</button>
         </div>
-        <div class="content" id="grp-list"></div>
-        <button class="fab" id="fab-cg">+</button>
+        <div class="content" id="home-content"></div>
     </div>
 
-    <!-- Analytics -->
+    <!-- Groups Tab -->
+    <div class="screen" id="s-groups-tab">
+        <div class="topbar">
+            <h1>Groups</h1>
+        </div>
+        <div class="content" id="groups-tab-list"></div>
+        <button class="fab" id="fab-cg" style="bottom:90px">+</button>
+    </div>
+
+    <!-- Analytics Tab -->
+    <div class="screen" id="s-analytics-tab">
+        <div class="topbar">
+            <h1>Spending Analytics</h1>
+        </div>
+        <div class="content" id="analytics-tab-content"></div>
+    </div>
+
+    <!-- Profile Tab -->
+    <div class="screen" id="s-profile">
+        <div class="topbar">
+            <h1>Profile</h1>
+        </div>
+        <div class="content" id="profile-content"></div>
+    </div>
+
+    <!-- Legacy s-groups kept hidden for data functions that reference grp-list -->
+    <div class="screen" id="s-groups" style="display:none">
+        <div class="content" id="grp-list"></div>
+    </div>
+
+    <!-- Analytics (stack screen, kept for compatibility) -->
     <div class="screen" id="s-analytics">
         <div class="topbar"><button class="back" id="analytics-back">&#x2190;</button><h1>Spending Analytics</h1></div>
         <div class="content" id="analytics-content"></div>
@@ -1018,6 +1131,13 @@
     </div>
 </div>
 
+<nav class="bottom-nav hidden" id="bottom-nav">
+    <button class="nav-tab active" data-tab="home"><span class="nav-icon">&#x1F3E0;</span>Home</button>
+    <button class="nav-tab" data-tab="groups-tab"><span class="nav-icon">&#x1F465;</span>Groups</button>
+    <button class="nav-tab" data-tab="analytics-tab"><span class="nav-icon">&#x1F4CA;</span>Analytics</button>
+    <button class="nav-tab" data-tab="profile"><span class="nav-icon">&#x1F464;</span>Profile</button>
+</nav>
+
 <div class="toast" id="toast"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -1123,10 +1243,39 @@ function getTagStyle(tag){if(tag&&TAGS[tag])return{icon:TAGS[tag].icon,bg:TAGS[t
 
 // Nav
 let curScreen='',curGroup='',curGroupKey='',hist=[];
-function show(id,push=true){if(curScreen&&push)hist.push(curScreen);document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('s-'+id).classList.add('active');curScreen=id}
-function goBack(){const p=hist.pop();if(p)show(p,false)}
-function goHome(){stopSync();hist=[];show('groups',false);renderGroups()}
+const TAB_SCREENS=['home','groups-tab','analytics-tab','profile'];
+function show(id,push=true){
+    const isTab=TAB_SCREENS.includes(id);
+    const nav=document.getElementById('bottom-nav');
+    if(isTab){
+        // Tab screens: show bottom nav, don't push to history
+        nav.classList.remove('hidden');
+        document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+        document.getElementById('s-'+id).classList.add('active');
+        curScreen=id;
+    }else{
+        // Stack screens: hide bottom nav, push to history
+        nav.classList.add('hidden');
+        if(curScreen&&push)hist.push(curScreen);
+        document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+        document.getElementById('s-'+id).classList.add('active');
+        curScreen=id;
+    }
+}
+function goBack(){const p=hist.pop();if(p){if(TAB_SCREENS.includes(p)){switchNavTab(p)}else{show(p,false)}}}
+function goHome(){stopSync();hist=[];switchNavTab('home')}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
+function switchNavTab(tabId){
+    // Update active tab styling
+    document.querySelectorAll('#bottom-nav .nav-tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tabId));
+    // Show the corresponding screen
+    show(tabId,false);
+    // Call the render function
+    if(tabId==='home')renderHome();
+    else if(tabId==='groups-tab')renderGroupsTab();
+    else if(tabId==='analytics-tab')renderAnalyticsTab();
+    else if(tabId==='profile')renderProfile();
+}
 
 // Firebase sync
 let syncRef=null;
@@ -1596,7 +1745,399 @@ async function renderGroups(){
     if(logDebtBtn)logDebtBtn.addEventListener('click',()=>{show('log-debt');initLogDebt()});
 }
 
-async function openGroup(gid){curGroup=gid;const g=await iG('groups',gid);if(!g)return;curGroupKey=g.groupKeyBase64;document.getElementById('gd-title').textContent=g.name;show('gd');startSync(gid,curGroupKey);switchTab('exp')}
+// Home tab render
+async function renderHome(){
+    const groups=(await iA('groups')).sort((a,b)=>b.createdAt-a.createdAt);
+    const allExps=(await iA('expenses')).filter(e=>!e.isDeleted);
+    const allSets=(await iA('settlements')).filter(s=>!s.isDeleted);
+    const el=document.getElementById('home-content');
+
+    // Compute overall balances
+    let totalOwed=0,totalOwe=0;
+    for(const g of groups){
+        const gExps=allExps.filter(e=>e.groupId===g.groupId);
+        const gSets=allSets.filter(s=>s.groupId===g.groupId);
+        const bal=calcBal(gExps,gSets);
+        const myBal=bal[myId]||0;
+        if(myBal>0)totalOwed+=myBal;
+        else if(myBal<0)totalOwe+=Math.abs(myBal);
+    }
+    const net=totalOwed-totalOwe;
+
+    // Summary card
+    let html=`<div class="dash-summary">
+        <h2>Your Overview</h2>
+        <div class="dash-summary-row">
+            <div class="dash-summary-item ds-owed"><div class="ds-amount">${fmt(totalOwed)}</div><div class="ds-label">You are owed</div></div>
+            <div class="dash-divider"></div>
+            <div class="dash-summary-item ds-owe"><div class="ds-amount">${fmt(totalOwe)}</div><div class="ds-label">You owe</div></div>
+            <div class="dash-divider"></div>
+            <div class="dash-summary-item ds-net"><div class="ds-amount">${net>=0?'+':''}${fmt(net)}</div><div class="ds-label">Net</div></div>
+        </div>
+    </div>`;
+
+    // Log Debt quick action
+    html+=`<button class="log-debt-btn" id="home-log-debt-btn">&#x1F4B8; Log Quick Debt</button>`;
+
+    // Quick Debts section
+    let allDebts=[];
+    for(const g of groups){
+        const gExps=allExps.filter(e=>e.groupId===g.groupId);
+        const gSets=allSets.filter(s=>s.groupId===g.groupId);
+        const bal=calcBal(gExps,gSets);
+        const debts=simplify(bal);
+        const gMems=(await iA('members')).filter(m=>m.groupId===g.groupId);
+        const nm={};gMems.forEach(m=>nm[m.memberId]=m.displayName);
+        debts.forEach(d=>{
+            if(d.from===myId||d.to===myId){
+                allDebts.push({...d,groupName:g.name,groupId:g.groupId,nm});
+            }
+        });
+    }
+    if(allDebts.length){
+        html+=`<div class="quick-debts"><div class="dash-activity-header"><h3>Quick Debts</h3></div>`;
+        allDebts.forEach(d=>{
+            const otherId=d.from===myId?d.to:d.from;
+            const otherName=d.nm[otherId]||otherId.slice(0,8);
+            const col=getColor(otherId);
+            const isIOwe=d.from===myId;
+            html+=`<div class="quick-debt-card"><div class="qd-avatar" style="background:${col}">${getInitial(otherName)}</div><div class="qd-info"><div style="font-weight:600;font-size:14px">${esc(otherName)}</div><div style="font-size:11px;color:var(--text-secondary);font-weight:500">${esc(d.groupName)}</div></div><div class="qd-amount ${isIOwe?'bn':'bp'}">${isIOwe?'You owe ':'Owes you '}${fmt(d.amountCents)}</div></div>`;
+        });
+        html+=`</div>`;
+    }
+
+    // Recent activity (last 5)
+    const recentExps=allExps.sort((a,b)=>b.createdAt-a.createdAt).slice(0,5);
+    if(recentExps.length){
+        const allMembersArr=await iA('members');
+        const globalNm={};allMembersArr.forEach(m=>globalNm[m.memberId]=m.displayName);
+        const groupNameMap={};groups.forEach(g=>groupNameMap[g.groupId]=g.name);
+        html+=`<div class="dash-activity"><div class="dash-activity-header"><h3>Recent Activity</h3></div>`;
+        recentExps.forEach(e=>{
+            const ts=getTagStyle(e.tag);const st=ts?{icon:ts.icon,bg:ts.bg}:getExpStyle(e.description);
+            const gName=groupNameMap[e.groupId]||'';
+            const payer=globalNm[e.paidBy]||e.paidBy.slice(0,8);
+            html+=`<div class="dash-activity-item" data-g="${e.groupId}"><div class="dai-icon" style="background:${st.bg}">${st.icon}</div><div class="dai-info"><div class="dai-desc">${esc(e.description)}</div><div class="dai-meta">${esc(payer)} &middot; ${esc(gName)} &middot; ${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div><div class="dai-amount">${fmt(e.amountCents)}</div></div>`;
+        });
+        html+=`</div>`;
+    }
+
+    if(!groups.length&&!recentExps.length){
+        html+='<div class="empty"><div class="ic">&#x1F44B;</div><h3>Welcome to SplitBlind</h3><p>Create a group or log a debt to get started</p></div>';
+    }
+
+    el.innerHTML=html;
+    el.querySelectorAll('[data-g]').forEach(c=>c.addEventListener('click',()=>openGroup(c.dataset.g)));
+    const logDebtBtn=document.getElementById('home-log-debt-btn');
+    if(logDebtBtn)logDebtBtn.addEventListener('click',()=>{show('log-debt');initLogDebt()});
+}
+
+// Groups tab render
+async function renderGroupsTab(){
+    const groups=(await iA('groups')).sort((a,b)=>b.createdAt-a.createdAt);
+    const el=document.getElementById('groups-tab-list');
+    if(!groups.length){el.innerHTML='<div class="empty"><div class="ic">&#x1F465;</div><h3>No groups yet</h3><p>Tap + to create your first split group</p></div>';return}
+    const allM=await iA('members');
+    const allExps=(await iA('expenses')).filter(e=>!e.isDeleted);
+    const allSets=(await iA('settlements')).filter(s=>!s.isDeleted);
+
+    const groupBalances={};
+    for(const g of groups){
+        const gExps=allExps.filter(e=>e.groupId===g.groupId);
+        const gSets=allSets.filter(s=>s.groupId===g.groupId);
+        const bal=calcBal(gExps,gSets);
+        groupBalances[g.groupId]=bal[myId]||0;
+    }
+
+    // Split into regular groups and IOU groups
+    const regularGroups=groups.filter(g=>!g.isIOU);
+    const iouGroups=groups.filter(g=>g.isIOU);
+
+    let html='';
+
+    if(regularGroups.length){
+        html+=`<div class="sec-t">Groups</div>`;
+        html+=regularGroups.map((g,i)=>{
+            const c=allM.filter(m=>m.groupId===g.groupId&&!m.isDeleted).length;
+            const myBal=groupBalances[g.groupId]||0;
+            let balText,balClass;
+            if(myBal>0){balText='You are owed '+fmt(myBal);balClass='bp'}
+            else if(myBal<0){balText='You owe '+fmt(Math.abs(myBal));balClass='bn'}
+            else{balText='Settled up';balClass='settled'}
+            return`<div class="dash-group-card" data-g="${g.groupId}"><div class="group-icon gi-${(i%5)+1}">&#x1F46B;</div><div style="flex:1"><div class="card-t">${esc(g.name)}</div><div class="card-s">${c} member${c!==1?'s':''} &middot; ${new Date(g.createdAt).toLocaleDateString()}</div><div class="dgc-balance ${balClass}">${balText}</div></div></div>`;
+        }).join('');
+    }
+
+    if(iouGroups.length){
+        html+=`<div class="sec-t">IOUs</div>`;
+        html+=iouGroups.map((g,i)=>{
+            const c=allM.filter(m=>m.groupId===g.groupId&&!m.isDeleted).length;
+            const myBal=groupBalances[g.groupId]||0;
+            let balText,balClass;
+            if(myBal>0){balText='You are owed '+fmt(myBal);balClass='bp'}
+            else if(myBal<0){balText='You owe '+fmt(Math.abs(myBal));balClass='bn'}
+            else{balText='Settled up';balClass='settled'}
+            return`<div class="dash-group-card" data-g="${g.groupId}"><div class="group-icon gi-${((regularGroups.length+i)%5)+1}">&#x1F4B8;</div><div style="flex:1"><div class="card-t">${esc(g.name)}</div><div class="card-s">${c} member${c!==1?'s':''} &middot; ${new Date(g.createdAt).toLocaleDateString()}</div><div class="dgc-balance ${balClass}">${balText}</div></div></div>`;
+        }).join('');
+    }
+
+    el.innerHTML=html;
+    el.querySelectorAll('[data-g]').forEach(c=>c.addEventListener('click',()=>openGroup(c.dataset.g)));
+}
+
+// Analytics tab render
+async function renderAnalyticsTab(){
+    // Reuse the analytics rendering but target the tab content element
+    const allExps=(await iA('expenses')).filter(e=>!e.isDeleted);
+    const allSets=(await iA('settlements')).filter(s=>!s.isDeleted);
+    const allMems=await iA('members');
+    const globalNm={};allMems.forEach(m=>globalNm[m.memberId]=m.displayName);
+    const el=document.getElementById('analytics-tab-content');
+
+    if(!allExps.length){el.innerHTML='<div class="empty"><div class="ic">&#x1F4CA;</div><h3>No data yet</h3><p>Add expenses to see analytics</p></div>';return}
+
+    let html='';
+
+    // By Category
+    const tagTotals={};
+    allExps.forEach(e=>{const t=e.tag||'other';tagTotals[t]=(tagTotals[t]||0)+e.amountCents});
+    const totalSpend=Object.values(tagTotals).reduce((a,b)=>a+b,0);
+    const tagSorted=Object.entries(tagTotals).sort((a,b)=>b[1]-a[1]);
+    const tagColors={'food':'#7C6FE0','transport':'#89C4F4','shopping':'#F2A0C4','entertainment':'#F8C4A4',
+        'travel':'#BB8FCE','bills':'#F7DC6F','groceries':'#8DDCC5','health':'#F1948A','rent':'#F8C4A4','other':'#BDC3C7'};
+
+    html+=`<div class="analytics-card"><h3>&#x1F3F7; By Category</h3>`;
+    tagSorted.forEach(([tag,amt])=>{
+        const pct=totalSpend>0?(amt/totalSpend*100):0;
+        const t=TAGS[tag]||TAGS.other;
+        const color=tagColors[tag]||'#BDC3C7';
+        html+=`<div class="chart-bar-row"><div class="chart-bar-label">${t.icon} ${t.label}</div><div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,5)}%;background:${color}"><span>${pct.toFixed(0)}%</span></div></div><div class="chart-bar-value">${fmt(amt)}</div></div>`;
+    });
+    html+=`</div>`;
+
+    // By Month (last 6 months)
+    const monthTotals={};
+    const now=new Date();
+    for(let i=5;i>=0;i--){
+        const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+        const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+        monthTotals[key]=0;
+    }
+    allExps.forEach(e=>{
+        const d=new Date(e.createdAt);
+        const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+        if(key in monthTotals)monthTotals[key]+=e.amountCents;
+    });
+    const monthMax=Math.max(...Object.values(monthTotals),1);
+    const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    html+=`<div class="analytics-card"><h3>&#x1F4C5; By Month</h3><div class="chart-months-row">`;
+    Object.entries(monthTotals).forEach(([key,amt])=>{
+        const pct=monthMax>0?(amt/monthMax*100):0;
+        const m=parseInt(key.split('-')[1])-1;
+        html+=`<div class="chart-month-bar"><div class="chart-month-col"><div class="chart-month-fill" style="height:${Math.max(pct,3)}%;background:linear-gradient(to top,var(--primary),var(--primary-soft))"></div></div><div class="chart-month-label">${monthNames[m]}</div><div class="chart-month-amount">${fmt(amt)}</div></div>`;
+    });
+    html+=`</div></div>`;
+
+    // By Member
+    const memberPaid={};
+    allExps.forEach(e=>{
+        if(e.paidByMap){for(const[id,a] of Object.entries(e.paidByMap))memberPaid[id]=(memberPaid[id]||0)+a}
+        else{memberPaid[e.paidBy]=(memberPaid[e.paidBy]||0)+e.amountCents}
+    });
+    const memberOwes={};
+    const groups=await iA('groups');
+    for(const g of groups){
+        const gExps=allExps.filter(e=>e.groupId===g.groupId);
+        const gSets=allSets.filter(s=>s.groupId===g.groupId);
+        const bal=calcBal(gExps,gSets);
+        for(const[id,b] of Object.entries(bal)){
+            if(b<0)memberOwes[id]=(memberOwes[id]||0)+Math.abs(b);
+        }
+    }
+    const paidSorted=Object.entries(memberPaid).sort((a,b)=>b[1]-a[1]);
+    const paidMax=paidSorted.length?paidSorted[0][1]:1;
+    const owesSorted=Object.entries(memberOwes).sort((a,b)=>b[1]-a[1]);
+    const owesMax=owesSorted.length?owesSorted[0][1]:1;
+
+    html+=`<div class="analytics-card"><h3>&#x1F4B3; Who Paid Most</h3>`;
+    paidSorted.forEach(([id,amt])=>{
+        const pct=paidMax>0?(amt/paidMax*100):0;
+        const col=getColor(id);
+        html+=`<div class="chart-bar-row"><div class="chart-bar-label">${esc(globalNm[id]||id.slice(0,8))}</div><div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,5)}%;background:${col}"><span>${fmt(amt)}</span></div></div><div class="chart-bar-value">${fmt(amt)}</div></div>`;
+    });
+    html+=`</div>`;
+
+    if(owesSorted.length){
+        html+=`<div class="analytics-card"><h3>&#x1F4B8; Who Owes Most</h3>`;
+        owesSorted.forEach(([id,amt])=>{
+            const pct=owesMax>0?(amt/owesMax*100):0;
+            const col=getColor(id);
+            html+=`<div class="chart-bar-row"><div class="chart-bar-label">${esc(globalNm[id]||id.slice(0,8))}</div><div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,5)}%;background:${col}"><span>${fmt(amt)}</span></div></div><div class="chart-bar-value">${fmt(amt)}</div></div>`;
+        });
+        html+=`</div>`;
+    }
+
+    el.innerHTML=html;
+}
+
+// Profile tab render
+async function renderProfile(){
+    const el=document.getElementById('profile-content');
+    const pp=await iG('identity','pp');
+    const ppStatus=pp?'Set':'Not set';
+    const ppStatusColor=pp?'var(--positive)':'var(--negative)';
+    const col=getColor(myId);
+    const isDark=document.documentElement.classList.contains('dark');
+
+    let html=`
+        <div class="profile-header">
+            <div class="profile-avatar" style="background:${col}">${getInitial(myName)}</div>
+            <div class="profile-name-edit">
+                <span class="profile-name" id="profile-display-name">${esc(myName)}</span>
+                <button class="profile-name-edit-btn" id="profile-edit-name-btn" title="Edit name">&#x270F;&#xFE0F;</button>
+            </div>
+        </div>
+        <div id="profile-edit-name-form" style="display:none;padding:0 0 16px">
+            <div class="fg" style="margin-bottom:10px">
+                <input type="text" id="profile-name-input" placeholder="Your name" value="${esc(myName)}">
+            </div>
+            <div style="display:flex;gap:8px">
+                <button class="btn btn-p" id="profile-name-save" style="font-size:14px;padding:12px">Save</button>
+                <button class="btn btn-o" id="profile-name-cancel" style="font-size:14px;padding:12px">Cancel</button>
+            </div>
+        </div>
+
+        <div class="profile-section">
+            <div class="profile-section-title">Recovery</div>
+            <div class="profile-row">
+                <div class="profile-row-left">
+                    <span class="profile-row-icon">&#x1F511;</span>
+                    <div>
+                        <div class="profile-row-label">Passphrase</div>
+                        <div class="profile-row-sublabel" style="color:${ppStatusColor}">${ppStatus}</div>
+                    </div>
+                </div>
+                <button class="profile-row-action" id="profile-pp-btn">${pp?'View':'Set Up'}</button>
+            </div>
+        </div>
+
+        <div class="profile-section">
+            <div class="profile-section-title">Devices</div>
+            <div class="profile-row">
+                <div class="profile-row-left">
+                    <span class="profile-row-icon">&#x1F4F1;</span>
+                    <div>
+                        <div class="profile-row-label">Sync to Another Device</div>
+                        <div class="profile-row-sublabel">Transfer your data</div>
+                    </div>
+                </div>
+                <button class="profile-row-action" id="profile-sync-btn">Sync</button>
+            </div>
+        </div>
+
+        <div class="profile-section">
+            <div class="profile-section-title">Security</div>
+            <div class="profile-row">
+                <div class="profile-row-left">
+                    <span class="profile-row-icon">&#x1F512;</span>
+                    <div>
+                        <div class="profile-row-label">How Your Data is Protected</div>
+                        <div class="profile-row-sublabel">End-to-end encrypted</div>
+                    </div>
+                </div>
+                <button class="profile-row-action" id="profile-security-btn">View</button>
+            </div>
+        </div>
+
+        <div class="profile-section">
+            <div class="profile-section-title">Appearance</div>
+            <div class="theme-toggle-row">
+                <div class="profile-row-left">
+                    <span class="profile-row-icon">${isDark?'&#x1F319;':'&#x2600;&#xFE0F;'}</span>
+                    <div>
+                        <div class="profile-row-label">Dark Mode</div>
+                    </div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="profile-theme-toggle" ${isDark?'checked':''}>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <div class="profile-about">
+            SplitBlind v0.1.0 &middot; Open Source<br>
+            <a href="https://github.com/hell-abhi/splitblind" target="_blank" rel="noopener">View on GitHub &#x2192;</a>
+        </div>
+    `;
+
+    el.innerHTML=html;
+
+    // Wire profile events
+    document.getElementById('profile-edit-name-btn').onclick=()=>{
+        document.getElementById('profile-edit-name-form').style.display='';
+        document.getElementById('profile-name-input').focus();
+    };
+    document.getElementById('profile-name-cancel').onclick=()=>{
+        document.getElementById('profile-edit-name-form').style.display='none';
+        document.getElementById('profile-name-input').value=myName;
+    };
+    document.getElementById('profile-name-save').onclick=async()=>{
+        const newName=document.getElementById('profile-name-input').value.trim();
+        if(!newName){toast('Name cannot be empty');return}
+        myName=newName;
+        await iPK('identity','name',myName);
+        document.getElementById('profile-display-name').textContent=myName;
+        document.getElementById('profile-edit-name-form').style.display='none';
+        toast('Name updated');
+        autoBackup().catch(()=>{});
+    };
+    document.getElementById('profile-pp-btn').onclick=async()=>{
+        const pp=await iG('identity','pp');
+        if(pp){
+            // Show current passphrase
+            openModal(`
+                <div style="text-align:center;padding:12px 0 8px">
+                    <div style="font-size:40px;margin-bottom:12px">&#x1F511;</div>
+                    <h3 style="font-size:17px;font-weight:800">Your Recovery Passphrase</h3>
+                    <div style="font-size:20px;font-weight:800;color:var(--primary);padding:16px;background:var(--primary-bg);border-radius:14px;margin:16px 0;word-spacing:6px">${esc(pp)}</div>
+                    <p style="color:var(--text-secondary);font-size:13px;font-weight:500;line-height:1.6">Keep this safe. It's the only way to recover your data.</p>
+                </div>
+                <div style="display:flex;gap:8px;margin-bottom:10px">
+                    <button class="modal-btn modal-btn-edit" style="flex:1" onclick="downloadPassphrase('${esc(pp)}');closeModal()">&#x1F4E5; Download</button>
+                    <button class="modal-btn modal-btn-edit" style="flex:1" onclick="sharePassphrase('${esc(pp)}');closeModal()">&#x1F4E4; Share</button>
+                </div>
+                <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Close</button>
+            `);
+        }else{
+            // Go to passphrase setup
+            obPassphrase=generatePassphrase();showObPp();
+            document.getElementById('ob-pp-confirm').checked=false;
+            document.getElementById('ob-pp-continue').disabled=true;
+            document.getElementById('ob-pp-custom-input').style.display='none';
+            show('ob-recovery');
+        }
+    };
+    document.getElementById('profile-sync-btn').onclick=()=>{
+        document.getElementById('sg-pin').value='';
+        document.getElementById('sg-btn').disabled=true;
+        document.getElementById('sg-result').style.display='none';
+        document.getElementById('sg-btn').style.display='';
+        show('sync-gen');
+    };
+    document.getElementById('profile-security-btn').onclick=()=>show('security');
+    document.getElementById('profile-theme-toggle').onchange=(e)=>{
+        const isDark=e.target.checked;
+        localStorage.setItem('theme',isDark?'dark':'light');
+        document.documentElement.classList.toggle('dark',isDark);
+        document.documentElement.classList.toggle('light',!isDark);
+        // Re-render to update icon
+        renderProfile();
+    };
+}
+
+async function openGroup(gid){curGroup=gid;const g=await iG('groups',gid);if(!g)return;curGroupKey=g.groupKeyBase64;document.getElementById('gd-title').textContent=g.name;show('gd');startSync(gid,curGroupKey);switchGroupTab('exp')}
 
 async function restoreExpense(eid){
     const expense=await iG('expenses',eid);if(!expense)return;
@@ -1819,7 +2360,7 @@ async function renderMembers(){
     document.getElementById('invite-btn').addEventListener('click',async()=>{const link=await makeShortLink(curGroup,curGroupKey,g.name);document.getElementById('inv-display2').textContent=link;document.getElementById('share-btn2').onclick=()=>shareLink(link,g.name);show('invite')});
 }
 
-function switchTab(tab){expSearchQuery='';expTagFilter=null;expDateFilter='all';document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));document.getElementById('t-exp').style.display=tab==='exp'?'':'none';document.getElementById('t-bal').style.display=tab==='bal'?'':'none';document.getElementById('t-mem').style.display=tab==='members'?'':'none';document.getElementById('fab-ae').style.display=tab==='exp'?'':'none';if(tab==='exp')renderExpenses();else if(tab==='bal')renderBalances();else renderMembers()}
+function switchGroupTab(tab){expSearchQuery='';expTagFilter=null;expDateFilter='all';document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));document.getElementById('t-exp').style.display=tab==='exp'?'':'none';document.getElementById('t-bal').style.display=tab==='bal'?'':'none';document.getElementById('t-mem').style.display=tab==='members'?'':'none';document.getElementById('fab-ae').style.display=tab==='exp'?'':'none';if(tab==='exp')renderExpenses();else if(tab==='bal')renderBalances();else renderMembers()}
 
 let aePayerMode='single',aeSplitMode='equal',aeMembers=[];
 async function renderAddExpense(){
@@ -1987,6 +2528,9 @@ async function handleJoin(){
     }catch(e){console.error('Join failed:',e);toast('Failed to join group');return null}
 }
 
+let obPassphrase='';
+function showObPp(){document.getElementById('ob-pp-display').textContent=obPassphrase}
+
 // Wire events
 function wireEvents(){
     document.getElementById('cg-back').onclick=goBack;
@@ -1997,7 +2541,6 @@ function wireEvents(){
     document.getElementById('inv-back').onclick=goBack;
     document.getElementById('sec-back').onclick=goBack;
     document.getElementById('inv-done').onclick=goBack;
-    document.getElementById('btn-security').onclick=()=>show('security');
     document.getElementById('analytics-back').onclick=goBack;
     document.getElementById('ld-back').onclick=goBack;
 
@@ -2058,31 +2601,15 @@ function wireEvents(){
         const data={expenseId:eid,groupId:gid,description:desc,amountCents:amtC,currency:'INR',paidBy,splitAmong,createdAt:now,isDeleted:false,tag:'other',paidByMap:null,splitMode:'amount',splitDetails,notes:null};
         await iP('expenses',{...data,hlcTimestamp:now});
         await pushOp(gid,key,{id:uid(),type:'expense',data,hlc:now,author:myId});
-        goBack();renderGroups();toast('Debt logged!');
+        goBack();toast('Debt logged!');if(TAB_SCREENS.includes(curScreen))switchNavTab(curScreen);
         autoBackup().catch(()=>{});
     });
 
-    // Theme toggle
-    function applyTheme(){
-        const saved=localStorage.getItem('theme');
-        const isDark=saved==='dark'||(saved===null&&window.matchMedia('(prefers-color-scheme:dark)').matches);
-        document.documentElement.classList.toggle('dark',isDark);
-        document.documentElement.classList.toggle('light',!isDark);
-        document.getElementById('btn-theme').textContent=isDark?'\u2600\uFE0F':'\uD83C\uDF19';
-    }
-    applyTheme();
-    document.getElementById('btn-theme').onclick=()=>{
-        const isDark=document.documentElement.classList.contains('dark');
-        localStorage.setItem('theme',isDark?'light':'dark');
-        applyTheme();
-    };
-    document.getElementById('btn-sync-device').onclick=()=>{document.getElementById('sg-pin').value='';document.getElementById('sg-btn').disabled=true;document.getElementById('sg-result').style.display='none';show('sync-gen')};
     document.getElementById('sg-back').onclick=goBack;
     document.getElementById('rec-back').onclick=goBack;
 
     // Recovery passphrase setup (onboarding step 2)
-    let obPassphrase=generatePassphrase();
-    function showObPp(){document.getElementById('ob-pp-display').textContent=obPassphrase}
+    obPassphrase=generatePassphrase();
     document.getElementById('ob-pp-regen').onclick=()=>{obPassphrase=generatePassphrase();showObPp();document.getElementById('ob-pp-custom-input').style.display='none'};
     document.getElementById('ob-pp-custom').onclick=()=>{document.getElementById('ob-pp-custom-input').style.display='';document.getElementById('ob-pp-input').value='';document.getElementById('ob-pp-input').focus()};
     document.getElementById('ob-pp-input').addEventListener('input',e=>{
@@ -2098,13 +2625,17 @@ function wireEvents(){
         if(!validatePassphrase(obPassphrase)){toast('Passphrase needs at least 3 words');return}
         await backupToRecovery(obPassphrase);
         toast('Backed up!');
+        // If coming from profile (already has identity), just go back
+        if(myId&&hist.length){goBack();return}
         const jr=await handleJoin();
-        show('groups',false);await renderGroups();
+        switchNavTab('home');
         if(jr){await openGroup(jr.groupId);if(jr.action==='joined')toast('Joined group!')}
     };
     document.getElementById('ob-pp-skip').onclick=async()=>{
+        // If coming from profile, just go back
+        if(myId&&hist.length){goBack();return}
         const jr=await handleJoin();
-        show('groups',false);await renderGroups();
+        switchNavTab('home');
         if(jr){await openGroup(jr.groupId);if(jr.action==='joined')toast('Joined group!')}
     };
 
@@ -2128,7 +2659,7 @@ function wireEvents(){
                 await iP('members',{_key:g.i+'_'+myId,groupId:g.i,memberId:myId,displayName:myName,joinedAt:now,isDeleted:false,hlcTimestamp:now});
             }
         }
-        show('groups',false);hist=[];await renderGroups();
+        hist=[];switchNavTab('home');
         toast('Recovered '+bundle.groups.length+' group'+(bundle.groups.length!==1?'s':'')+'!');
     };
     document.getElementById('sr-back').onclick=goBack;
@@ -2167,14 +2698,16 @@ function wireEvents(){
             await applyRestore(bundle);
             // Clean up the sync code from Firebase
             try{await fbDb.ref('sync/'+code.replace('-','')).remove()}catch(e){}
-            show('groups',false);hist=[];await renderGroups();toast('Restored '+bundle.groups.length+' group'+(bundle.groups.length!==1?'s':'')+'!');
+            hist=[];switchNavTab('home');toast('Restored '+bundle.groups.length+' group'+(bundle.groups.length!==1?'s':'')+'!');
         }catch(e){errEl.textContent='Wrong PIN or corrupted data';errEl.style.display='';console.error(e)}
     });
-    document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>switchTab(t.dataset.tab)));
+    document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>switchGroupTab(t.dataset.tab)));
+    // Bottom nav tab buttons
+    document.querySelectorAll('#bottom-nav .nav-tab').forEach(t=>t.addEventListener('click',()=>switchNavTab(t.dataset.tab)));
     document.getElementById('fab-cg').addEventListener('click',()=>{document.getElementById('cg-form').style.display='';document.getElementById('cg-done').style.display='none';document.getElementById('cg-name').value='';document.getElementById('cg-btn').disabled=true;show('cg')});
     document.getElementById('cg-name').addEventListener('input',e=>{document.getElementById('cg-btn').disabled=!e.target.value.trim()});
     let newGid='';
-    document.getElementById('cg-btn').addEventListener('click',async()=>{const name=document.getElementById('cg-name').value.trim(),gid=uid(),now=Date.now(),key=await genKey();await iP('groups',{groupId:gid,name,createdBy:myId,createdAt:now,inviteToken:uid(),groupKeyBase64:key,hlcTimestamp:now,hlcNodeId:myId});await iP('members',{_key:gid+'_'+myId,groupId:gid,memberId:myId,displayName:myName,joinedAt:now,isDeleted:false,hlcTimestamp:now});await pushOp(gid,key,{id:uid(),type:'member_join',data:{memberId:myId,displayName:myName,joinedAt:now},hlc:now,author:myId});newGid=gid;const link=await makeShortLink(gid,key,name);document.getElementById('inv-display').textContent=link;document.getElementById('cg-form').style.display='none';document.getElementById('cg-done').style.display='';document.getElementById('share-btn').onclick=()=>shareLink(link,name);document.getElementById('goto-btn').onclick=async()=>{await renderGroups();openGroup(newGid)};autoBackup().catch(()=>{})});
+    document.getElementById('cg-btn').addEventListener('click',async()=>{const name=document.getElementById('cg-name').value.trim(),gid=uid(),now=Date.now(),key=await genKey();await iP('groups',{groupId:gid,name,createdBy:myId,createdAt:now,inviteToken:uid(),groupKeyBase64:key,hlcTimestamp:now,hlcNodeId:myId});await iP('members',{_key:gid+'_'+myId,groupId:gid,memberId:myId,displayName:myName,joinedAt:now,isDeleted:false,hlcTimestamp:now});await pushOp(gid,key,{id:uid(),type:'member_join',data:{memberId:myId,displayName:myName,joinedAt:now},hlc:now,author:myId});newGid=gid;const link=await makeShortLink(gid,key,name);document.getElementById('inv-display').textContent=link;document.getElementById('cg-form').style.display='none';document.getElementById('cg-done').style.display='';document.getElementById('share-btn').onclick=()=>shareLink(link,name);document.getElementById('goto-btn').onclick=async()=>{openGroup(newGid)};autoBackup().catch(()=>{})});
     document.getElementById('fab-ae').addEventListener('click',()=>{show('ae');renderAddExpense()});
     document.getElementById('ae-desc').addEventListener('input',updAe);
     document.getElementById('ae-amt').addEventListener('input',updAe);
@@ -2221,10 +2754,10 @@ function wireEvents(){
         }
         await iP('expenses',{...data,hlcTimestamp:now});await pushOp(curGroup,curGroupKey,{id:uid(),type:'expense',data,hlc:now,author:myId});
         editingExpense=null;
-        goBack();switchTab('exp');toast(isEdit?'Expense updated!':'Expense added!')
+        goBack();switchGroupTab('exp');toast(isEdit?'Expense updated!':'Expense added!')
     });
     document.getElementById('stl-input').addEventListener('input',()=>updateSettleHint(settleData.amountCents));
-    document.getElementById('stl-btn').addEventListener('click',async()=>{const settleAmt=Math.round((parseFloat(document.getElementById('stl-input').value)||0)*100);if(settleAmt<=0||settleAmt>settleData.amountCents)return;const now=Date.now(),sid=uid(),data={settlementId:sid,groupId:curGroup,fromMember:settleData.from,toMember:settleData.to,amountCents:settleAmt,createdAt:now,isDeleted:false};await saveHistory(makeHistoryEntry({settlementId:sid,entityType:'settlement',action:'created',previousData:null,newData:data}));await iP('settlements',{...data,hlcTimestamp:now});await pushOp(curGroup,curGroupKey,{id:uid(),type:'settlement',data,hlc:now,author:myId});goBack();switchTab('bal');toast(settleAmt<settleData.amountCents?'Partially settled!':'Settled!')});
+    document.getElementById('stl-btn').addEventListener('click',async()=>{const settleAmt=Math.round((parseFloat(document.getElementById('stl-input').value)||0)*100);if(settleAmt<=0||settleAmt>settleData.amountCents)return;const now=Date.now(),sid=uid(),data={settlementId:sid,groupId:curGroup,fromMember:settleData.from,toMember:settleData.to,amountCents:settleAmt,createdAt:now,isDeleted:false};await saveHistory(makeHistoryEntry({settlementId:sid,entityType:'settlement',action:'created',previousData:null,newData:data}));await iP('settlements',{...data,hlcTimestamp:now});await pushOp(curGroup,curGroupKey,{id:uid(),type:'settlement',data,hlc:now,author:myId});goBack();switchGroupTab('bal');toast(settleAmt<settleData.amountCents?'Partially settled!':'Settled!')});
 }
 
 // Analytics
@@ -2357,7 +2890,7 @@ async function init(){
     document.getElementById('ob-recover-pp').addEventListener('click',()=>{document.getElementById('rec-phrase').value='';document.getElementById('rec-btn').disabled=true;document.getElementById('rec-status').style.display='none';show('recover')});
     document.getElementById('ob-restore').addEventListener('click',()=>{document.getElementById('sr-code').value='';document.getElementById('sr-pin').value='';document.getElementById('sr-btn').disabled=true;document.getElementById('sr-error').style.display='none';show('sync-restore')});
     if(!(await loadId())){show('onboard',false);return}
-    const jr=await handleJoin();show('groups',false);await renderGroups();
+    const jr=await handleJoin();switchNavTab('home');
     if(jr){await openGroup(jr.groupId);if(jr.action==='joined')toast('Joined group!')}
 }
 init().catch(console.error);

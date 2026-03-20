@@ -7,10 +7,10 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.navigation.compose.rememberNavController
 import com.akeshari.splitblind.crypto.Identity
 import com.akeshari.splitblind.sync.SyncEngine
-import com.akeshari.splitblind.ui.navigation.NavGraph
+import com.akeshari.splitblind.ui.main.DeepLinkData
+import com.akeshari.splitblind.ui.main.MainScreen
 import com.akeshari.splitblind.ui.theme.SplitBlindTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -32,7 +32,6 @@ class MainActivity : ComponentActivity() {
         val deepLink = parseDeepLink(intent)
 
         if (deepLink is DeepLinkResult.ShortCode) {
-            // Resolve the short code asynchronously, then render
             syncEngine.resolveShortCode(deepLink.code) { result ->
                 runOnUiThread {
                     val resolved = if (result != null) {
@@ -78,23 +77,14 @@ class MainActivity : ComponentActivity() {
     private fun renderContent(deepLink: DeepLinkData?) {
         setContent {
             SplitBlindTheme {
-                val navController = rememberNavController()
-                NavGraph(
-                    navController = navController,
+                MainScreen(
                     isOnboarded = identity.isOnboarded,
-                    joinGroupId = deepLink?.groupId,
-                    joinGroupKey = deepLink?.groupKey,
-                    joinGroupName = deepLink?.groupName
+                    deepLinkData = deepLink,
+                    identity = identity
                 )
             }
         }
     }
-
-    private data class DeepLinkData(
-        val groupId: String,
-        val groupKey: String,
-        val groupName: String
-    )
 
     private sealed class DeepLinkResult {
         data class Full(val data: DeepLinkData) : DeepLinkResult()
@@ -109,14 +99,12 @@ class MainActivity : ComponentActivity() {
     private fun parseInviteUri(uri: Uri): DeepLinkResult? {
         val fragment = uri.fragment ?: return null
 
-        // Format 1 (short): ?c={shortcode}#{base64key}
         val shortCode = uri.getQueryParameter("c")
         if (shortCode != null) {
             val groupKey = fragment
             return DeepLinkResult.ShortCode(code = shortCode, groupKey = groupKey)
         }
 
-        // Format 2 (legacy): ?g={groupId}#{base64key}|{encodedName}
         val groupId = uri.getQueryParameter("g") ?: return null
         val parts = fragment.split("|", limit = 2)
         if (parts.isEmpty()) return null

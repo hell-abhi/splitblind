@@ -32,6 +32,17 @@ object ThemeManager {
         context.getSharedPreferences("splitblind_prefs", Context.MODE_PRIVATE)
             .edit().putString("theme", if (isDark) "light" else "dark").apply()
     }
+
+    fun setMode(context: Context, mode: ThemeMode) {
+        themeMode = mode
+        val value = when (mode) {
+            ThemeMode.LIGHT -> "light"
+            ThemeMode.DARK -> "dark"
+            ThemeMode.SYSTEM -> "system"
+        }
+        context.getSharedPreferences("splitblind_prefs", Context.MODE_PRIVATE)
+            .edit().putString("theme", value).apply()
+    }
 }
 
 enum class ThemeMode { LIGHT, DARK, SYSTEM }
