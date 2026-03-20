@@ -110,7 +110,7 @@ function wireEvents(){
         }else{
             // Create new IOU group
             gid=uid();key=await genKey();
-            await iP('groups',{groupId:gid,name:friendName,createdBy:myId,createdAt:now,inviteToken:uid(),groupKeyBase64:key,hlcTimestamp:now,hlcNodeId:myId,isIOU:true});
+            await iP('groups',{groupId:gid,name:friendName,createdBy:myId,createdAt:now,inviteToken:uid(),groupKeyBase64:key,hlcTimestamp:now,hlcNodeId:myId,isIOU:true,baseCurrency:myDefaultCurrency});
             await iP('members',{_key:gid+'_'+myId,groupId:gid,memberId:myId,displayName:myName,joinedAt:now,isDeleted:false,hlcTimestamp:now});
             await pushOp(gid,key,{id:uid(),type:'member_join',data:{memberId:myId,displayName:myName,joinedAt:now},hlc:now,author:myId});
             // Add friend as a virtual member
@@ -242,7 +242,7 @@ function wireEvents(){
     document.getElementById('fab-cg').addEventListener('click',()=>{document.getElementById('cg-form').style.display='';document.getElementById('cg-done').style.display='none';document.getElementById('cg-name').value='';document.getElementById('cg-btn').disabled=true;show('cg')});
     document.getElementById('cg-name').addEventListener('input',e=>{document.getElementById('cg-btn').disabled=!e.target.value.trim()});
     let newGid='';
-    document.getElementById('cg-btn').addEventListener('click',async()=>{const name=document.getElementById('cg-name').value.trim(),gid=uid(),now=Date.now(),key=await genKey();await iP('groups',{groupId:gid,name,createdBy:myId,createdAt:now,inviteToken:uid(),groupKeyBase64:key,hlcTimestamp:now,hlcNodeId:myId});await iP('members',{_key:gid+'_'+myId,groupId:gid,memberId:myId,displayName:myName,joinedAt:now,isDeleted:false,hlcTimestamp:now});await pushOp(gid,key,{id:uid(),type:'member_join',data:{memberId:myId,displayName:myName,joinedAt:now},hlc:now,author:myId});newGid=gid;const link=await makeShortLink(gid,key,name);document.getElementById('inv-display').textContent=link;document.getElementById('cg-form').style.display='none';document.getElementById('cg-done').style.display='';document.getElementById('share-btn').onclick=()=>shareLink(link,name);document.getElementById('qr-btn-cg').onclick=()=>showQrModal(link,name);document.getElementById('goto-btn').onclick=async()=>{openGroup(newGid)};autoBackup().catch(()=>{})});
+    document.getElementById('cg-btn').addEventListener('click',async()=>{const name=document.getElementById('cg-name').value.trim(),gid=uid(),now=Date.now(),key=await genKey();await iP('groups',{groupId:gid,name,createdBy:myId,createdAt:now,inviteToken:uid(),groupKeyBase64:key,hlcTimestamp:now,hlcNodeId:myId,baseCurrency:myDefaultCurrency});await iP('members',{_key:gid+'_'+myId,groupId:gid,memberId:myId,displayName:myName,joinedAt:now,isDeleted:false,hlcTimestamp:now});await pushOp(gid,key,{id:uid(),type:'member_join',data:{memberId:myId,displayName:myName,joinedAt:now},hlc:now,author:myId});newGid=gid;const link=await makeShortLink(gid,key,name);document.getElementById('inv-display').textContent=link;document.getElementById('cg-form').style.display='none';document.getElementById('cg-done').style.display='';document.getElementById('share-btn').onclick=()=>shareLink(link,name);document.getElementById('qr-btn-cg').onclick=()=>showQrModal(link,name);document.getElementById('goto-btn').onclick=async()=>{openGroup(newGid)};autoBackup().catch(()=>{})});
     // Export button
     document.getElementById('btn-export').addEventListener('click',()=>{
         document.getElementById('export-modal').style.display='flex';
@@ -305,7 +305,34 @@ function wireEvents(){
         const recurring=recurringEnabled?{frequency:aeRecurringFreq}:null;
         // Currency
         const currency=aeCurrency||'INR';
-        const data={expenseId:finalEid,groupId:curGroup,description:desc,amountCents:amtC,currency,paidBy,splitAmong:split,createdAt,isDeleted:false,tag,paidByMap,splitMode,splitDetails,notes,recurring,splitItems};
+        // Currency conversion
+        let convertedAmountCents=null,conversionRate=null,convertedCurrency=null;
+        let convertedSplitDetails=null,convertedPaidByMap=null;
+        const groupObj=await iG('groups',curGroup);
+        const groupBaseCurrency=groupObj?.baseCurrency||myDefaultCurrency;
+        if(currency!==groupBaseCurrency){
+            const rate=aeConversionRate||await fetchExchangeRate(currency,groupBaseCurrency);
+            if(rate){
+                conversionRate=rate;
+                convertedCurrency=groupBaseCurrency;
+                convertedAmountCents=Math.round(amtC*rate);
+                // Convert splitDetails to base currency
+                if(splitDetails){
+                    convertedSplitDetails={};
+                    for(const[mid,amt] of Object.entries(splitDetails)){
+                        convertedSplitDetails[mid]=Math.round(amt*rate);
+                    }
+                }
+                // Convert paidByMap to base currency
+                if(paidByMap){
+                    convertedPaidByMap={};
+                    for(const[mid,amt] of Object.entries(paidByMap)){
+                        convertedPaidByMap[mid]=Math.round(amt*rate);
+                    }
+                }
+            }
+        }
+        const data={expenseId:finalEid,groupId:curGroup,description:desc,amountCents:amtC,currency,paidBy,splitAmong:split,createdAt,isDeleted:false,tag,paidByMap,splitMode,splitDetails,notes,recurring,splitItems,convertedAmountCents,conversionRate,convertedCurrency,convertedSplitDetails,convertedPaidByMap};
         // Save history
         if(isEdit){
             const prevData={...editingExpense};delete prevData.hlcTimestamp;

@@ -290,7 +290,7 @@ async function renderGroupsTab(){
 async function createPersonalGroup(){
     const now=Date.now();
     const gid=uid();const key=await genKey();
-    await iP('groups',{groupId:gid,name:'Personal',createdBy:myId,createdAt:now,inviteToken:uid(),groupKeyBase64:key,hlcTimestamp:now,hlcNodeId:myId,groupType:'personal',isPersonal:true});
+    await iP('groups',{groupId:gid,name:'Personal',createdBy:myId,createdAt:now,inviteToken:uid(),groupKeyBase64:key,hlcTimestamp:now,hlcNodeId:myId,groupType:'personal',isPersonal:true,baseCurrency:myDefaultCurrency});
     await iP('members',{_key:gid+'_'+myId,groupId:gid,memberId:myId,displayName:myName,joinedAt:now,isDeleted:false,hlcTimestamp:now});
     await pushOp(gid,key,{id:uid(),type:'member_join',data:{memberId:myId,displayName:myName,joinedAt:now},hlc:now,author:myId});
     await iPK('identity','personalGroupId',gid);
@@ -709,6 +709,20 @@ async function renderProfile(){
         </div>
 
         <div class="profile-section">
+            <div class="profile-section-title">Currency</div>
+            <div class="profile-row">
+                <div class="profile-row-left">
+                    <span class="profile-row-icon">${getCurrencySymbol(myDefaultCurrency)}</span>
+                    <div>
+                        <div class="profile-row-label">Default Currency</div>
+                        <div class="profile-row-sublabel">${myDefaultCurrency} ${getCurrencySymbol(myDefaultCurrency)} ${(CURRENCY_MAP[myDefaultCurrency]||{}).name||''}</div>
+                    </div>
+                </div>
+                <button class="profile-row-action" id="profile-currency-btn">Change</button>
+            </div>
+        </div>
+
+        <div class="profile-section">
             <div class="profile-section-title">Appearance</div>
             <div class="seg-control" id="profile-theme-seg">
                 <button class="seg-btn${savedTheme==='light'?' active':''}" data-theme="light">&#x2600;&#xFE0F; Light</button>
@@ -783,6 +797,9 @@ async function renderProfile(){
         show('sync-gen');
     };
     document.getElementById('profile-security-btn').onclick=()=>show('security');
+    document.getElementById('profile-currency-btn').onclick=()=>{
+        openProfileCurrencyModal();
+    };
     document.querySelectorAll('#profile-theme-seg .seg-btn').forEach(btn=>{
         btn.onclick=()=>{
             const mode=btn.dataset.theme;
@@ -939,7 +956,13 @@ async function renderExpenses(){
                 noteHtml=`<div class="exp-note-indicator" data-note-target="note-${e.expenseId}">\u{1F4DD} Note</div><div id="note-${e.expenseId}" class="exp-note-text" style="display:none">${esc(e.notes)}</div>`;
             }
             const histToggle=hist.length?`<div class="history-toggle" data-hist-target="hist-${e.expenseId}">\u{1F4CB} History (${hist.length})</div><div id="hist-${e.expenseId}" style="display:none">${renderHistoryHtml(hist,nm)}${isDeleted?`<button class="restore-btn" data-restore-eid="${e.expenseId}">\u21A9 Restore</button>`:''}</div>`:(isDeleted?`<button class="restore-btn" data-restore-eid="${e.expenseId}">\u21A9 Restore</button>`:'');
-            return`<div class="card${delClass}" data-eid="${e.expenseId}"><div class="exp-c"><div class="exp-left"><div class="exp-icon" style="background:${st.bg}">${st.icon}</div><div><div class="card-t">${esc(e.description)}${delBadge}</div><div class="card-s">${paidStr}</div>${tagHtml}${splitHtml}${recurringHtml}</div></div><div><div class="exp-a">${fmt(e.amountCents,e.currency)}</div><div class="exp-d">${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div>${noteHtml}${histToggle}</div>`;
+            // Show converted amount if currency differs
+            let amtDisplay=fmt(e.amountCents,e.currency);
+            let convertedHtml='';
+            if(e.convertedAmountCents&&e.convertedCurrency&&e.currency!==e.convertedCurrency){
+                convertedHtml=`<div class="exp-converted">&asymp; ${fmt(e.convertedAmountCents,e.convertedCurrency)}</div>`;
+            }
+            return`<div class="card${delClass}" data-eid="${e.expenseId}"><div class="exp-c"><div class="exp-left"><div class="exp-icon" style="background:${st.bg}">${st.icon}</div><div><div class="card-t">${esc(e.description)}${delBadge}</div><div class="card-s">${paidStr}</div>${tagHtml}${splitHtml}${recurringHtml}</div></div><div><div class="exp-a">${amtDisplay}</div>${convertedHtml}<div class="exp-d">${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div>${noteHtml}${histToggle}</div>`;
         }else{
             const s=item.data;
             const hist=histBySettlement[s.settlementId]||[];
@@ -999,14 +1022,16 @@ async function renderBalances(){
     const exps=(await iA('expenses')).filter(e=>e.groupId===curGroup&&!e.isDeleted);
     const sets=(await iA('settlements')).filter(s=>s.groupId===curGroup&&!s.isDeleted);
     const mems=(await iA('members')).filter(m=>m.groupId===curGroup);const nm={};mems.forEach(m=>nm[m.memberId]=m.displayName);
+    const g=await iG('groups',curGroup);
+    const baseCur=g?.baseCurrency||myDefaultCurrency;
     const bal=calcBal(exps,sets),debts=simplify(bal);
     const el=document.getElementById('t-bal');
-    let h='<div class="sec-t">Net Balances</div><div class="card" style="cursor:default">';
+    let h='<div class="sec-t">Net Balances <span style="font-size:10px;font-weight:600;color:var(--primary);text-transform:none;letter-spacing:0">'+baseCur+'</span></div><div class="card" style="cursor:default">';
     const ent=Object.entries(bal);
     if(!ent.length)h+='<p style="text-align:center;padding:24px;color:var(--text-secondary);font-weight:600">All settled up! &#x1F389;</p>';
-    else h+=ent.map(([id,a])=>{const col=getColor(id);return`<div class="bal-r"><div class="bal-name"><div class="bal-avatar" style="background:${col}">${getInitial(nm[id]||id)}</div><span style="font-weight:600">${esc(nm[id]||id.slice(0,8))}${id===myId?' <span class="pill" style="background:var(--primary-bg);color:var(--primary)">you</span>':''}</span></div><span class="${a>=0?'bp':'bn'}">${a>0?'+':''}${fmt(a)}</span></div>`}).join('');
+    else h+=ent.map(([id,a])=>{const col=getColor(id);return`<div class="bal-r"><div class="bal-name"><div class="bal-avatar" style="background:${col}">${getInitial(nm[id]||id)}</div><span style="font-weight:600">${esc(nm[id]||id.slice(0,8))}${id===myId?' <span class="pill" style="background:var(--primary-bg);color:var(--primary)">you</span>':''}</span></div><span class="${a>=0?'bp':'bn'}">${a>0?'+':''}${fmt(a,baseCur)}</span></div>`}).join('');
     h+='</div>';
-    if(debts.length){h+='<div class="sec-t">Settlements Needed</div>';h+=debts.map(d=>{const fn=d.from===myId?'You':esc(nm[d.from]||d.from.slice(0,8)),tn=d.to===myId?'You':esc(nm[d.to]||d.to.slice(0,8)),mine=d.from===myId||d.to===myId;return`<div class="card debt-c" style="${mine?'border:2px solid var(--primary);background:var(--primary-bg)':''}"><div><div class="card-t" style="font-size:15px">${fn} &#x2192; ${tn}${mine?' <span class="pill" style="background:var(--primary);color:#fff">you</span>':''}</div><div style="color:var(--primary);font-weight:800;font-size:18px;margin-top:4px">${fmt(d.amountCents)}</div></div><div style="display:flex;gap:6px;align-items:center"><button class="remind-b" data-rf="${d.from}" data-rt="${d.to}" data-ra="${d.amountCents}">&#x1F514;</button><button class="settle-b" data-f="${d.from}" data-t="${d.to}" data-a="${d.amountCents}" style="${mine?'':'background:var(--text-secondary);opacity:0.7'}">${mine?'Settle':'Settle'}</button></div></div>`}).join('')}
+    if(debts.length){h+='<div class="sec-t">Settlements Needed</div>';h+=debts.map(d=>{const fn=d.from===myId?'You':esc(nm[d.from]||d.from.slice(0,8)),tn=d.to===myId?'You':esc(nm[d.to]||d.to.slice(0,8)),mine=d.from===myId||d.to===myId;return`<div class="card debt-c" style="${mine?'border:2px solid var(--primary);background:var(--primary-bg)':''}"><div><div class="card-t" style="font-size:15px">${fn} &#x2192; ${tn}${mine?' <span class="pill" style="background:var(--primary);color:#fff">you</span>':''}</div><div style="color:var(--primary);font-weight:800;font-size:18px;margin-top:4px">${fmt(d.amountCents,baseCur)}</div></div><div style="display:flex;gap:6px;align-items:center"><button class="remind-b" data-rf="${d.from}" data-rt="${d.to}" data-ra="${d.amountCents}">&#x1F514;</button><button class="settle-b" data-f="${d.from}" data-t="${d.to}" data-a="${d.amountCents}" style="${mine?'':'background:var(--text-secondary);opacity:0.7'}">${mine?'Settle':'Settle'}</button></div></div>`}).join('')}
     el.innerHTML=h;
     el.querySelectorAll('.settle-b').forEach(b=>b.addEventListener('click',()=>openSettle(b.dataset.f,b.dataset.t,+b.dataset.a)));
     el.querySelectorAll('.remind-b').forEach(b=>b.addEventListener('click',async()=>{
@@ -1186,9 +1211,30 @@ async function renderAddExpense(){
     document.getElementById('ae-items-container').innerHTML='';
     aeItemRows=[];
     document.getElementById('ae-split-validation').style.display='none';
-    // Currency selector
-    aeCurrency='INR';
-    document.getElementById('ae-currency-btn').textContent='INR \u20B9';
+    // Currency selector — default to user's default currency
+    aeCurrency=myDefaultCurrency||'INR';
+    document.getElementById('ae-currency-btn').textContent=aeCurrency+' '+getCurrencySymbol(aeCurrency);
+    // Reset conversion state
+    aeConversionRate=null;aeConversionFetching=false;
+    // Load group base currency
+    if(curGroup){const g=await iG('groups',curGroup);aeGroupBaseCurrency=g?.baseCurrency||myDefaultCurrency}
+    else{aeGroupBaseCurrency=myDefaultCurrency}
+    // Add conversion preview div if not present
+    if(!document.getElementById('ae-conversion-preview')){
+        const amtSection=document.querySelector('#s-ae .ae-section');
+        if(amtSection){
+            let prevDiv=document.getElementById('ae-conversion-preview');
+            if(!prevDiv){
+                prevDiv=document.createElement('div');
+                prevDiv.id='ae-conversion-preview';
+                prevDiv.className='conversion-preview';
+                prevDiv.style.display='none';
+                amtSection.appendChild(prevDiv);
+            }
+        }
+    }else{
+        document.getElementById('ae-conversion-preview').style.display='none';
+    }
     // Recurring
     document.getElementById('ae-recurring-toggle').checked=false;
     document.getElementById('ae-recurring-options').style.display='none';
@@ -1304,6 +1350,63 @@ function updAe(){
     if(aePayerMode==='multi')updateMultiPayerValidation();
     if(aeSplitMode!=='equal'&&aeSplitMode!=='items')updateSplitValidation();
     if(aeSplitMode==='items')updateItemsValidation();
+    updateConversionPreview();
+}
+
+// Live conversion preview for add expense
+let aeConversionRate=null;
+let aeConversionFetching=false;
+let aeGroupBaseCurrency=null;
+let aeConversionDebounce=null;
+async function updateConversionPreview(){
+    const previewEl=document.getElementById('ae-conversion-preview');
+    if(!previewEl) return;
+    // Get group's base currency
+    if(!aeGroupBaseCurrency){
+        if(curGroup){
+            const g=await iG('groups',curGroup);
+            aeGroupBaseCurrency=g?.baseCurrency||myDefaultCurrency;
+        }else{
+            aeGroupBaseCurrency=myDefaultCurrency;
+        }
+    }
+    if(aeCurrency===aeGroupBaseCurrency){
+        previewEl.style.display='none';
+        aeConversionRate=null;
+        return;
+    }
+    const amtVal=parseFloat(document.getElementById('ae-amt').value)||0;
+    if(amtVal<=0){
+        previewEl.style.display='none';
+        return;
+    }
+    // Debounce rate fetching
+    if(aeConversionDebounce) clearTimeout(aeConversionDebounce);
+    aeConversionDebounce=setTimeout(async()=>{
+        if(!aeConversionRate||aeConversionFetching===false){
+            // Check if we already have rate cached
+            const cacheKey=aeCurrency+'_'+aeGroupBaseCurrency;
+            if(rateCache[cacheKey]){
+                aeConversionRate=rateCache[cacheKey];
+            }else{
+                previewEl.style.display='';
+                previewEl.innerHTML='<span style="color:var(--text-secondary)">Fetching rate...</span>';
+                aeConversionFetching=true;
+                const rate=await fetchExchangeRate(aeCurrency,aeGroupBaseCurrency);
+                aeConversionFetching=false;
+                if(!rate){
+                    previewEl.innerHTML='<span style="color:var(--negative)">Rate unavailable</span>';
+                    return;
+                }
+                aeConversionRate=rate;
+            }
+        }
+        const convertedAmt=amtVal*aeConversionRate;
+        const baseSym=getCurrencySymbol(aeGroupBaseCurrency);
+        const fromSym=getCurrencySymbol(aeCurrency);
+        previewEl.style.display='';
+        previewEl.innerHTML=`<span class="conversion-approx">&asymp; ${baseSym}${convertedAmt.toFixed(2)}</span> <span class="conversion-rate">(1 ${aeCurrency} = ${baseSym}${aeConversionRate.toFixed(4)})</span>`;
+    },300);
 }
 
 function showExpenseActions(expense,nm){
@@ -1659,6 +1762,7 @@ function getItemsSplitData(){
 // === Feature: Currency selector ===
 let aeCurrency='INR';
 function openCurrencyModal(){
+    currencyModalMode='expense';
     document.getElementById('currency-modal').style.display='flex';
     document.getElementById('currency-search').value='';
     renderCurrencyList('');
@@ -1666,6 +1770,15 @@ function openCurrencyModal(){
     document.getElementById('currency-search').addEventListener('input',e=>renderCurrencyList(e.target.value));
 }
 function closeCurrencyModal(){document.getElementById('currency-modal').style.display='none'}
+let currencyModalMode='expense'; // 'expense' or 'profile'
+function openProfileCurrencyModal(){
+    currencyModalMode='profile';
+    document.getElementById('currency-modal').style.display='flex';
+    document.getElementById('currency-search').value='';
+    renderCurrencyList('');
+    document.getElementById('currency-search').focus();
+    document.getElementById('currency-search').addEventListener('input',e=>renderCurrencyList(e.target.value));
+}
 function renderCurrencyList(query){
     const q=query.toLowerCase().trim();
     const el=document.getElementById('currency-list');
@@ -1688,16 +1801,28 @@ function renderCurrencyList(query){
     }
     el.innerHTML=html;
     el.querySelectorAll('.currency-item').forEach(item=>{
-        item.addEventListener('click',()=>{
+        item.addEventListener('click',async()=>{
+            if(currencyModalMode==='profile'){
+                myDefaultCurrency=item.dataset.code;
+                await iPK('identity','defaultCurrency',myDefaultCurrency);
+                closeCurrencyModal();
+                currencyModalMode='expense';
+                renderProfile();
+                toast('Default currency set to '+myDefaultCurrency);
+                return;
+            }
             aeCurrency=item.dataset.code;
+            aeConversionRate=null; // reset rate for new currency pair
             document.getElementById('ae-currency-btn').textContent=aeCurrency+' '+getCurrencySymbol(aeCurrency);
             closeCurrencyModal();
             if(aeSplitMode==='items') renderItemsSplit();
+            updateConversionPreview();
         });
     });
 }
 function currencyItemHtml(c){
-    return`<div class="currency-item${c.code===aeCurrency?' selected':''}" data-code="${c.code}">
+    const selCode=currencyModalMode==='profile'?myDefaultCurrency:aeCurrency;
+    return`<div class="currency-item${c.code===selCode?' selected':''}" data-code="${c.code}">
         <span class="currency-symbol">${c.symbol}</span>
         <span class="currency-code">${c.code}</span>
         <span class="currency-name">${c.name}</span>

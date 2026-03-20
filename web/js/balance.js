@@ -1,11 +1,31 @@
 // Balance
 function calcBal(exps,sets){const b={};for(const e of exps){if(e.isDeleted)continue;
+    // Use converted amounts (base currency) when available
+    const effectiveAmt=e.convertedAmountCents||e.amountCents;
     // CREDIT: multi-payer or single payer
-    if(e.paidByMap){for(const[m,a] of Object.entries(e.paidByMap))b[m]=(b[m]||0)+a}
-    else{b[e.paidBy]=(b[e.paidBy]||0)+e.amountCents}
-    // DEBIT: splitDetails or equal split
-    if(e.splitDetails){for(const[m,a] of Object.entries(e.splitDetails))b[m]=(b[m]||0)-a}
-    else{const s=e.splitAmong,sh=Math.floor(e.amountCents/s.length),rem=e.amountCents%s.length;s.forEach((m,i)=>{b[m]=(b[m]||0)-sh-(i<rem?1:0)})}
+    if(e.convertedPaidByMap){for(const[m,a] of Object.entries(e.convertedPaidByMap))b[m]=(b[m]||0)+a}
+    else if(e.paidByMap&&!e.convertedAmountCents){for(const[m,a] of Object.entries(e.paidByMap))b[m]=(b[m]||0)+a}
+    else if(e.paidByMap&&e.convertedAmountCents){
+        // Multi-payer with conversion: scale each payer's share by the conversion rate
+        const origTotal=e.amountCents;
+        for(const[m,a] of Object.entries(e.paidByMap)){
+            const scaled=Math.round(a/origTotal*effectiveAmt);
+            b[m]=(b[m]||0)+scaled;
+        }
+    }
+    else{b[e.paidBy]=(b[e.paidBy]||0)+effectiveAmt}
+    // DEBIT: splitDetails (already in base currency if converted) or equal split
+    if(e.convertedSplitDetails){for(const[m,a] of Object.entries(e.convertedSplitDetails))b[m]=(b[m]||0)-a}
+    else if(e.splitDetails&&!e.convertedAmountCents){for(const[m,a] of Object.entries(e.splitDetails))b[m]=(b[m]||0)-a}
+    else if(e.splitDetails&&e.convertedAmountCents){
+        // Split details exist but in original currency; scale them
+        const origTotal=e.amountCents;
+        for(const[m,a] of Object.entries(e.splitDetails)){
+            const scaled=Math.round(a/origTotal*effectiveAmt);
+            b[m]=(b[m]||0)-scaled;
+        }
+    }
+    else{const s=e.splitAmong,sh=Math.floor(effectiveAmt/s.length),rem=effectiveAmt%s.length;s.forEach((m,i)=>{b[m]=(b[m]||0)-sh-(i<rem?1:0)})}
 }for(const s of sets){if(s.isDeleted)continue;b[s.fromMember]=(b[s.fromMember]||0)+s.amountCents;b[s.toMember]=(b[s.toMember]||0)-s.amountCents}return b}
 function simplify(bal){const cr=[],dr=[];for(const[m,b] of Object.entries(bal)){if(b>0)cr.push({id:m,a:b});else if(b<0)dr.push({id:m,a:-b})}cr.sort((a,b)=>b.a-a.a);dr.sort((a,b)=>b.a-a.a);const debts=[];let i=0,j=0;while(i<cr.length&&j<dr.length){const a=Math.min(cr[i].a,dr[j].a);if(a>0)debts.push({from:dr[j].id,to:cr[i].id,amountCents:a});cr[i].a-=a;dr[j].a-=a;if(!cr[i].a)i++;if(!dr[j].a)j++}return debts}
 // Currency data
@@ -69,15 +89,18 @@ const TAGS={
 };
 function getTagStyle(tag){if(tag&&TAGS[tag])return{icon:TAGS[tag].icon,bg:TAGS[tag].color,label:TAGS[tag].label};return null}
 
-// Helper: calculate user's share of an expense
+// Helper: calculate user's share of an expense (uses converted amounts when available)
 function getMyShare(expense, userId) {
-    if (expense.splitDetails) {
-        const details = typeof expense.splitDetails === 'string' ? JSON.parse(expense.splitDetails) : expense.splitDetails;
+    const effectiveAmt=expense.convertedAmountCents||expense.amountCents;
+    // Use converted split details if available
+    const sd=expense.convertedSplitDetails||expense.splitDetails;
+    if (sd) {
+        const details = typeof sd === 'string' ? JSON.parse(sd) : sd;
         return details[userId] || 0;
     }
     const splitAmong = typeof expense.splitAmong === 'string' ? JSON.parse(expense.splitAmong) : expense.splitAmong;
     if (Array.isArray(splitAmong) && splitAmong.includes(userId)) {
-        return Math.floor(expense.amountCents / splitAmong.length);
+        return Math.floor(effectiveAmt / splitAmong.length);
     }
     return 0;
 }
@@ -116,6 +139,24 @@ function computeChanges(prev,next){
     if((prev.splitMode||'equal')!==(next.splitMode||'equal'))changes.push({field:'Split mode',from:prev.splitMode||'equal',to:next.splitMode||'equal'});
     if((prev.notes||'')!==(next.notes||''))changes.push({field:'Notes',from:prev.notes||'(none)',to:next.notes||'(none)'});
     return changes;
+}
+
+// Exchange rate cache and fetcher
+const rateCache={};
+async function fetchExchangeRate(from, to){
+    if(from===to) return 1;
+    const key=from+'_'+to;
+    if(rateCache[key]) return rateCache[key];
+    try{
+        const resp=await fetch(`https://api.frankfurter.app/latest?from=${from}&to=${to}`);
+        const data=await resp.json();
+        const rate=data.rates[to]||null;
+        if(rate) rateCache[key]=rate;
+        return rate;
+    }catch(e){
+        console.error('Rate fetch failed:',e);
+        return null;
+    }
 }
 
 // Recurring expense helper
