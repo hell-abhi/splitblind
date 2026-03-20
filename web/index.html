@@ -177,17 +177,17 @@
         }
         .fab:active { transform:scale(.88) rotate(90deg); }
         .fab-stack {
-            position:fixed; bottom:max(90px,calc(70px + env(safe-area-inset-bottom)));
+            position:fixed; bottom:max(100px,calc(80px + env(safe-area-inset-bottom)));
             right:calc(50% - 212px);
-            display:flex; flex-direction:column; align-items:center; gap:12px; z-index:20;
+            display:flex; flex-direction:column; align-items:center; gap:10px; z-index:20;
         }
-        @media(max-width:480px){ .fab-stack{right:24px;} }
+        @media(max-width:480px){ .fab-stack{right:20px;} }
         .fab-small {
-            width:46px; height:46px;
-            background:var(--card); color:var(--primary);
-            border:2px solid var(--primary); border-radius:16px;
+            width:48px; height:48px;
+            background:var(--primary-bg); color:var(--primary);
+            border:none; border-radius:16px;
             font-size:20px; cursor:pointer;
-            box-shadow:var(--shadow);
+            box-shadow:0 4px 16px rgba(124,111,224,0.25);
             display:flex; align-items:center; justify-content:center;
             transition:all .2s;
         }
@@ -1260,9 +1260,9 @@
 <!-- Scan QR -->
 <div class="screen" id="s-scan-qr">
     <div class="topbar"><button class="back" id="scan-back">&#x2190;</button><h1>Scan QR Code</h1></div>
-    <div class="content">
-        <div id="qr-reader" style="width:100%;max-width:350px;margin:0 auto"></div>
-        <p style="text-align:center;color:var(--text-secondary);margin-top:16px;font-size:14px;font-weight:500">Point your camera at a SplitBlind QR code</p>
+    <div class="content" style="padding-top:0">
+        <p style="text-align:center;color:var(--text-secondary);padding:12px 0 8px;font-size:13px;font-weight:500">Point your camera at a SplitBlind QR code</p>
+        <div id="qr-reader" style="width:100%;max-width:400px;margin:0 auto;border-radius:16px;overflow:hidden"></div>
     </div>
 </div>
 

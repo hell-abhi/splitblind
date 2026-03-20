@@ -97,8 +97,8 @@ fun HomeScreen(
             ) {
                 SmallFloatingActionButton(
                     onClick = onScanQrClick,
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.primary
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ) {
                     Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan QR")
                 }
