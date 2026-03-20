@@ -1404,19 +1404,18 @@ function show(id,push=true){
     const isTab=TAB_SCREENS.includes(id);
     const nav=document.getElementById('bottom-nav');
     if(isTab){
-        // Tab screens: show bottom nav, don't push to history
         nav.classList.remove('hidden');
         document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
         document.getElementById('s-'+id).classList.add('active');
         curScreen=id;
     }else{
-        // Stack screens: hide bottom nav, push to history
         nav.classList.add('hidden');
         if(curScreen&&push)hist.push(curScreen);
         document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
         document.getElementById('s-'+id).classList.add('active');
         curScreen=id;
     }
+    window.scrollTo(0,0);
 }
 function goBack(){const p=hist.pop();if(p){if(TAB_SCREENS.includes(p)){switchNavTab(p)}else{show(p,false)}}}
 function goHome(){stopSync();hist=[];switchNavTab('home')}
