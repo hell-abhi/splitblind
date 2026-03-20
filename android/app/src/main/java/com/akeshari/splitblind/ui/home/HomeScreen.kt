@@ -144,10 +144,57 @@ fun HomeScreen(
                 }
             }
 
+            // Latest Groups (3)
+            if (dashboard.latestGroups.isNotEmpty()) {
+                item {
+                    Text(
+                        "Latest Groups",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+                items(dashboard.latestGroups) { gp ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onPersonalTrackerClick?.invoke(gp.group.groupId) },
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(gp.group.name, style = MaterialTheme.typography.titleSmall)
+                                Text(
+                                    "${gp.memberCount} member${if (gp.memberCount != 1) "s" else ""}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            if (gp.myBalance != 0L) {
+                                Text(
+                                    (if (gp.myBalance > 0) "+" else "") + formatAmount(gp.myBalance),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (gp.myBalance > 0) Color(0xFF6BCB77) else Color(0xFFFF6B6B)
+                                )
+                            } else {
+                                Text("Settled", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Latest Transactions (3)
             if (dashboard.recentExpenses.isNotEmpty()) {
                 item {
                     Text(
-                        "Recent Activity",
+                        "Latest Transactions",
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp)

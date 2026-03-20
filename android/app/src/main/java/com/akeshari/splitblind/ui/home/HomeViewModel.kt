@@ -24,11 +24,18 @@ import java.util.Calendar
 import java.util.UUID
 import javax.inject.Inject
 
+data class GroupPreview(
+    val group: GroupEntity,
+    val memberCount: Int,
+    val myBalance: Long
+)
+
 data class HomeDashboardState(
     val totalOwed: Long = 0,
     val totalOwe: Long = 0,
     val netBalance: Long = 0,
     val recentExpenses: List<ExpenseEntity> = emptyList(),
+    val latestGroups: List<GroupPreview> = emptyList(),
     val personalGroupId: String? = null,
     val personalMonthSpend: Long = 0
 )
@@ -49,9 +56,11 @@ class HomeViewModel @Inject constructor(
         expenseDao.getRecentExpenses(5)
     ) { groups, allExpenses, allSettlements, recentExpenses ->
         val myId = identity.memberId
+        val allMembers = groupDao.getAllMembersList()
 
         var totalOwed = 0L
         var totalOwe = 0L
+        val groupPreviews = mutableListOf<GroupPreview>()
 
         for (group in groups) {
             val gExpenses = allExpenses.filter { it.groupId == group.groupId }
@@ -60,7 +69,14 @@ class HomeViewModel @Inject constructor(
             val myBalance = netBalances[myId] ?: 0L
             if (myBalance > 0) totalOwed += myBalance
             else if (myBalance < 0) totalOwe += -myBalance
+
+            if (group.groupType != "personal" && group.groupType != "iou") {
+                val mc = allMembers.count { it.groupId == group.groupId && !it.isDeleted }
+                groupPreviews.add(GroupPreview(group, mc, myBalance))
+            }
         }
+
+        val latestGroups = groupPreviews.sortedByDescending { it.group.createdAt }.take(3)
 
         // Personal tracker spending this month
         val personalGroup = groups.find { it.groupType == "personal" }
@@ -82,7 +98,8 @@ class HomeViewModel @Inject constructor(
             totalOwed = totalOwed,
             totalOwe = totalOwe,
             netBalance = totalOwed - totalOwe,
-            recentExpenses = recentExpenses,
+            recentExpenses = recentExpenses.take(3),
+            latestGroups = latestGroups,
             personalGroupId = personalGroup?.groupId,
             personalMonthSpend = personalMonthSpend
         )

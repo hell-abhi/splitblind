@@ -28,6 +28,9 @@ interface GroupDao {
     @Query("SELECT * FROM members WHERE groupId = :groupId AND isDeleted = 0")
     suspend fun getMembersList(groupId: String): List<MemberEntity>
 
+    @Query("SELECT * FROM members")
+    suspend fun getAllMembersList(): List<MemberEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMember(member: MemberEntity)
 }

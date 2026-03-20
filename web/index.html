@@ -2005,20 +2005,36 @@ async function renderHome(){
         html+=`<div class="personal-tracker-card pt-empty" id="home-personal-create"><div class="pt-header"><div class="pt-icon">&#x1F4DD;</div><div><div class="pt-title">Personal Tracker</div><div class="pt-subtitle">Track your personal expenses</div></div></div><button class="pt-create-btn" id="home-pt-create-btn">Start Tracking</button></div>`;
     }
 
-    // Recent activity (last 5)
-    const recentExps=allExps.sort((a,b)=>b.createdAt-a.createdAt).slice(0,5);
+    const allMembersArr=await iA('members');
+    const globalNm={};allMembersArr.forEach(m=>globalNm[m.memberId]=m.displayName);
+    const groupNameMap={};groups.forEach(g=>groupNameMap[g.groupId]=g.name);
+    const allM=await iA('members');
+
+    // Latest Groups (3 most recent non-personal, non-IOU)
+    const recentGroups=groups.filter(g=>g.groupType!=='personal'&&!g.isPersonal&&g.groupType!=='iou'&&!g.isIOU).slice(0,3);
+    if(recentGroups.length){
+        html+=`<div class="sec-t" style="margin-top:20px">Latest Groups</div>`;
+        recentGroups.forEach((g,i)=>{
+            const mc=allM.filter(m=>m.groupId===g.groupId&&!m.isDeleted).length;
+            const gExps=allExps.filter(e=>e.groupId===g.groupId);
+            const gSets=allSets.filter(s=>s.groupId===g.groupId);
+            const bal=calcBal(gExps,gSets);
+            const myBal=bal[myId]||0;
+            const balText=myBal>0?'<span style="color:var(--positive)">+'+fmt(myBal)+'</span>':myBal<0?'<span style="color:var(--negative)">'+fmt(myBal)+'</span>':'<span style="color:var(--text-secondary)">Settled</span>';
+            html+=`<div class="card group-card" data-g="${g.groupId}" style="cursor:pointer"><div class="group-icon gi-${(i%5)+1}">&#x1F46B;</div><div style="flex:1"><div class="card-t">${esc(g.name)}</div><div class="card-s">${mc} member${mc!==1?'s':''}</div></div><div style="text-align:right;font-weight:700;font-size:14px">${balText}</div></div>`;
+        });
+    }
+
+    // Latest Transactions (3 most recent expenses across all groups)
+    const recentExps=allExps.sort((a,b)=>b.createdAt-a.createdAt).slice(0,3);
     if(recentExps.length){
-        const allMembersArr=await iA('members');
-        const globalNm={};allMembersArr.forEach(m=>globalNm[m.memberId]=m.displayName);
-        const groupNameMap={};groups.forEach(g=>groupNameMap[g.groupId]=g.name);
-        html+=`<div class="dash-activity"><div class="dash-activity-header"><h3>Recent Activity</h3></div>`;
+        html+=`<div class="sec-t" style="margin-top:20px">Latest Transactions</div>`;
         recentExps.forEach(e=>{
             const ts=getTagStyle(e.tag);const st=ts?{icon:ts.icon,bg:ts.bg}:getExpStyle(e.description);
             const gName=groupNameMap[e.groupId]||'';
-            const payer=globalNm[e.paidBy]||e.paidBy.slice(0,8);
-            html+=`<div class="dash-activity-item" data-g="${e.groupId}"><div class="dai-icon" style="background:${st.bg}">${st.icon}</div><div class="dai-info"><div class="dai-desc">${esc(e.description)}</div><div class="dai-meta">${esc(payer)} &middot; ${esc(gName)} &middot; ${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div><div class="dai-amount">${fmt(e.amountCents)}</div></div>`;
+            const payer=e.paidBy===myId?'You':(globalNm[e.paidBy]||e.paidBy.slice(0,8));
+            html+=`<div class="card exp-c" data-g="${e.groupId}" style="cursor:pointer"><div class="exp-left"><div class="exp-icon" style="background:${st.bg}">${st.icon}</div><div><div class="card-t">${esc(e.description)}</div><div class="card-s">${esc(payer)} &middot; ${esc(gName)} &middot; ${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div><div><div class="exp-a">${fmt(e.amountCents)}</div></div></div>`;
         });
-        html+=`</div>`;
     }
 
     if(!groups.length&&!recentExps.length){
