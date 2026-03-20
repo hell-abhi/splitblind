@@ -872,14 +872,34 @@ private fun HistoryEntryRow(history: HistoryEntity, dateFormat: SimpleDateFormat
                 val next: Map<String, String> = Json.decodeFromString(history.newData)
                 val changes = mutableListOf<String>()
                 if (prev["description"] != next["description"]) {
-                    changes.add("\"${prev["description"]}\" -> \"${next["description"]}\"")
+                    changes.add("Description: \"${prev["description"]}\" \u2192 \"${next["description"]}\"")
                 }
                 if (prev["amountCents"] != next["amountCents"]) {
                     val oldAmt = (prev["amountCents"]?.toLongOrNull() ?: 0) / 100.0
                     val newAmt = (next["amountCents"]?.toLongOrNull() ?: 0) / 100.0
-                    changes.add(String.format(Locale.getDefault(), "\u20B9%.2f -> \u20B9%.2f", oldAmt, newAmt))
+                    changes.add(String.format(Locale.getDefault(), "Amount: \u20B9%.2f \u2192 \u20B9%.2f", oldAmt, newAmt))
                 }
-                if (changes.isNotEmpty()) changes.joinToString(", ") else null
+                if (prev["tag"] != next["tag"]) {
+                    val oldTag = ExpenseTag.fromSlug(prev["tag"]).label
+                    val newTag = ExpenseTag.fromSlug(next["tag"]).label
+                    changes.add("Category: $oldTag \u2192 $newTag")
+                }
+                if (prev["paidBy"] != next["paidBy"]) {
+                    changes.add("Paid by: ${prev["paidBy"]?.take(8) ?: "?"} \u2192 ${next["paidBy"]?.take(8) ?: "?"}")
+                }
+                if (prev["splitMode"] != next["splitMode"]) {
+                    changes.add("Split: ${prev["splitMode"] ?: "equal"} \u2192 ${next["splitMode"] ?: "equal"}")
+                }
+                if (prev["notes"] != next["notes"]) {
+                    changes.add("Notes updated")
+                }
+                if (prev["currency"] != next["currency"]) {
+                    changes.add("Currency: ${prev["currency"] ?: "INR"} \u2192 ${next["currency"] ?: "INR"}")
+                }
+                if (prev["recurringFrequency"] != next["recurringFrequency"]) {
+                    changes.add("Recurring: ${prev["recurringFrequency"] ?: "none"} \u2192 ${next["recurringFrequency"] ?: "none"}")
+                }
+                if (changes.isNotEmpty()) changes.joinToString("\n") else null
             } catch (_: Exception) { null }
         }
         if (changesSummary != null) {
