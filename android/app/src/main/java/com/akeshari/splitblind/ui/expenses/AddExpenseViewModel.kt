@@ -51,7 +51,7 @@ data class ExpenseTag(
             ExpenseTag("other", "Other", "\uD83D\uDCCC", 0xFFCFD8DC)
         )
 
-        fun fromSlug(slug: String?): ExpenseTag? = ALL.find { it.slug == slug }
+        fun fromSlug(slug: String?): ExpenseTag = ALL.find { it.slug == slug } ?: ALL.last()
     }
 }
 

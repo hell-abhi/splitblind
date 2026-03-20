@@ -575,18 +575,16 @@ private fun RecentExpenseCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                if (tag != null) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(Color(tag.color)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(tag.emoji, fontSize = 16.sp)
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color(tag.color)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(tag.emoji, fontSize = 16.sp)
                 }
+                Spacer(modifier = Modifier.width(10.dp))
                 Column {
                     Text(
                         expense.description,

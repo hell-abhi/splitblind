@@ -569,7 +569,7 @@ private fun ExpensesTab(
                                                     }
                                                 }
                                                 val tag = ExpenseTag.fromSlug(expense.tag)
-                                                if (tag != null && !isDeleted) {
+                                                if (!isDeleted) {
                                                     Box(modifier = Modifier.background(Color(tag.color), RoundedCornerShape(12.dp)).padding(horizontal = 8.dp, vertical = 2.dp)) {
                                                         Text("${tag.emoji} ${tag.label}", style = MaterialTheme.typography.labelSmall, color = Color.Black)
                                                     }
