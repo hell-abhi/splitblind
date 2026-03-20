@@ -1936,6 +1936,7 @@ function getMyShare(expense, userId) {
 
 // Analytics tab render
 let analyticsGroupFilter='';
+let analyticsViewMode='group';
 async function renderAnalyticsTab(){
     const allExpsRaw=(await iA('expenses')).filter(e=>!e.isDeleted);
     const allSetsRaw=(await iA('settlements')).filter(s=>!s.isDeleted);
@@ -1943,6 +1944,7 @@ async function renderAnalyticsTab(){
     const groups=await iA('groups');
     const globalNm={};allMems.forEach(m=>globalNm[m.memberId]=m.displayName);
     const el=document.getElementById('analytics-tab-content');
+    const isYours=analyticsViewMode==='yours';
 
     // Filter by group if selected
     const allExps=analyticsGroupFilter?allExpsRaw.filter(e=>e.groupId===analyticsGroupFilter):allExpsRaw;
@@ -1954,46 +1956,44 @@ async function renderAnalyticsTab(){
     groups.forEach(g=>{html+=`<option value="${g.groupId}"${analyticsGroupFilter===g.groupId?' selected':''}>${esc(g.name)}</option>`});
     html+='</select></div>';
 
-    if(!allExps.length){html+='<div class="empty"><div class="ic">&#x1F4CA;</div><h3>No data yet</h3><p>Add expenses to see analytics</p></div>';el.innerHTML=html;el.querySelector('#analytics-group-select').addEventListener('change',e=>{analyticsGroupFilter=e.target.value;renderAnalyticsTab()});return}
+    // View toggle: Group / Yours
+    html+=`<div class="seg-control" id="analytics-view-toggle"><button class="seg-btn${!isYours?' active':''}" data-mode="group">Group</button><button class="seg-btn${isYours?' active':''}" data-mode="yours">Yours</button></div>`;
+
+    if(!allExps.length){html+='<div class="empty"><div class="ic">&#x1F4CA;</div><h3>No data yet</h3><p>Add expenses to see analytics</p></div>';el.innerHTML=html;el.querySelector('#analytics-group-select').addEventListener('change',e=>{analyticsGroupFilter=e.target.value;renderAnalyticsTab()});el.querySelectorAll('#analytics-view-toggle .seg-btn').forEach(b=>b.addEventListener('click',()=>{analyticsViewMode=b.dataset.mode;renderAnalyticsTab()}));return}
 
     const tagColors={'food':'#7C6FE0','transport':'#89C4F4','shopping':'#F2A0C4','entertainment':'#F8C4A4',
         'travel':'#BB8FCE','bills':'#F7DC6F','groceries':'#8DDCC5','health':'#F1948A','rent':'#F8C4A4','other':'#BDC3C7'};
 
-    // Total spending: Group vs Your Share
+    // Total spending
     const totalGroupSpend=allExps.reduce((a,e)=>a+e.amountCents,0);
     const totalYourShare=allExps.reduce((a,e)=>a+getMyShare(e,myId),0);
+    const displayTotal=isYours?totalYourShare:totalGroupSpend;
+    const totalLabel=isYours?'Your Spending':'Total Group Spending';
 
-    html+=`<div class="analytics-card"><div style="display:flex;gap:16px;justify-content:center;text-align:center">`;
-    html+=`<div style="flex:1"><div style="font-size:13px;color:var(--text-secondary);font-weight:600;margin-bottom:4px">Total Group Spending</div><div style="font-size:24px;font-weight:800;color:var(--text)">${fmt(totalGroupSpend)}</div></div>`;
-    html+=`<div style="width:1px;background:var(--border)"></div>`;
-    html+=`<div style="flex:1"><div style="font-size:13px;color:var(--text-secondary);font-weight:600;margin-bottom:4px">Your Share</div><div style="font-size:24px;font-weight:800;color:var(--primary)">${fmt(totalYourShare)}</div></div>`;
+    html+=`<div class="analytics-card"><div style="text-align:center">`;
+    html+=`<div style="font-size:13px;color:var(--text-secondary);font-weight:600;margin-bottom:4px">${totalLabel}</div><div style="font-size:28px;font-weight:800;color:${isYours?'var(--primary)':'var(--text)'}">${fmt(displayTotal)}</div>`;
     html+=`</div></div>`;
 
-    // By Category (dual bars: group + yours)
+    // By Category (single bar based on toggle)
     const tagTotals={};
     const tagMyTotals={};
     allExps.forEach(e=>{const t=e.tag||'other';tagTotals[t]=(tagTotals[t]||0)+e.amountCents;tagMyTotals[t]=(tagMyTotals[t]||0)+getMyShare(e,myId)});
-    const tagSorted=Object.entries(tagTotals).sort((a,b)=>b[1]-a[1]);
+    const tagAmts=isYours?tagMyTotals:tagTotals;
+    const tagSorted=Object.entries(tagAmts).sort((a,b)=>b[1]-a[1]);
     const catMax=tagSorted.length?tagSorted[0][1]:1;
 
     html+=`<div class="analytics-card"><h3>&#x1F3F7; By Category</h3>`;
-    html+=`<div style="display:flex;gap:12px;margin-bottom:12px;font-size:11px;color:var(--text-secondary)"><span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:var(--primary);opacity:0.3;display:inline-block"></span>Group</span><span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:var(--primary);display:inline-block"></span>Yours</span></div>`;
     tagSorted.forEach(([tag,amt])=>{
-        const myAmt=tagMyTotals[tag]||0;
         const t=TAGS[tag]||TAGS.other;
         const color=tagColors[tag]||'#BDC3C7';
-        const pctGroup=catMax>0?(amt/catMax*100):0;
-        const pctMy=catMax>0?(myAmt/catMax*100):0;
-        html+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:13px;font-weight:600">${t.icon} ${t.label}</span></div>`;
-        html+=`<div class="chart-bar-track" style="margin-bottom:3px"><div class="chart-bar-fill" style="width:${Math.max(pctGroup,3)}%;background:${color};opacity:0.3"><span></span></div></div>`;
-        html+=`<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary)"><span>Group ${fmt(amt)}</span></div>`;
-        html+=`<div class="chart-bar-track" style="margin-bottom:3px"><div class="chart-bar-fill" style="width:${Math.max(pctMy,3)}%;background:${color}"><span></span></div></div>`;
-        html+=`<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary)"><span>Yours ${fmt(myAmt)}</span></div>`;
+        const pct=catMax>0?(amt/catMax*100):0;
+        html+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:13px;font-weight:600">${t.icon} ${t.label}</span><span style="font-size:12px;color:var(--text-secondary)">${fmt(amt)}</span></div>`;
+        html+=`<div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,3)}%;background:${color}"><span></span></div></div>`;
         html+=`</div>`;
     });
     html+=`</div>`;
 
-    // By Month (dual bars: group + yours)
+    // By Month (single bar based on toggle)
     const monthTotals={};
     const monthMyTotals={};
     const now=new Date();
@@ -2009,50 +2009,47 @@ async function renderAnalyticsTab(){
         const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
         if(key in monthTotals){monthTotals[key]+=e.amountCents;monthMyTotals[key]+=getMyShare(e,myId)}
     });
-    const monthMax=Math.max(...Object.values(monthTotals),1);
+    const monthAmts=isYours?monthMyTotals:monthTotals;
+    const monthMax=Math.max(...Object.values(monthAmts),1);
 
     html+=`<div class="analytics-card"><h3>&#x1F4C5; By Month</h3>`;
-    html+=`<div style="display:flex;gap:12px;margin-bottom:12px;font-size:11px;color:var(--text-secondary)"><span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:var(--primary);opacity:0.3;display:inline-block"></span>Group</span><span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:var(--primary);display:inline-block"></span>Yours</span></div>`;
-    Object.entries(monthTotals).forEach(([key,amt])=>{
-        const myAmt=monthMyTotals[key]||0;
-        const pctGroup=monthMax>0?(amt/monthMax*100):0;
-        const pctMy=monthMax>0?(myAmt/monthMax*100):0;
+    Object.entries(monthAmts).forEach(([key,amt])=>{
+        const pct=monthMax>0?(amt/monthMax*100):0;
         const m=parseInt(key.split('-')[1])-1;
         const yr=key.split('-')[0].slice(2);
-        html+=`<div style="margin-bottom:10px"><div style="font-size:13px;font-weight:600;margin-bottom:4px">${monthNames[m]} '${yr}</div>`;
-        html+=`<div class="chart-bar-track" style="margin-bottom:2px"><div class="chart-bar-fill" style="width:${Math.max(pctGroup,3)}%;background:var(--primary);opacity:0.3"><span></span></div></div>`;
-        html+=`<div style="font-size:11px;color:var(--text-secondary);margin-bottom:2px">Group ${fmt(amt)}</div>`;
-        html+=`<div class="chart-bar-track" style="margin-bottom:2px"><div class="chart-bar-fill" style="width:${Math.max(pctMy,3)}%;background:var(--primary)"><span></span></div></div>`;
-        html+=`<div style="font-size:11px;color:var(--text-secondary)">Yours ${fmt(myAmt)}</div>`;
+        html+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;font-weight:600">${monthNames[m]} '${yr}</span><span style="font-size:12px;color:var(--text-secondary)">${fmt(amt)}</span></div>`;
+        html+=`<div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,3)}%;background:var(--primary)"><span></span></div></div>`;
         html+=`</div>`;
     });
     html+=`</div>`;
 
     // Category by Month (stacked horizontal bar chart - last 6 months)
     html+=`<div class="analytics-card"><h3>&#x1F4CA; Category by Month</h3>`;
-    // Legend
     const allTags=[...new Set(allExps.map(e=>e.tag||'other'))];
     html+=`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">`;
     allTags.forEach(tag=>{const t=TAGS[tag]||TAGS.other;const color=tagColors[tag]||'#BDC3C7';html+=`<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--text-secondary)"><span style="width:10px;height:10px;border-radius:2px;background:${color};display:inline-block"></span>${t.label}</span>`});
     html+=`</div>`;
-    // Build month-category data
     const monthCatData={};
     Object.keys(monthTotals).forEach(key=>{monthCatData[key]={}});
     allExps.forEach(e=>{
         const d=new Date(e.createdAt);
         const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
         const tag=e.tag||'other';
-        if(key in monthCatData){monthCatData[key][tag]=(monthCatData[key][tag]||0)+e.amountCents}
+        if(key in monthCatData){
+            const amt=isYours?getMyShare(e,myId):e.amountCents;
+            monthCatData[key][tag]=(monthCatData[key][tag]||0)+amt;
+        }
     });
-    const monthCatMax=Math.max(...Object.values(monthTotals),1);
+    const monthCatTotals={};
+    Object.entries(monthCatData).forEach(([key,cats])=>{monthCatTotals[key]=Object.values(cats).reduce((a,b)=>a+b,0)});
+    const monthCatMax=Math.max(...Object.values(monthCatTotals),1);
     Object.entries(monthCatData).forEach(([key,cats])=>{
         const m=parseInt(key.split('-')[1])-1;
         const yr=key.split('-')[0].slice(2);
-        const total=monthTotals[key]||0;
+        const total=monthCatTotals[key]||0;
         html+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;font-weight:600">${monthNames[m]} '${yr}</span><span style="font-size:12px;color:var(--text-secondary)">${fmt(total)}</span></div>`;
         html+=`<div style="display:flex;height:24px;border-radius:6px;overflow:hidden;background:var(--bg-secondary)">`;
         if(total>0){
-            const widthPct=(total/monthCatMax*100);
             const catEntries=Object.entries(cats).sort((a,b)=>b[1]-a[1]);
             catEntries.forEach(([tag,amt])=>{
                 const color=tagColors[tag]||'#BDC3C7';
@@ -2064,47 +2061,50 @@ async function renderAnalyticsTab(){
     });
     html+=`</div>`;
 
-    // By Member
-    const memberPaid={};
-    allExps.forEach(e=>{
-        if(e.paidByMap){for(const[id,a] of Object.entries(e.paidByMap))memberPaid[id]=(memberPaid[id]||0)+a}
-        else{memberPaid[e.paidBy]=(memberPaid[e.paidBy]||0)+e.amountCents}
-    });
-    const memberOwes={};
-    const grpsToCheck=analyticsGroupFilter?groups.filter(g=>g.groupId===analyticsGroupFilter):groups;
-    for(const g of grpsToCheck){
-        const gExps=allExps.filter(e=>e.groupId===g.groupId);
-        const gSets=allSets.filter(s=>s.groupId===g.groupId);
-        const bal=calcBal(gExps,gSets);
-        for(const[id,b] of Object.entries(bal)){
-            if(b<0)memberOwes[id]=(memberOwes[id]||0)+Math.abs(b);
+    // By Member (hidden in "yours" mode)
+    if(!isYours){
+        const memberPaid={};
+        allExps.forEach(e=>{
+            if(e.paidByMap){for(const[id,a] of Object.entries(e.paidByMap))memberPaid[id]=(memberPaid[id]||0)+a}
+            else{memberPaid[e.paidBy]=(memberPaid[e.paidBy]||0)+e.amountCents}
+        });
+        const memberOwes={};
+        const grpsToCheck=analyticsGroupFilter?groups.filter(g=>g.groupId===analyticsGroupFilter):groups;
+        for(const g of grpsToCheck){
+            const gExps=allExps.filter(e=>e.groupId===g.groupId);
+            const gSets=allSets.filter(s=>s.groupId===g.groupId);
+            const bal=calcBal(gExps,gSets);
+            for(const[id,b] of Object.entries(bal)){
+                if(b<0)memberOwes[id]=(memberOwes[id]||0)+Math.abs(b);
+            }
         }
-    }
-    const paidSorted=Object.entries(memberPaid).sort((a,b)=>b[1]-a[1]);
-    const paidMax=paidSorted.length?paidSorted[0][1]:1;
-    const owesSorted=Object.entries(memberOwes).sort((a,b)=>b[1]-a[1]);
-    const owesMax=owesSorted.length?owesSorted[0][1]:1;
+        const paidSorted=Object.entries(memberPaid).sort((a,b)=>b[1]-a[1]);
+        const paidMax=paidSorted.length?paidSorted[0][1]:1;
+        const owesSorted=Object.entries(memberOwes).sort((a,b)=>b[1]-a[1]);
+        const owesMax=owesSorted.length?owesSorted[0][1]:1;
 
-    html+=`<div class="analytics-card"><h3>&#x1F4B3; Who Paid Most</h3>`;
-    paidSorted.forEach(([id,amt])=>{
-        const pct=paidMax>0?(amt/paidMax*100):0;
-        const col=getColor(id);
-        html+=`<div class="chart-bar-row"><div class="chart-bar-label">${esc(globalNm[id]||id.slice(0,8))}</div><div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,5)}%;background:${col}"><span>${fmt(amt)}</span></div></div><div class="chart-bar-value">${fmt(amt)}</div></div>`;
-    });
-    html+=`</div>`;
-
-    if(owesSorted.length){
-        html+=`<div class="analytics-card"><h3>&#x1F4B8; Who Owes Most</h3>`;
-        owesSorted.forEach(([id,amt])=>{
-            const pct=owesMax>0?(amt/owesMax*100):0;
+        html+=`<div class="analytics-card"><h3>&#x1F4B3; Who Paid Most</h3>`;
+        paidSorted.forEach(([id,amt])=>{
+            const pct=paidMax>0?(amt/paidMax*100):0;
             const col=getColor(id);
             html+=`<div class="chart-bar-row"><div class="chart-bar-label">${esc(globalNm[id]||id.slice(0,8))}</div><div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,5)}%;background:${col}"><span>${fmt(amt)}</span></div></div><div class="chart-bar-value">${fmt(amt)}</div></div>`;
         });
         html+=`</div>`;
+
+        if(owesSorted.length){
+            html+=`<div class="analytics-card"><h3>&#x1F4B8; Who Owes Most</h3>`;
+            owesSorted.forEach(([id,amt])=>{
+                const pct=owesMax>0?(amt/owesMax*100):0;
+                const col=getColor(id);
+                html+=`<div class="chart-bar-row"><div class="chart-bar-label">${esc(globalNm[id]||id.slice(0,8))}</div><div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,5)}%;background:${col}"><span>${fmt(amt)}</span></div></div><div class="chart-bar-value">${fmt(amt)}</div></div>`;
+            });
+            html+=`</div>`;
+        }
     }
 
     el.innerHTML=html;
     el.querySelector('#analytics-group-select').addEventListener('change',e=>{analyticsGroupFilter=e.target.value;renderAnalyticsTab()});
+    el.querySelectorAll('#analytics-view-toggle .seg-btn').forEach(b=>b.addEventListener('click',()=>{analyticsViewMode=b.dataset.mode;renderAnalyticsTab()}));
 }
 
 // Profile tab render
@@ -2487,6 +2487,7 @@ async function renderMembers(){
     document.getElementById('invite-btn').addEventListener('click',async()=>{const link=await makeShortLink(curGroup,curGroupKey,g.name);document.getElementById('inv-display2').textContent=link;document.getElementById('share-btn2').onclick=()=>shareLink(link,g.name);show('invite')});
 }
 
+let groupAnalyticsViewMode='group';
 async function renderGroupAnalytics(){
     const isPersonal=curGroupType==='personal';
     const exps=(await iA('expenses')).filter(e=>e.groupId===curGroup&&!e.isDeleted);
@@ -2494,48 +2495,46 @@ async function renderGroupAnalytics(){
     const mems=(await iA('members')).filter(m=>m.groupId===curGroup);
     const nm={};mems.forEach(m=>nm[m.memberId]=m.displayName);
     const el=document.getElementById('t-analytics');
+    const isYours=groupAnalyticsViewMode==='yours';
 
-    if(!exps.length){el.innerHTML='<div class="empty"><div class="ic">&#x1F4CA;</div><h3>No data yet</h3><p>Add expenses to see analytics</p></div>';return}
+    // View toggle: Group / Yours
+    let html=`<div class="seg-control" id="group-analytics-view-toggle" style="margin:16px 16px 0"><button class="seg-btn${!isYours?' active':''}" data-mode="group">Group</button><button class="seg-btn${isYours?' active':''}" data-mode="yours">Yours</button></div>`;
+
+    if(!exps.length){html+='<div class="empty"><div class="ic">&#x1F4CA;</div><h3>No data yet</h3><p>Add expenses to see analytics</p></div>';el.innerHTML=html;el.querySelectorAll('#group-analytics-view-toggle .seg-btn').forEach(b=>b.addEventListener('click',()=>{groupAnalyticsViewMode=b.dataset.mode;renderGroupAnalytics()}));return}
 
     const tagColors={'food':'#7C6FE0','transport':'#89C4F4','shopping':'#F2A0C4','entertainment':'#F8C4A4',
         'travel':'#BB8FCE','bills':'#F7DC6F','groceries':'#8DDCC5','health':'#F1948A','rent':'#F8C4A4','other':'#BDC3C7'};
-    let html='';
 
-    // Total spending: Group vs Your Share
+    // Total spending
     const totalGroupSpend=exps.reduce((a,e)=>a+e.amountCents,0);
     const totalYourShare=exps.reduce((a,e)=>a+getMyShare(e,myId),0);
+    const displayTotal=isYours?totalYourShare:totalGroupSpend;
+    const totalLabel=isYours?'Your Spending':'Total Group Spending';
 
-    html+=`<div class="analytics-card"><div style="display:flex;gap:16px;justify-content:center;text-align:center">`;
-    html+=`<div style="flex:1"><div style="font-size:13px;color:var(--text-secondary);font-weight:600;margin-bottom:4px">Total Group Spending</div><div style="font-size:24px;font-weight:800;color:var(--text)">${fmt(totalGroupSpend)}</div></div>`;
-    html+=`<div style="width:1px;background:var(--border)"></div>`;
-    html+=`<div style="flex:1"><div style="font-size:13px;color:var(--text-secondary);font-weight:600;margin-bottom:4px">Your Share</div><div style="font-size:24px;font-weight:800;color:var(--primary)">${fmt(totalYourShare)}</div></div>`;
+    html+=`<div class="analytics-card"><div style="text-align:center">`;
+    html+=`<div style="font-size:13px;color:var(--text-secondary);font-weight:600;margin-bottom:4px">${totalLabel}</div><div style="font-size:28px;font-weight:800;color:${isYours?'var(--primary)':'var(--text)'}">${fmt(displayTotal)}</div>`;
     html+=`</div></div>`;
 
-    // By Category (dual bars: group + yours)
+    // By Category (single bar based on toggle)
     const tagTotals={};
     const tagMyTotals={};
     exps.forEach(e=>{const t=e.tag||'other';tagTotals[t]=(tagTotals[t]||0)+e.amountCents;tagMyTotals[t]=(tagMyTotals[t]||0)+getMyShare(e,myId)});
-    const tagSorted=Object.entries(tagTotals).sort((a,b)=>b[1]-a[1]);
+    const tagAmts=isYours?tagMyTotals:tagTotals;
+    const tagSorted=Object.entries(tagAmts).sort((a,b)=>b[1]-a[1]);
     const catMax=tagSorted.length?tagSorted[0][1]:1;
 
     html+=`<div class="analytics-card"><h3>&#x1F3F7; By Category</h3>`;
-    html+=`<div style="display:flex;gap:12px;margin-bottom:12px;font-size:11px;color:var(--text-secondary)"><span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:var(--primary);opacity:0.3;display:inline-block"></span>Group</span><span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:var(--primary);display:inline-block"></span>Yours</span></div>`;
     tagSorted.forEach(([tag,amt])=>{
-        const myAmt=tagMyTotals[tag]||0;
         const t=TAGS[tag]||TAGS.other;
         const color=tagColors[tag]||'#BDC3C7';
-        const pctGroup=catMax>0?(amt/catMax*100):0;
-        const pctMy=catMax>0?(myAmt/catMax*100):0;
-        html+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:13px;font-weight:600">${t.icon} ${t.label}</span></div>`;
-        html+=`<div class="chart-bar-track" style="margin-bottom:3px"><div class="chart-bar-fill" style="width:${Math.max(pctGroup,3)}%;background:${color};opacity:0.3"><span></span></div></div>`;
-        html+=`<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary)"><span>Group ${fmt(amt)}</span></div>`;
-        html+=`<div class="chart-bar-track" style="margin-bottom:3px"><div class="chart-bar-fill" style="width:${Math.max(pctMy,3)}%;background:${color}"><span></span></div></div>`;
-        html+=`<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary)"><span>Yours ${fmt(myAmt)}</span></div>`;
+        const pct=catMax>0?(amt/catMax*100):0;
+        html+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:13px;font-weight:600">${t.icon} ${t.label}</span><span style="font-size:12px;color:var(--text-secondary)">${fmt(amt)}</span></div>`;
+        html+=`<div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,3)}%;background:${color}"><span></span></div></div>`;
         html+=`</div>`;
     });
     html+=`</div>`;
 
-    // By Month (dual bars: group + yours)
+    // By Month (single bar based on toggle)
     const monthTotals={};
     const monthMyTotals={};
     const now=new Date();
@@ -2551,21 +2550,16 @@ async function renderGroupAnalytics(){
         const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
         if(key in monthTotals){monthTotals[key]+=e.amountCents;monthMyTotals[key]+=getMyShare(e,myId)}
     });
-    const monthMax=Math.max(...Object.values(monthTotals),1);
+    const monthAmts=isYours?monthMyTotals:monthTotals;
+    const monthMax=Math.max(...Object.values(monthAmts),1);
 
     html+=`<div class="analytics-card"><h3>&#x1F4C5; By Month</h3>`;
-    html+=`<div style="display:flex;gap:12px;margin-bottom:12px;font-size:11px;color:var(--text-secondary)"><span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:var(--primary);opacity:0.3;display:inline-block"></span>Group</span><span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:var(--primary);display:inline-block"></span>Yours</span></div>`;
-    Object.entries(monthTotals).forEach(([key,amt])=>{
-        const myAmt=monthMyTotals[key]||0;
-        const pctGroup=monthMax>0?(amt/monthMax*100):0;
-        const pctMy=monthMax>0?(myAmt/monthMax*100):0;
+    Object.entries(monthAmts).forEach(([key,amt])=>{
+        const pct=monthMax>0?(amt/monthMax*100):0;
         const m=parseInt(key.split('-')[1])-1;
         const yr=key.split('-')[0].slice(2);
-        html+=`<div style="margin-bottom:10px"><div style="font-size:13px;font-weight:600;margin-bottom:4px">${monthNames[m]} '${yr}</div>`;
-        html+=`<div class="chart-bar-track" style="margin-bottom:2px"><div class="chart-bar-fill" style="width:${Math.max(pctGroup,3)}%;background:var(--primary);opacity:0.3"><span></span></div></div>`;
-        html+=`<div style="font-size:11px;color:var(--text-secondary);margin-bottom:2px">Group ${fmt(amt)}</div>`;
-        html+=`<div class="chart-bar-track" style="margin-bottom:2px"><div class="chart-bar-fill" style="width:${Math.max(pctMy,3)}%;background:var(--primary)"><span></span></div></div>`;
-        html+=`<div style="font-size:11px;color:var(--text-secondary)">Yours ${fmt(myAmt)}</div>`;
+        html+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;font-weight:600">${monthNames[m]} '${yr}</span><span style="font-size:12px;color:var(--text-secondary)">${fmt(amt)}</span></div>`;
+        html+=`<div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,3)}%;background:var(--primary)"><span></span></div></div>`;
         html+=`</div>`;
     });
     html+=`</div>`;
@@ -2582,13 +2576,18 @@ async function renderGroupAnalytics(){
         const d=new Date(e.createdAt);
         const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
         const tag=e.tag||'other';
-        if(key in monthCatData){monthCatData[key][tag]=(monthCatData[key][tag]||0)+e.amountCents}
+        if(key in monthCatData){
+            const amt=isYours?getMyShare(e,myId):e.amountCents;
+            monthCatData[key][tag]=(monthCatData[key][tag]||0)+amt;
+        }
     });
-    const monthCatMax=Math.max(...Object.values(monthTotals),1);
+    const monthCatTotals={};
+    Object.entries(monthCatData).forEach(([key,cats])=>{monthCatTotals[key]=Object.values(cats).reduce((a,b)=>a+b,0)});
+    const monthCatMax=Math.max(...Object.values(monthCatTotals),1);
     Object.entries(monthCatData).forEach(([key,cats])=>{
         const m=parseInt(key.split('-')[1])-1;
         const yr=key.split('-')[0].slice(2);
-        const total=monthTotals[key]||0;
+        const total=monthCatTotals[key]||0;
         html+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;font-weight:600">${monthNames[m]} '${yr}</span><span style="font-size:12px;color:var(--text-secondary)">${fmt(total)}</span></div>`;
         html+=`<div style="display:flex;height:24px;border-radius:6px;overflow:hidden;background:var(--bg-secondary)">`;
         if(total>0){
@@ -2603,8 +2602,8 @@ async function renderGroupAnalytics(){
     });
     html+=`</div>`;
 
-    // By Member (skip for personal groups)
-    if(!isPersonal){
+    // By Member (skip for personal groups, hidden in "yours" mode)
+    if(!isPersonal&&!isYours){
         const memberPaid={};
         exps.forEach(e=>{
             if(e.paidByMap){for(const[id,a] of Object.entries(e.paidByMap))memberPaid[id]=(memberPaid[id]||0)+a}
@@ -2622,6 +2621,7 @@ async function renderGroupAnalytics(){
     }
 
     el.innerHTML=html;
+    el.querySelectorAll('#group-analytics-view-toggle .seg-btn').forEach(b=>b.addEventListener('click',()=>{groupAnalyticsViewMode=b.dataset.mode;renderGroupAnalytics()}));
 }
 
 function switchGroupTab(tab){expSearchQuery='';expTagFilter=null;expDateFilter='all';document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));document.getElementById('t-exp').style.display=tab==='exp'?'':'none';document.getElementById('t-bal').style.display=tab==='bal'?'':'none';document.getElementById('t-mem').style.display=tab==='members'?'':'none';document.getElementById('t-analytics').style.display=tab==='analytics'?'':'none';document.getElementById('fab-ae').style.display=tab==='exp'?'':'none';if(tab==='exp')renderExpenses();else if(tab==='bal')renderBalances();else if(tab==='analytics')renderGroupAnalytics();else renderMembers()}

@@ -1017,6 +1017,9 @@ private fun GroupAnalyticsTab(
         return
     }
 
+    var viewMode by remember { mutableStateOf("group") }
+    val isYours = viewMode == "yours"
+
     // Helper to compute user's share of an expense
     fun getMyShare(expense: ExpenseEntity): Long {
         if (expense.splitDetails != null) {
@@ -1051,7 +1054,7 @@ private fun GroupAnalyticsTab(
     val monthNames = arrayOf("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")
     data class MonthData(val label: String, val total: Long, val yours: Long)
     val monthStats = mutableListOf<MonthData>()
-    data class MonthCatData(val label: String, val total: Long, val categories: List<Pair<ExpenseTag?, Long>>)
+    data class MonthCatData(val label: String, val total: Long, val yourTotal: Long, val categories: List<Pair<ExpenseTag?, Long>>, val yourCategories: List<Pair<ExpenseTag?, Long>>)
     val monthCategoryStats = mutableListOf<MonthCatData>()
     for (i in 5 downTo 0) {
         val c = Calendar.getInstance()
@@ -1076,7 +1079,10 @@ private fun GroupAnalyticsTab(
         val catBreakdown = monthExps.groupBy { it.tag ?: "other" }
             .map { (slug, exps) -> Pair(ExpenseTag.fromSlug(slug), exps.sumOf { it.amountCents }) }
             .sortedByDescending { it.second }
-        monthCategoryStats.add(MonthCatData(label, total, catBreakdown))
+        val yourCatBreakdown = monthExps.groupBy { it.tag ?: "other" }
+            .map { (slug, exps) -> Pair(ExpenseTag.fromSlug(slug), exps.sumOf { getMyShare(it) }) }
+            .sortedByDescending { it.second }
+        monthCategoryStats.add(MonthCatData(label, total, yours, catBreakdown, yourCatBreakdown))
     }
 
     // By Member
@@ -1096,156 +1102,167 @@ private fun GroupAnalyticsTab(
         }
     }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // Total spending - Group vs Your Share
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-            ) {
-                Row(
+    Column(modifier = Modifier.fillMaxSize()) {
+        // View toggle: Group / Yours
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            listOf("group" to "Group", "yours" to "Yours").forEach { (mode, label) ->
+                val isActive = viewMode == mode
+                Box(
                     modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
+                        .weight(1f)
+                        .padding(3.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(
+                            if (isActive) MaterialTheme.colorScheme.primary
+                            else Color.Transparent
+                        )
+                        .clickable { viewMode = mode }
+                        .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Total Group Spending", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(formatAmount(totalSpent), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                    }
-                    Box(
-                        modifier = Modifier
-                            .height(48.dp)
-                            .width(1.dp)
-                            .background(MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.3f))
+                    Text(
+                        label,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = if (isActive) Color.White
+                        else MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Your Share", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                }
+            }
+        }
+
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Total spending - single value based on toggle
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .padding(20.dp)
+                            .fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            if (isYours) "Your Spending" else "Total Group Spending",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text(formatAmount(yourTotalShare), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            formatAmount(if (isYours) yourTotalShare else totalSpent),
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isYours) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onPrimaryContainer
+                        )
                     }
                 }
             }
-        }
 
-        // By Category (dual bars)
-        item {
-            Text("By Category", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(bottom = 4.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(10.dp).clip(RoundedCornerShape(2.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Group", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(10.dp).clip(RoundedCornerShape(2.dp)).background(MaterialTheme.colorScheme.primary))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Yours", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+            // By Category (single bar)
+            item {
+                Text("By Category", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
-        }
-        item {
-            val maxCat = categoryStats.maxOfOrNull { it.total } ?: 1L
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    categoryStats.forEach { stat ->
-                        Column {
-                            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(Color(stat.color)))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("${stat.tag?.emoji ?: ""} ${stat.tag?.label ?: "Other"}", style = MaterialTheme.typography.bodyMedium)
+            item {
+                val maxCat = categoryStats.maxOfOrNull { if (isYours) it.yours else it.total } ?: 1L
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        categoryStats.forEach { stat ->
+                            val amt = if (isYours) stat.yours else stat.total
+                            Column {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(Color(stat.color)))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("${stat.tag?.emoji ?: ""} ${stat.tag?.label ?: "Other"}", style = MaterialTheme.typography.bodyMedium)
+                                    }
+                                    Text(formatAmount(amt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Box(modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                                    val fraction = if (maxCat > 0) (amt.toFloat() / maxCat) else 0f
+                                    Box(modifier = Modifier.fillMaxWidth(fraction = fraction.coerceIn(0f, 1f)).height(8.dp).clip(RoundedCornerShape(4.dp)).background(Color(stat.color)))
+                                }
                             }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            // Group bar (faded)
-                            Box(modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
-                                val fraction = if (maxCat > 0) (stat.total.toFloat() / maxCat) else 0f
-                                Box(modifier = Modifier.fillMaxWidth(fraction = fraction.coerceIn(0f, 1f)).height(8.dp).clip(RoundedCornerShape(4.dp)).background(Color(stat.color).copy(alpha = 0.3f)))
-                            }
-                            Text("Group ${formatAmount(stat.total)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Spacer(modifier = Modifier.height(2.dp))
-                            // Your bar (solid)
-                            Box(modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
-                                val fraction = if (maxCat > 0) (stat.yours.toFloat() / maxCat) else 0f
-                                Box(modifier = Modifier.fillMaxWidth(fraction = fraction.coerceIn(0f, 1f)).height(8.dp).clip(RoundedCornerShape(4.dp)).background(Color(stat.color)))
-                            }
-                            Text("Yours ${formatAmount(stat.yours)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
             }
-        }
 
-        // By Month (dual bars)
-        item {
-            Text("By Month (Last 6 Months)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        }
-        item {
-            val maxMonth = monthStats.maxOfOrNull { it.total } ?: 1L
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    monthStats.forEach { month ->
-                        Column {
-                            Text(month.label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            // Group bar
-                            Box(modifier = Modifier.fillMaxWidth().height(14.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
-                                val fraction = if (maxMonth > 0) (month.total.toFloat() / maxMonth) else 0f
-                                Box(modifier = Modifier.fillMaxWidth(fraction = fraction.coerceIn(0f, 1f)).height(14.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)))
+            // By Month (single bar)
+            item {
+                Text("By Month (Last 6 Months)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            }
+            item {
+                val maxMonth = monthStats.maxOfOrNull { if (isYours) it.yours else it.total } ?: 1L
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        monthStats.forEach { month ->
+                            val amt = if (isYours) month.yours else month.total
+                            Column {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(month.label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                    Text(formatAmount(amt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Box(modifier = Modifier.fillMaxWidth().height(14.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                                    val fraction = if (maxMonth > 0) (amt.toFloat() / maxMonth) else 0f
+                                    Box(modifier = Modifier.fillMaxWidth(fraction = fraction.coerceIn(0f, 1f)).height(14.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.primary))
+                                }
                             }
-                            Text("Group ${formatAmount(month.total)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Spacer(modifier = Modifier.height(2.dp))
-                            // Your bar
-                            Box(modifier = Modifier.fillMaxWidth().height(14.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
-                                val fraction = if (maxMonth > 0) (month.yours.toFloat() / maxMonth) else 0f
-                                Box(modifier = Modifier.fillMaxWidth(fraction = fraction.coerceIn(0f, 1f)).height(14.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.primary))
-                            }
-                            Text("Yours ${formatAmount(month.yours)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
             }
-        }
 
-        // Category by Month (stacked bars)
-        item {
-            Text("Category by Month", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        }
-        item {
-            val maxMonthCat = monthCategoryStats.maxOfOrNull { it.total } ?: 1L
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    monthCategoryStats.forEach { monthCat ->
-                        Column {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(monthCat.label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                                Text(formatAmount(monthCat.total), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(24.dp)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                            ) {
-                                if (monthCat.total > 0) {
-                                    monthCat.categories.forEach { (tag, amt) ->
-                                        val segFraction = amt.toFloat() / maxMonthCat
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth(fraction = segFraction.coerceIn(0f, 1f))
-                                                .height(24.dp)
-                                                .background(Color(tag?.color ?: 0xFFCFD8DC))
-                                        )
+            // Category by Month (stacked bars)
+            item {
+                Text("Category by Month", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            }
+            item {
+                val maxMonthCat = monthCategoryStats.maxOfOrNull { if (isYours) it.yourTotal else it.total } ?: 1L
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        monthCategoryStats.forEach { monthCat ->
+                            val cats = if (isYours) monthCat.yourCategories else monthCat.categories
+                            val total = if (isYours) monthCat.yourTotal else monthCat.total
+                            Column {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(monthCat.label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                    Text(formatAmount(total), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(24.dp)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                                ) {
+                                    if (total > 0) {
+                                        cats.forEach { (tag, amt) ->
+                                            val segFraction = amt.toFloat() / maxMonthCat
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth(fraction = segFraction.coerceIn(0f, 1f))
+                                                    .height(24.dp)
+                                                    .background(Color(tag?.color ?: 0xFFCFD8DC))
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -1253,36 +1270,36 @@ private fun GroupAnalyticsTab(
                     }
                 }
             }
-        }
 
-        // By Member (skip for personal)
-        if (!isPersonal && paidByMember.isNotEmpty()) {
-            item {
-                Text("By Member", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            }
-            item {
-                val maxPaid = paidByMember.values.maxOrNull() ?: 1L
-                val sortedMembers = paidByMember.entries.sortedByDescending { it.value }
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        sortedMembers.forEach { (memberId, totalPaid) ->
-                            Column {
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                    Text(memberNames[memberId] ?: memberId.take(8), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                                    Text(formatAmount(totalPaid), style = MaterialTheme.typography.bodySmall)
-                                }
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Box(modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
-                                    val fraction = if (maxPaid > 0) (totalPaid.toFloat() / maxPaid) else 0f
-                                    Box(modifier = Modifier.fillMaxWidth(fraction = fraction.coerceIn(0f, 1f)).height(8.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF89C4F4)))
+            // By Member (skip for personal, hidden in "yours" mode)
+            if (!isPersonal && !isYours && paidByMember.isNotEmpty()) {
+                item {
+                    Text("By Member", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+                item {
+                    val maxPaid = paidByMember.values.maxOrNull() ?: 1L
+                    val sortedMembers = paidByMember.entries.sortedByDescending { it.value }
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            sortedMembers.forEach { (memberId, totalPaid) ->
+                                Column {
+                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                        Text(memberNames[memberId] ?: memberId.take(8), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                        Text(formatAmount(totalPaid), style = MaterialTheme.typography.bodySmall)
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Box(modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                                        val fraction = if (maxPaid > 0) (totalPaid.toFloat() / maxPaid) else 0f
+                                        Box(modifier = Modifier.fillMaxWidth(fraction = fraction.coerceIn(0f, 1f)).height(8.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF89C4F4)))
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-        }
 
-        item { Spacer(modifier = Modifier.height(16.dp)) }
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+        }
     }
 }
