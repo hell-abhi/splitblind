@@ -897,6 +897,8 @@
     <div class="screen" id="s-home">
         <div class="topbar">
             <h1>SplitBlind</h1>
+            <button class="icon-btn" id="home-sync" title="Sync Device">&#x1F504;</button>
+            <button class="icon-btn" id="home-security" title="Security">&#x1F512;</button>
         </div>
         <div class="content" id="home-content"></div>
     </div>
@@ -2023,7 +2025,7 @@ async function renderProfile(){
     const ppStatus=pp?'Set':'Not set';
     const ppStatusColor=pp?'var(--positive)':'var(--negative)';
     const col=getColor(myId);
-    const isDark=document.documentElement.classList.contains('dark');
+    const savedTheme=localStorage.getItem('theme')||'system';
 
     let html=`
         <div class="profile-header">
@@ -2087,17 +2089,10 @@ async function renderProfile(){
 
         <div class="profile-section">
             <div class="profile-section-title">Appearance</div>
-            <div class="theme-toggle-row">
-                <div class="profile-row-left">
-                    <span class="profile-row-icon">${isDark?'&#x1F319;':'&#x2600;&#xFE0F;'}</span>
-                    <div>
-                        <div class="profile-row-label">Dark Mode</div>
-                    </div>
-                </div>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="profile-theme-toggle" ${isDark?'checked':''}>
-                    <span class="toggle-slider"></span>
-                </label>
+            <div class="seg-control" id="profile-theme-seg">
+                <button class="seg-btn${savedTheme==='light'?' active':''}" data-theme="light">&#x2600;&#xFE0F; Light</button>
+                <button class="seg-btn${!savedTheme||savedTheme==='system'?' active':''}" data-theme="system">&#x1F4F1; System</button>
+                <button class="seg-btn${savedTheme==='dark'?' active':''}" data-theme="dark">&#x1F319; Dark</button>
             </div>
         </div>
 
@@ -2162,14 +2157,17 @@ async function renderProfile(){
         show('sync-gen');
     };
     document.getElementById('profile-security-btn').onclick=()=>show('security');
-    document.getElementById('profile-theme-toggle').onchange=(e)=>{
-        const isDark=e.target.checked;
-        localStorage.setItem('theme',isDark?'dark':'light');
-        document.documentElement.classList.toggle('dark',isDark);
-        document.documentElement.classList.toggle('light',!isDark);
-        // Re-render to update icon
-        renderProfile();
-    };
+    document.querySelectorAll('#profile-theme-seg .seg-btn').forEach(btn=>{
+        btn.onclick=()=>{
+            const mode=btn.dataset.theme;
+            localStorage.setItem('theme',mode==='system'?'system':mode);
+            document.documentElement.classList.remove('dark','light');
+            if(mode==='dark')document.documentElement.classList.add('dark');
+            else if(mode==='light')document.documentElement.classList.add('light');
+            // system: no class = falls through to @media query
+            renderProfile();
+        };
+    });
 }
 
 async function openGroup(gid){curGroup=gid;const g=await iG('groups',gid);if(!g)return;curGroupKey=g.groupKeyBase64;curGroupType=g.groupType||'';document.getElementById('gd-title').textContent=g.name;const isPersonal=g.groupType==='personal'||g.isPersonal;const pplTab=document.querySelector('.tab[data-tab="members"]');if(pplTab)pplTab.style.display=isPersonal?'none':'';const analyticsTab=document.querySelector('.tab[data-tab="analytics"]');if(analyticsTab)analyticsTab.style.display='';show('gd');startSync(gid,curGroupKey);switchGroupTab('exp')}
@@ -2648,6 +2646,8 @@ function wireEvents(){
     document.getElementById('inv-back').onclick=goBack;
     document.getElementById('sec-back').onclick=goBack;
     document.getElementById('inv-done').onclick=goBack;
+    document.getElementById('home-sync').onclick=()=>{document.getElementById('sg-pin').value='';document.getElementById('sg-btn').disabled=true;document.getElementById('sg-result').style.display='none';document.getElementById('sg-btn').style.display='';show('sync-gen')};
+    document.getElementById('home-security').onclick=()=>show('security');
     document.getElementById('analytics-back').onclick=goBack;
     document.getElementById('ld-back').onclick=goBack;
 

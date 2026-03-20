@@ -122,7 +122,9 @@ fun MainScreen(
                 HomeScreen(
                     onPersonalTrackerClick = { groupId ->
                         navController.navigate(Routes.groupDetail(groupId))
-                    }
+                    },
+                    onSyncClick = { navController.navigate(Routes.SYNC_GENERATE) },
+                    onSecurityClick = { navController.navigate(Routes.SECURITY) }
                 )
             }
 
