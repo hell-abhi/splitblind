@@ -12,16 +12,27 @@ object BalanceCalculator {
     fun computeNetBalances(expenses: List<ExpenseEntity>, settlements: List<SettlementEntity>): Map<String, Long> {
         val balances = mutableMapOf<String, Long>()
         for (expense in expenses) {
+            // Use converted amount (base currency) if available
+            val effectiveAmountCents = expense.convertedAmountCents ?: expense.amountCents
+
             // --- Credit payers ---
             val paidByMap: Map<String, Long>? = expense.paidByMap?.let {
                 try { json.decodeFromString<Map<String, Long>>(it) } catch (_: Exception) { null }
             }
             if (paidByMap != null && paidByMap.isNotEmpty()) {
-                for ((memberId, amount) in paidByMap) {
-                    balances[memberId] = (balances[memberId] ?: 0) + amount
+                if (expense.convertedAmountCents != null && expense.conversionRate != null) {
+                    // Scale multi-payer amounts by conversion rate
+                    for ((memberId, amount) in paidByMap) {
+                        val convertedPayer = (amount * expense.conversionRate).toLong()
+                        balances[memberId] = (balances[memberId] ?: 0) + convertedPayer
+                    }
+                } else {
+                    for ((memberId, amount) in paidByMap) {
+                        balances[memberId] = (balances[memberId] ?: 0) + amount
+                    }
                 }
             } else {
-                balances[expense.paidBy] = (balances[expense.paidBy] ?: 0) + expense.amountCents
+                balances[expense.paidBy] = (balances[expense.paidBy] ?: 0) + effectiveAmountCents
             }
 
             // --- Debit split members ---
@@ -29,14 +40,22 @@ object BalanceCalculator {
                 try { json.decodeFromString<Map<String, Long>>(it) } catch (_: Exception) { null }
             }
             if (splitDetailsMap != null && splitDetailsMap.isNotEmpty()) {
-                for ((memberId, amount) in splitDetailsMap) {
-                    balances[memberId] = (balances[memberId] ?: 0) - amount
+                if (expense.convertedAmountCents != null && expense.conversionRate != null) {
+                    // Scale split details by conversion rate
+                    for ((memberId, amount) in splitDetailsMap) {
+                        val convertedSplit = (amount * expense.conversionRate).toLong()
+                        balances[memberId] = (balances[memberId] ?: 0) - convertedSplit
+                    }
+                } else {
+                    for ((memberId, amount) in splitDetailsMap) {
+                        balances[memberId] = (balances[memberId] ?: 0) - amount
+                    }
                 }
             } else {
                 // Fall back to equal split
                 val splitMembers: List<String> = json.decodeFromString(expense.splitAmong)
-                val share = expense.amountCents / splitMembers.size
-                val remainder = expense.amountCents % splitMembers.size
+                val share = effectiveAmountCents / splitMembers.size
+                val remainder = effectiveAmountCents % splitMembers.size
                 for ((index, member) in splitMembers.withIndex()) {
                     val memberShare = share + if (index < remainder) 1 else 0
                     balances[member] = (balances[member] ?: 0) - memberShare

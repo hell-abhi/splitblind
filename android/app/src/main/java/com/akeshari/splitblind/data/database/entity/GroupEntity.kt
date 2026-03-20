@@ -11,5 +11,6 @@ data class GroupEntity(
     val createdAt: Long,
     val groupKeyBase64: String,
     val hlcTimestamp: Long,
-    val groupType: String? = null  // "group" or "iou"
+    val groupType: String? = null,  // "group" or "iou"
+    val baseCurrency: String? = "INR"
 )

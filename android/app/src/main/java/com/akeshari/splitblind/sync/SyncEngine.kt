@@ -78,7 +78,11 @@ data class OpData(
     // recurring
     val recurringFrequency: String? = null,
     // item-wise split
-    val splitItems: String? = null
+    val splitItems: String? = null,
+    // currency conversion
+    val convertedAmountCents: Long? = null,
+    val conversionRate: Double? = null,
+    val convertedCurrency: String? = null
 )
 
 private val json = Json { ignoreUnknownKeys = true }
@@ -231,7 +235,10 @@ class SyncEngine @Inject constructor(
                             splitDetails = d.splitDetails?.let { json.encodeToString(it) },
                             notes = d.notes,
                             recurringFrequency = d.recurringFrequency,
-                            splitItems = d.splitItems
+                            splitItems = d.splitItems,
+                            convertedAmountCents = d.convertedAmountCents,
+                            conversionRate = d.conversionRate,
+                            convertedCurrency = d.convertedCurrency
                         )
                     )
                 }

@@ -51,6 +51,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.akeshari.splitblind.crypto.Identity
+import com.akeshari.splitblind.ui.expenses.CurrencyInfo
 import com.akeshari.splitblind.ui.theme.ThemeManager
 import com.akeshari.splitblind.ui.theme.ThemeMode
 
@@ -64,7 +65,9 @@ fun ProfileScreen(
 ) {
     val context = LocalContext.current
     var showEditNameDialog by remember { mutableStateOf(false) }
+    var showCurrencyDialog by remember { mutableStateOf(false) }
     var displayName by remember { mutableStateOf(identity.displayName) }
+    var defaultCurrency by remember { mutableStateOf(identity.defaultCurrency) }
 
     if (showEditNameDialog) {
         EditNameDialog(
@@ -74,6 +77,79 @@ fun ProfileScreen(
                 identity.displayName = newName
                 displayName = newName
                 showEditNameDialog = false
+            }
+        )
+    }
+
+    if (showCurrencyDialog) {
+        var currencySearch by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showCurrencyDialog = false },
+            title = { Text("Default Currency") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = currencySearch,
+                        onValueChange = { currencySearch = it },
+                        placeholder = { Text("Search currencies...") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val currencies = if (currencySearch.isBlank()) {
+                        CurrencyInfo.ALL
+                    } else {
+                        CurrencyInfo.ALL.filter {
+                            it.code.contains(currencySearch, ignoreCase = true) ||
+                            it.name.contains(currencySearch, ignoreCase = true)
+                        }
+                    }
+                    Column(
+                        modifier = Modifier
+                            .height(300.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        currencies.forEach { currency ->
+                            val isSelected = defaultCurrency == currency.code
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(
+                                        if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                        else androidx.compose.ui.graphics.Color.Transparent,
+                                        RoundedCornerShape(8.dp)
+                                    )
+                                    .clickable {
+                                        identity.defaultCurrency = currency.code
+                                        defaultCurrency = currency.code
+                                        showCurrencyDialog = false
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    currency.symbol,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp
+                                )
+                                Column {
+                                    Text(currency.code, fontWeight = FontWeight.SemiBold)
+                                    Text(
+                                        currency.name,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showCurrencyDialog = false }) {
+                    Text("Cancel")
+                }
             }
         )
     }
@@ -136,6 +212,45 @@ fun ProfileScreen(
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
+                }
+            }
+
+            // Default Currency
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showCurrencyDialog = true },
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            "Default Currency",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        val currencyInfo = CurrencyInfo.ALL.find { it.code == defaultCurrency }
+                        Text(
+                            "${defaultCurrency} ${currencyInfo?.symbol ?: ""} ${currencyInfo?.name ?: ""}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Text(
+                        "Change",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
 

@@ -27,7 +27,7 @@ import com.akeshari.splitblind.data.database.entity.SettlementEntity
         ProcessedOpEntity::class,
         HistoryEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -78,6 +78,15 @@ abstract class SplitBlindDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE expenses ADD COLUMN recurringFrequency TEXT DEFAULT NULL")
                 db.execSQL("ALTER TABLE expenses ADD COLUMN splitItems TEXT DEFAULT NULL")
+            }
+        }
+
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `groups` ADD COLUMN baseCurrency TEXT DEFAULT 'INR'")
+                db.execSQL("ALTER TABLE expenses ADD COLUMN convertedAmountCents INTEGER DEFAULT NULL")
+                db.execSQL("ALTER TABLE expenses ADD COLUMN conversionRate REAL DEFAULT NULL")
+                db.execSQL("ALTER TABLE expenses ADD COLUMN convertedCurrency TEXT DEFAULT NULL")
             }
         }
     }

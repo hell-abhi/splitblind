@@ -40,5 +40,9 @@ class Identity(context: Context) {
         get() = prefs.getString("personal_group_id", null)
         set(value) = prefs.edit().putString("personal_group_id", value).apply()
 
+    var defaultCurrency: String
+        get() = prefs.getString("default_currency", "INR") ?: "INR"
+        set(value) = prefs.edit().putString("default_currency", value).apply()
+
     val isOnboarded: Boolean get() = displayName.isNotBlank()
 }

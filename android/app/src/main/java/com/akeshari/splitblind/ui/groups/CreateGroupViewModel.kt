@@ -59,7 +59,8 @@ class CreateGroupViewModel @Inject constructor(
                     createdBy = identity.memberId,
                     createdAt = now,
                     groupKeyBase64 = groupKeyBase64,
-                    hlcTimestamp = now
+                    hlcTimestamp = now,
+                    baseCurrency = identity.defaultCurrency
                 )
             )
 

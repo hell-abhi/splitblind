@@ -10,6 +10,7 @@ import com.akeshari.splitblind.data.database.dao.HistoryDao
 import com.akeshari.splitblind.data.database.entity.ExpenseEntity
 import com.akeshari.splitblind.data.database.entity.HistoryEntity
 import com.akeshari.splitblind.data.database.entity.MemberEntity
+import com.akeshari.splitblind.util.ExchangeRateService
 import com.akeshari.splitblind.sync.OpData
 import com.akeshari.splitblind.sync.OpPayload
 import com.akeshari.splitblind.sync.SyncEngine
@@ -144,7 +145,13 @@ data class AddExpenseState(
     // Currency
     val currency: String = "INR",
     // Item-wise split
-    val splitItems: List<SplitItem> = listOf(SplitItem())
+    val splitItems: List<SplitItem> = listOf(SplitItem()),
+    // Currency conversion
+    val conversionRate: Double? = null,
+    val convertedAmountCents: Long? = null,
+    val conversionPreview: String? = null,
+    val groupBaseCurrency: String = "INR",
+    val isLoadingRate: Boolean = false
 )
 
 @HiltViewModel
@@ -167,6 +174,13 @@ class AddExpenseViewModel @Inject constructor(
     val state: StateFlow<AddExpenseState> = _state
 
     init {
+        // Load group base currency
+        viewModelScope.launch {
+            val group = groupDao.getGroup(groupId)
+            val baseCurrency = group?.baseCurrency ?: "INR"
+            _state.value = _state.value.copy(groupBaseCurrency = baseCurrency)
+        }
+
         if (editExpenseId != null) {
             viewModelScope.launch {
                 val expense = expenseDao.getExpense(editExpenseId) ?: return@launch
@@ -208,6 +222,9 @@ class AddExpenseViewModel @Inject constructor(
     fun setAmount(amount: String) {
         if (amount.isEmpty() || amount.matches(Regex("^\\d*\\.?\\d{0,2}$"))) {
             _state.value = _state.value.copy(amount = amount)
+            if (_state.value.currency != _state.value.groupBaseCurrency) {
+                fetchConversionRate()
+            }
         }
     }
 
@@ -244,6 +261,59 @@ class AddExpenseViewModel @Inject constructor(
 
     fun setCurrency(currency: String) {
         _state.value = _state.value.copy(currency = currency)
+        fetchConversionRate()
+    }
+
+    private fun fetchConversionRate() {
+        val s = _state.value
+        val from = s.currency
+        val to = s.groupBaseCurrency
+        if (from == to) {
+            _state.value = s.copy(
+                conversionRate = null,
+                convertedAmountCents = null,
+                conversionPreview = null,
+                isLoadingRate = false
+            )
+            return
+        }
+        val amountDouble = s.amount.toDoubleOrNull()
+        if (amountDouble == null || amountDouble <= 0) {
+            _state.value = s.copy(
+                conversionRate = null,
+                convertedAmountCents = null,
+                conversionPreview = null,
+                isLoadingRate = false
+            )
+            return
+        }
+        _state.value = s.copy(isLoadingRate = true)
+        viewModelScope.launch {
+            val rate = ExchangeRateService.getRate(from, to)
+            if (rate != null) {
+                val convertedCents = (amountDouble * rate * 100).toLong()
+                val toSymbol = CurrencyInfo.symbolFor(to)
+                val fromSymbol = CurrencyInfo.symbolFor(from)
+                val preview = String.format(
+                    java.util.Locale.getDefault(),
+                    "%s%,.2f (1 %s = %s%.4f)",
+                    toSymbol, convertedCents / 100.0, from, toSymbol, rate
+                )
+                _state.value = _state.value.copy(
+                    conversionRate = rate,
+                    convertedAmountCents = convertedCents,
+                    conversionPreview = preview,
+                    isLoadingRate = false
+                )
+            } else {
+                _state.value = _state.value.copy(
+                    conversionRate = null,
+                    convertedAmountCents = null,
+                    conversionPreview = "Rate unavailable",
+                    isLoadingRate = false
+                )
+            }
+        }
     }
 
     fun addSplitItem() {
@@ -478,6 +548,11 @@ class AddExpenseViewModel @Inject constructor(
             val notesValue = s.notes.trim().ifEmpty { null }
             val recurringFreq = if (s.isRecurring) s.recurringFrequency else null
 
+            // Currency conversion fields
+            val conversionRate = s.conversionRate
+            val convertedAmountCents = s.convertedAmountCents
+            val convertedCurrency = if (conversionRate != null) s.groupBaseCurrency else null
+
             val expense = ExpenseEntity(
                 expenseId = expenseId,
                 groupId = groupId,
@@ -494,7 +569,10 @@ class AddExpenseViewModel @Inject constructor(
                 splitDetails = splitDetailsJson,
                 notes = notesValue,
                 recurringFrequency = recurringFreq,
-                splitItems = splitItemsJson
+                splitItems = splitItemsJson,
+                convertedAmountCents = convertedAmountCents,
+                conversionRate = conversionRate,
+                convertedCurrency = convertedCurrency
             )
 
             expenseDao.insertExpense(expense)
@@ -523,7 +601,10 @@ class AddExpenseViewModel @Inject constructor(
                             splitDetails = splitDetailsCents,
                             notes = notesValue,
                             recurringFrequency = recurringFreq,
-                            splitItems = splitItemsJson
+                            splitItems = splitItemsJson,
+                            convertedAmountCents = convertedAmountCents,
+                            conversionRate = conversionRate,
+                            convertedCurrency = convertedCurrency
                         ),
                         hlc = now,
                         author = identity.memberId

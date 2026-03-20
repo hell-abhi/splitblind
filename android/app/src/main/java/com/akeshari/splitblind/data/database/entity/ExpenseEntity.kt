@@ -21,5 +21,8 @@ data class ExpenseEntity(
     val splitDetails: String? = null,    // JSON: {"memberId": cents}
     val notes: String? = null,
     val recurringFrequency: String? = null, // "weekly", "monthly", "yearly"
-    val splitItems: String? = null       // JSON array of item-wise split data
+    val splitItems: String? = null,       // JSON array of item-wise split data
+    val convertedAmountCents: Long? = null,
+    val conversionRate: Double? = null,
+    val convertedCurrency: String? = null
 )

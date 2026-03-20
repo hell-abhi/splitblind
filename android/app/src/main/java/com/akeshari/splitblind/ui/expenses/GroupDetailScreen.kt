@@ -640,14 +640,23 @@ private fun ExpensesTab(
                                             }
                                             Text(dateFormat.format(Date(expense.createdAt)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = itemAlpha))
                                         }
-                                        Text(
-                                            formatAmount(expense.amountCents, expense.currency),
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (isDeleted) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                                            else if (isInvolved) MaterialTheme.colorScheme.primary
-                                            else MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
+                                        Column(horizontalAlignment = Alignment.End) {
+                                            Text(
+                                                formatAmount(expense.amountCents, expense.currency),
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isDeleted) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                                else if (isInvolved) MaterialTheme.colorScheme.primary
+                                                else MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            if (expense.convertedAmountCents != null && expense.convertedCurrency != null && expense.currency != expense.convertedCurrency) {
+                                                Text(
+                                                    formatAmount(expense.convertedAmountCents, expense.convertedCurrency),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                                )
+                                            }
+                                        }
                                     }
 
                                     // Expandable notes
