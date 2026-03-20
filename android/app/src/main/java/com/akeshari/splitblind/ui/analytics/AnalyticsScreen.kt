@@ -21,6 +21,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -40,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import java.util.Locale
 
@@ -138,7 +140,7 @@ fun AnalyticsScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Total spending
+                // Total spending - Group vs Your Share
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -146,27 +148,52 @@ fun AnalyticsScreen(
                             containerColor = MaterialTheme.colorScheme.primaryContainer
                         )
                     ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                        Row(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                "Total Spending",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    "Total Group Spending",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    formatAmount(state.totalSpent),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                            HorizontalDivider(
+                                modifier = Modifier
+                                    .height(48.dp)
+                                    .width(1.dp),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.3f)
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                formatAmount(state.totalSpent),
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    "Your Share",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    formatAmount(state.yourTotalShare),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
                 }
 
-                // By Category
+                // By Category (dual bars)
                 item {
                     Text(
                         "By Category",
@@ -176,10 +203,40 @@ fun AnalyticsScreen(
                 }
 
                 item {
+                    // Legend
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .clip(RoundedCornerShape(2.dp))
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Group", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .clip(RoundedCornerShape(2.dp))
+                                    .background(MaterialTheme.colorScheme.primary)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Yours", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+
+                item {
+                    val maxCat = state.categoryStats.maxOfOrNull { it.totalCents } ?: 1L
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(
                             modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             state.categoryStats.forEach { stat ->
                                 Column {
@@ -201,14 +258,9 @@ fun AnalyticsScreen(
                                                 style = MaterialTheme.typography.bodyMedium
                                             )
                                         }
-                                        Text(
-                                            "${formatAmount(stat.totalCents)} (${String.format("%.1f", stat.percentage)}%)",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
                                     }
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    // Bar
+                                    // Group bar (faded)
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -216,21 +268,50 @@ fun AnalyticsScreen(
                                             .clip(RoundedCornerShape(4.dp))
                                             .background(MaterialTheme.colorScheme.surfaceVariant)
                                     ) {
+                                        val fraction = if (maxCat > 0) (stat.totalCents.toFloat() / maxCat) else 0f
                                         Box(
                                             modifier = Modifier
-                                                .fillMaxWidth(fraction = (stat.percentage / 100f).coerceIn(0f, 1f))
+                                                .fillMaxWidth(fraction = fraction.coerceIn(0f, 1f))
+                                                .height(8.dp)
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .background(Color(stat.color).copy(alpha = 0.3f))
+                                        )
+                                    }
+                                    Text(
+                                        "Group ${formatAmount(stat.totalCents)}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    // Your bar (solid)
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(8.dp)
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    ) {
+                                        val fraction = if (maxCat > 0) (stat.yourCents.toFloat() / maxCat) else 0f
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth(fraction = fraction.coerceIn(0f, 1f))
                                                 .height(8.dp)
                                                 .clip(RoundedCornerShape(4.dp))
                                                 .background(Color(stat.color))
                                         )
                                     }
+                                    Text(
+                                        "Yours ${formatAmount(stat.yourCents)}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                             }
                         }
                     }
                 }
 
-                // By Month
+                // By Month (dual bars)
                 item {
                     Text(
                         "By Month (Last 6 Months)",
@@ -245,23 +326,21 @@ fun AnalyticsScreen(
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(
                             modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             state.monthStats.forEach { month ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
+                                Column {
                                     Text(
                                         month.label,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        modifier = Modifier.width(50.dp)
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold
                                     )
-                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    // Group bar
                                     Box(
                                         modifier = Modifier
-                                            .weight(1f)
-                                            .height(20.dp)
+                                            .fillMaxWidth()
+                                            .height(14.dp)
                                             .clip(RoundedCornerShape(4.dp))
                                             .background(MaterialTheme.colorScheme.surfaceVariant)
                                     ) {
@@ -269,17 +348,99 @@ fun AnalyticsScreen(
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxWidth(fraction = fraction.coerceIn(0f, 1f))
-                                                .height(20.dp)
+                                                .height(14.dp)
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+                                        )
+                                    }
+                                    Text(
+                                        "Group ${formatAmount(month.totalCents)}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    // Your bar
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(14.dp)
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    ) {
+                                        val fraction = if (maxMonth > 0) (month.yourCents.toFloat() / maxMonth) else 0f
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth(fraction = fraction.coerceIn(0f, 1f))
+                                                .height(14.dp)
                                                 .clip(RoundedCornerShape(4.dp))
                                                 .background(MaterialTheme.colorScheme.primary)
                                         )
                                     }
-                                    Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        formatAmount(month.totalCents),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        modifier = Modifier.width(80.dp)
+                                        "Yours ${formatAmount(month.yourCents)}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Category by Month (stacked bars)
+                item {
+                    Text(
+                        "Category by Month",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                item {
+                    val maxMonthCat = state.monthCategoryStats.maxOfOrNull { it.totalCents } ?: 1L
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            state.monthCategoryStats.forEach { monthCat ->
+                                Column {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            monthCat.label,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Text(
+                                            formatAmount(monthCat.totalCents),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    // Stacked bar
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(24.dp)
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    ) {
+                                        if (monthCat.totalCents > 0) {
+                                            monthCat.categories.forEach { (tag, amt) ->
+                                                val segFraction = amt.toFloat() / maxMonthCat
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth(fraction = segFraction.coerceIn(0f, 1f))
+                                                        .height(24.dp)
+                                                        .background(Color(tag?.color ?: 0xFFCFD8DC))
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }

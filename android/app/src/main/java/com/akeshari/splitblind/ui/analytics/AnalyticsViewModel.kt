@@ -21,13 +21,21 @@ data class CategoryStat(
     val tag: ExpenseTag?,
     val slug: String,
     val totalCents: Long,
+    val yourCents: Long,
     val percentage: Float,
     val color: Long
 )
 
 data class MonthStat(
     val label: String,
-    val totalCents: Long
+    val totalCents: Long,
+    val yourCents: Long
+)
+
+data class MonthCategoryStat(
+    val label: String,
+    val totalCents: Long,
+    val categories: List<Pair<ExpenseTag?, Long>> // tag to amount
 )
 
 data class MemberStat(
@@ -45,8 +53,10 @@ data class GroupOption(
 data class AnalyticsState(
     val categoryStats: List<CategoryStat> = emptyList(),
     val monthStats: List<MonthStat> = emptyList(),
+    val monthCategoryStats: List<MonthCategoryStat> = emptyList(),
     val memberStats: List<MemberStat> = emptyList(),
     val totalSpent: Long = 0,
+    val yourTotalShare: Long = 0,
     val groups: List<GroupOption> = emptyList(),
     val selectedGroupId: String? = null
 )
@@ -71,6 +81,25 @@ class AnalyticsViewModel @Inject constructor(
         loadAnalytics()
     }
 
+    private fun getMyShare(expense: ExpenseEntity): Long {
+        val myId = identity.memberId
+        // Check splitDetails first (custom split)
+        if (expense.splitDetails != null) {
+            val details: Map<String, Long> = try {
+                Json.decodeFromString(expense.splitDetails)
+            } catch (_: Exception) { emptyMap() }
+            return details[myId] ?: 0
+        }
+        // Equal split fallback
+        val splitAmong: List<String> = try {
+            Json.decodeFromString(expense.splitAmong)
+        } catch (_: Exception) { emptyList() }
+        if (splitAmong.contains(myId)) {
+            return expense.amountCents / splitAmong.size
+        }
+        return 0
+    }
+
     private fun loadAnalytics() {
         viewModelScope.launch {
             val selectedGroupId = _state.value.selectedGroupId
@@ -89,16 +118,19 @@ class AnalyticsViewModel @Inject constructor(
             }
 
             val totalSpent = expenses.sumOf { it.amountCents }
+            val yourTotalShare = expenses.sumOf { getMyShare(it) }
 
             // --- By Category ---
             val byCat = expenses.groupBy { it.tag ?: "other" }
             val categoryStats = byCat.map { (slug, exps) ->
                 val total = exps.sumOf { it.amountCents }
+                val yourTotal = exps.sumOf { getMyShare(it) }
                 val tag = ExpenseTag.fromSlug(slug)
                 CategoryStat(
                     tag = tag,
                     slug = slug,
                     totalCents = total,
+                    yourCents = yourTotal,
                     percentage = if (totalSpent > 0) (total.toFloat() / totalSpent) * 100f else 0f,
                     color = tag?.color ?: 0xFFCFD8DC
                 )
@@ -106,6 +138,7 @@ class AnalyticsViewModel @Inject constructor(
 
             // --- By Month (last 6 months) ---
             val monthStats = mutableListOf<MonthStat>()
+            val monthCategoryStats = mutableListOf<MonthCategoryStat>()
             val monthNames = arrayOf("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")
             for (i in 5 downTo 0) {
                 val c = Calendar.getInstance()
@@ -123,8 +156,19 @@ class AnalyticsViewModel @Inject constructor(
                     add(Calendar.MONTH, 1)
                 }.timeInMillis
 
-                val total = expenses.filter { it.createdAt in start until end }.sumOf { it.amountCents }
-                monthStats.add(MonthStat(label, total))
+                val monthExpenses = expenses.filter { it.createdAt in start until end }
+                val total = monthExpenses.sumOf { it.amountCents }
+                val yourTotal = monthExpenses.sumOf { getMyShare(it) }
+                monthStats.add(MonthStat(label, total, yourTotal))
+
+                // Category breakdown per month
+                val catBreakdown = monthExpenses.groupBy { it.tag ?: "other" }
+                    .map { (slug, exps) ->
+                        val tag = ExpenseTag.fromSlug(slug)
+                        Pair(tag, exps.sumOf { it.amountCents })
+                    }
+                    .sortedByDescending { it.second }
+                monthCategoryStats.add(MonthCategoryStat(label, total, catBreakdown))
             }
 
             // --- By Member ---
@@ -156,8 +200,10 @@ class AnalyticsViewModel @Inject constructor(
             _state.value = _state.value.copy(
                 categoryStats = categoryStats,
                 monthStats = monthStats,
+                monthCategoryStats = monthCategoryStats,
                 memberStats = memberStats,
                 totalSpent = totalSpent,
+                yourTotalShare = yourTotalShare,
                 groups = groups.map { GroupOption(it.groupId, it.name) }
             )
         }
