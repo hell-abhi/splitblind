@@ -32,4 +32,7 @@ interface ExpenseDao {
 
     @Query("SELECT * FROM expenses WHERE isDeleted = 0 ORDER BY createdAt DESC LIMIT :limit")
     fun getRecentExpenses(limit: Int): Flow<List<ExpenseEntity>>
+
+    @Query("SELECT * FROM expenses WHERE recurringFrequency IS NOT NULL AND isDeleted = 0")
+    suspend fun getRecurringExpenses(): List<ExpenseEntity>
 }

@@ -23,6 +23,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -31,6 +34,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -42,6 +46,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -101,6 +108,110 @@ fun AddExpenseScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val members by viewModel.members.collectAsState()
+    var showCalculator by remember { mutableStateOf(false) }
+    var showCurrencyDialog by remember { mutableStateOf(false) }
+
+    // Calculator dialog
+    if (showCalculator) {
+        CalculatorDialog(
+            onResult = { result ->
+                viewModel.setAmount(result)
+                showCalculator = false
+            },
+            onDismiss = { showCalculator = false }
+        )
+    }
+
+    // Currency picker dialog
+    if (showCurrencyDialog) {
+        var currencySearch by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showCurrencyDialog = false },
+            title = { Text("Select Currency") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = currencySearch,
+                        onValueChange = { currencySearch = it },
+                        placeholder = { Text("Search currencies...") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    if (currencySearch.isBlank()) {
+                        Text("Frequently Used", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+                    val currencies = if (currencySearch.isBlank()) {
+                        CurrencyInfo.FREQUENTLY_USED
+                    } else {
+                        CurrencyInfo.ALL.filter {
+                            it.code.contains(currencySearch, ignoreCase = true) ||
+                            it.name.contains(currencySearch, ignoreCase = true)
+                        }
+                    }
+                    Column(
+                        modifier = Modifier.height(300.dp).verticalScroll(rememberScrollState())
+                    ) {
+                        currencies.forEach { currency ->
+                            val isSelected = state.currency == currency.code
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
+                                    .clickable {
+                                        viewModel.setCurrency(currency.code)
+                                        showCurrencyDialog = false
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(currency.symbol, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                Column {
+                                    Text(currency.code, fontWeight = FontWeight.SemiBold)
+                                    Text(currency.name, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                        if (currencySearch.isBlank()) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text("All Currencies", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            CurrencyInfo.ALL.filter { it !in CurrencyInfo.FREQUENTLY_USED }.forEach { currency ->
+                                val isSelected = state.currency == currency.code
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
+                                        .clickable {
+                                            viewModel.setCurrency(currency.code)
+                                            showCurrencyDialog = false
+                                        }
+                                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(currency.symbol, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                    Column {
+                                        Text(currency.code, fontWeight = FontWeight.SemiBold)
+                                        Text(currency.name, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showCurrencyDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     // Auto-select all members initially
     LaunchedEffect(members) {
@@ -160,16 +271,46 @@ fun AddExpenseScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = state.amount,
-                        onValueChange = viewModel::setAmount,
-                        label = { Text("Amount (\u20B9)") },
-                        placeholder = { Text("0.00") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        textStyle = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold),
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Currency button
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.primaryContainer)
+                                .clickable { showCurrencyDialog = true }
+                                .padding(horizontal = 12.dp, vertical = 14.dp)
+                        ) {
+                            Text(
+                                state.currency,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                        OutlinedTextField(
+                            value = state.amount,
+                            onValueChange = viewModel::setAmount,
+                            label = { Text("Amount (${CurrencyInfo.symbolFor(state.currency)})") },
+                            placeholder = { Text("0.00") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            textStyle = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold),
+                            modifier = Modifier.weight(1f)
+                        )
+                        // Calculator button
+                        IconButton(onClick = { showCalculator = true }) {
+                            Icon(
+                                Icons.Default.Calculate,
+                                contentDescription = "Calculator",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
                 }
             }
 
@@ -195,6 +336,64 @@ fun AddExpenseScreen(
                         maxLines = 3,
                         modifier = Modifier.fillMaxWidth()
                     )
+                }
+            }
+
+            // ---- Card: Recurring ----
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "\uD83D\uDD01 Repeat",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Switch(
+                            checked = state.isRecurring,
+                            onCheckedChange = { viewModel.setRecurring(it) }
+                        )
+                    }
+                    if (state.isRecurring) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            listOf("weekly" to "Weekly", "monthly" to "Monthly", "yearly" to "Yearly").forEach { (value, label) ->
+                                val isSelected = state.recurringFrequency == value
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(
+                                            if (isSelected) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.surfaceVariant
+                                        )
+                                        .clickable { viewModel.setRecurringFrequency(value) }
+                                        .padding(vertical = 10.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        label,
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -452,7 +651,107 @@ fun AddExpenseScreen(
                                         )
                                     }
                                     SplitMode.EQUAL -> { /* No extra input */ }
+                                    SplitMode.ITEMS -> { /* Items handled below */ }
                                 }
+                            }
+                        }
+                    }
+
+                    // ---- Item-wise split UI ----
+                    if (state.splitMode == SplitMode.ITEMS) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            "Items",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        state.splitItems.forEachIndexed { index, item ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        OutlinedTextField(
+                                            value = item.name,
+                                            onValueChange = { viewModel.updateSplitItemName(index, it) },
+                                            placeholder = { Text("Item name") },
+                                            singleLine = true,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        OutlinedTextField(
+                                            value = item.amount,
+                                            onValueChange = { viewModel.updateSplitItemAmount(index, it) },
+                                            placeholder = { Text("0.00") },
+                                            singleLine = true,
+                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                            modifier = Modifier.width(100.dp)
+                                        )
+                                        if (state.splitItems.size > 1) {
+                                            IconButton(
+                                                onClick = { viewModel.removeSplitItem(index) },
+                                                modifier = Modifier.size(24.dp)
+                                            ) {
+                                                Icon(Icons.Default.Close, contentDescription = "Remove", modifier = Modifier.size(16.dp))
+                                            }
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text("Split among:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    FlowRow(
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        members.filter { it.memberId in state.splitAmong }.forEach { member ->
+                                            val isChecked = member.memberId in item.members
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(16.dp))
+                                                    .background(
+                                                        if (isChecked) MaterialTheme.colorScheme.primary
+                                                        else MaterialTheme.colorScheme.surfaceVariant
+                                                    )
+                                                    .clickable { viewModel.toggleSplitItemMember(index, member.memberId) }
+                                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                                            ) {
+                                                Text(
+                                                    member.displayName,
+                                                    fontSize = 11.sp,
+                                                    color = if (isChecked) MaterialTheme.colorScheme.onPrimary
+                                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        OutlinedButton(
+                            onClick = { viewModel.addSplitItem() },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("+ Add Item")
+                        }
+
+                        // Items total validation
+                        if (state.amount.isNotEmpty()) {
+                            val totalCents = ((state.amount.toDoubleOrNull() ?: 0.0) * 100).toLong()
+                            val itemsCents = state.splitItems.sumOf { ((it.amount.toDoubleOrNull() ?: 0.0) * 100).toLong() }
+                            val diff = totalCents - itemsCents
+                            if (diff != 0L) {
+                                Text(
+                                    "Items remaining: ${CurrencyInfo.symbolFor(state.currency)}${String.format("%.2f", diff / 100.0)}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
                             }
                         }
                     }

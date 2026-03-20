@@ -19,6 +19,10 @@ import com.akeshari.splitblind.sync.SyncEngine
 import com.akeshari.splitblind.util.BalanceCalculator
 import com.akeshari.splitblind.util.Debt
 import dagger.hilt.android.lifecycle.HiltViewModel
+import android.content.Context
+import android.content.Intent
+import android.widget.Toast
+import androidx.core.content.FileProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -27,6 +31,10 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
 
@@ -364,6 +372,65 @@ class GroupDetailViewModel @Inject constructor(
                     author = identity.memberId
                 )
             )
+        }
+    }
+
+    fun exportCsv(context: Context) {
+        viewModelScope.launch {
+            try {
+                val s = state.value
+                val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+                val memberNames = s.memberNames
+
+                val sb = StringBuilder()
+                sb.appendLine("Date,Description,Tag,Amount,Currency,Paid By,Split Among,Notes,Type")
+
+                // Expenses
+                for (expense in s.allExpenses) {
+                    val date = dateFormat.format(Date(expense.createdAt))
+                    val desc = expense.description.replace(",", ";").replace("\"", "'")
+                    val tag = ExpenseTag.fromSlug(expense.tag).label
+                    val amount = String.format("%.2f", expense.amountCents / 100.0)
+                    val currency = expense.currency
+                    val paidBy = memberNames[expense.paidBy] ?: expense.paidBy.take(8)
+                    val splitAmong: List<String> = try {
+                        Json.decodeFromString(expense.splitAmong)
+                    } catch (_: Exception) { emptyList() }
+                    val splitNames = splitAmong.joinToString("; ") { id -> memberNames[id] ?: id.take(8) }
+                    val notes = (expense.notes ?: "").replace(",", ";").replace("\"", "'").replace("\n", " ")
+                    val type = if (expense.isDeleted) "Deleted Expense" else "Expense"
+                    sb.appendLine("\"$date\",\"$desc\",\"$tag\",\"$amount\",\"$currency\",\"$paidBy\",\"$splitNames\",\"$notes\",\"$type\"")
+                }
+
+                // Settlements
+                for (settlement in s.allSettlements) {
+                    val date = dateFormat.format(Date(settlement.createdAt))
+                    val fromName = memberNames[settlement.fromMember] ?: settlement.fromMember.take(8)
+                    val toName = memberNames[settlement.toMember] ?: settlement.toMember.take(8)
+                    val amount = String.format("%.2f", settlement.amountCents / 100.0)
+                    val type = if (settlement.isDeleted) "Deleted Settlement" else "Settlement"
+                    sb.appendLine("\"$date\",\"$fromName paid $toName\",\"\",\"$amount\",\"INR\",\"$fromName\",\"$toName\",\"\",\"$type\"")
+                }
+
+                // Write to cache/exports
+                val exportDir = File(context.cacheDir, "exports")
+                exportDir.mkdirs()
+                val groupName = (s.group?.name ?: "group").replace(" ", "_").take(20)
+                val fileName = "splitblind_${groupName}_${System.currentTimeMillis()}.csv"
+                val file = File(exportDir, fileName)
+                file.writeText(sb.toString())
+
+                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    this.type = "text/csv"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    putExtra(Intent.EXTRA_SUBJECT, "SplitBlind Export - ${s.group?.name ?: "Group"}")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                context.startActivity(Intent.createChooser(shareIntent, "Export CSV"))
+            } catch (e: Exception) {
+                Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 

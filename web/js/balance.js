@@ -8,7 +8,42 @@ function calcBal(exps,sets){const b={};for(const e of exps){if(e.isDeleted)conti
     else{const s=e.splitAmong,sh=Math.floor(e.amountCents/s.length),rem=e.amountCents%s.length;s.forEach((m,i)=>{b[m]=(b[m]||0)-sh-(i<rem?1:0)})}
 }for(const s of sets){if(s.isDeleted)continue;b[s.fromMember]=(b[s.fromMember]||0)+s.amountCents;b[s.toMember]=(b[s.toMember]||0)-s.amountCents}return b}
 function simplify(bal){const cr=[],dr=[];for(const[m,b] of Object.entries(bal)){if(b>0)cr.push({id:m,a:b});else if(b<0)dr.push({id:m,a:-b})}cr.sort((a,b)=>b.a-a.a);dr.sort((a,b)=>b.a-a.a);const debts=[];let i=0,j=0;while(i<cr.length&&j<dr.length){const a=Math.min(cr[i].a,dr[j].a);if(a>0)debts.push({from:dr[j].id,to:cr[i].id,amountCents:a});cr[i].a-=a;dr[j].a-=a;if(!cr[i].a)i++;if(!dr[j].a)j++}return debts}
-function fmt(c){const w=Math.floor(Math.abs(c)/100),f=Math.abs(c)%100;return(c<0?'-':'')+'\u20B9'+w+'.'+String(f).padStart(2,'0')}
+// Currency data
+const CURRENCIES=[
+    {code:'INR',symbol:'\u20B9',name:'Indian Rupee',top:true},
+    {code:'USD',symbol:'$',name:'US Dollar',top:true},
+    {code:'EUR',symbol:'\u20AC',name:'Euro',top:true},
+    {code:'GBP',symbol:'\u00A3',name:'British Pound',top:true},
+    {code:'AED',symbol:'\u062F.\u0625',name:'UAE Dirham',top:true},
+    {code:'SGD',symbol:'S$',name:'Singapore Dollar'},
+    {code:'CAD',symbol:'C$',name:'Canadian Dollar'},
+    {code:'AUD',symbol:'A$',name:'Australian Dollar'},
+    {code:'JPY',symbol:'\u00A5',name:'Japanese Yen'},
+    {code:'THB',symbol:'\u0E3F',name:'Thai Baht'},
+    {code:'MYR',symbol:'RM',name:'Malaysian Ringgit'},
+    {code:'IDR',symbol:'Rp',name:'Indonesian Rupiah'},
+    {code:'KRW',symbol:'\u20A9',name:'South Korean Won'},
+    {code:'CHF',symbol:'Fr',name:'Swiss Franc'},
+    {code:'SEK',symbol:'kr',name:'Swedish Krona'},
+    {code:'NOK',symbol:'kr',name:'Norwegian Krone'},
+    {code:'DKK',symbol:'kr',name:'Danish Krone'},
+    {code:'NZD',symbol:'NZ$',name:'New Zealand Dollar'},
+    {code:'HKD',symbol:'HK$',name:'Hong Kong Dollar'},
+    {code:'PHP',symbol:'\u20B1',name:'Philippine Peso'},
+    {code:'SAR',symbol:'\uFDFC',name:'Saudi Riyal'},
+    {code:'QAR',symbol:'\uFDFC',name:'Qatari Riyal'},
+    {code:'BHD',symbol:'BD',name:'Bahraini Dinar'},
+    {code:'OMR',symbol:'OMR',name:'Omani Rial'},
+    {code:'KWD',symbol:'KD',name:'Kuwaiti Dinar'},
+    {code:'ZAR',symbol:'R',name:'South African Rand'},
+    {code:'BRL',symbol:'R$',name:'Brazilian Real'},
+    {code:'MXN',symbol:'MX$',name:'Mexican Peso'},
+    {code:'TRY',symbol:'\u20BA',name:'Turkish Lira'},
+    {code:'RUB',symbol:'\u20BD',name:'Russian Ruble'}
+];
+const CURRENCY_MAP={};CURRENCIES.forEach(c=>CURRENCY_MAP[c.code]=c);
+function getCurrencySymbol(code){const c=CURRENCY_MAP[code||'INR'];return c?c.symbol:'\u20B9'}
+function fmt(c,currencyCode){const sym=getCurrencySymbol(currencyCode);const w=Math.floor(Math.abs(c)/100),f=Math.abs(c)%100;return(c<0?'-':'')+sym+w+'.'+String(f).padStart(2,'0')}
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
 
 // Colors for avatars
@@ -81,4 +116,44 @@ function computeChanges(prev,next){
     if((prev.splitMode||'equal')!==(next.splitMode||'equal'))changes.push({field:'Split mode',from:prev.splitMode||'equal',to:next.splitMode||'equal'});
     if((prev.notes||'')!==(next.notes||''))changes.push({field:'Notes',from:prev.notes||'(none)',to:next.notes||'(none)'});
     return changes;
+}
+
+// Recurring expense helper
+function getNextRecurringDate(timestamp, frequency){
+    const d=new Date(timestamp);
+    if(frequency==='weekly') d.setDate(d.getDate()+7);
+    else if(frequency==='monthly') d.setMonth(d.getMonth()+1);
+    else if(frequency==='yearly') d.setFullYear(d.getFullYear()+1);
+    return d.getTime();
+}
+
+async function processRecurringExpenses(groupId, groupKey){
+    const exps=(await iA('expenses')).filter(e=>e.groupId===groupId&&!e.isDeleted&&e.recurring);
+    const now=Date.now();
+    let created=0;
+    for(const e of exps){
+        if(!e.recurring||!e.recurring.frequency) continue;
+        // Find the latest occurrence of this recurring expense (by recurringParentId or itself)
+        const parentId=e.recurringParentId||e.expenseId;
+        const allOccurrences=(await iA('expenses')).filter(x=>x.groupId===groupId&&!x.isDeleted&&(x.expenseId===parentId||x.recurringParentId===parentId));
+        const latestTs=Math.max(...allOccurrences.map(x=>x.createdAt));
+        const nextDue=getNextRecurringDate(latestTs, e.recurring.frequency);
+        if(nextDue<=now){
+            // Create new occurrence
+            const eid=uid();
+            const data={
+                expenseId:eid, groupId:groupId, description:e.description,
+                amountCents:e.amountCents, currency:e.currency||'INR',
+                paidBy:e.paidBy, splitAmong:e.splitAmong, createdAt:nextDue,
+                isDeleted:false, tag:e.tag, paidByMap:e.paidByMap||null,
+                splitMode:e.splitMode||null, splitDetails:e.splitDetails||null,
+                notes:e.notes||null, recurring:e.recurring,
+                recurringParentId:parentId, splitItems:e.splitItems||null
+            };
+            await iP('expenses',{...data,hlcTimestamp:now});
+            await pushOp(groupId,groupKey,{id:uid(),type:'expense',data,hlc:now,author:myId});
+            created++;
+        }
+    }
+    return created;
 }

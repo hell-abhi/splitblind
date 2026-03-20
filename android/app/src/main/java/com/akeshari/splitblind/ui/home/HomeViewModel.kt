@@ -22,6 +22,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString
 import java.util.Calendar
 import java.util.UUID
 import javax.inject.Inject
@@ -60,6 +62,91 @@ class HomeViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
+
+    init {
+        // Check for recurring expenses on app start
+        viewModelScope.launch {
+            processRecurringExpenses()
+        }
+    }
+
+    private suspend fun processRecurringExpenses() {
+        try {
+            val recurringExpenses = expenseDao.getRecurringExpenses()
+            val now = System.currentTimeMillis()
+
+            for (expense in recurringExpenses) {
+                val freq = expense.recurringFrequency ?: continue
+                val intervalMs = when (freq) {
+                    "weekly" -> 7L * 24 * 60 * 60 * 1000
+                    "monthly" -> 30L * 24 * 60 * 60 * 1000
+                    "yearly" -> 365L * 24 * 60 * 60 * 1000
+                    else -> continue
+                }
+
+                // Check if enough time has passed since last occurrence
+                val timeSince = now - expense.createdAt
+                if (timeSince < intervalMs) continue
+
+                // Check how many occurrences are due
+                val occurrencesDue = (timeSince / intervalMs).toInt()
+                // Only create one at a time to avoid flooding
+                if (occurrencesDue < 1) continue
+
+                // Create new expense
+                val newExpenseId = UUID.randomUUID().toString().take(16)
+                val splitAmong: List<String> = try {
+                    Json.decodeFromString(expense.splitAmong)
+                } catch (_: Exception) { emptyList() }
+                val paidByMap: Map<String, Long>? = expense.paidByMap?.let {
+                    try { Json.decodeFromString(it) } catch (_: Exception) { null }
+                }
+                val splitDetails: Map<String, Long>? = expense.splitDetails?.let {
+                    try { Json.decodeFromString(it) } catch (_: Exception) { null }
+                }
+
+                val newExpense = expense.copy(
+                    expenseId = newExpenseId,
+                    createdAt = now,
+                    hlcTimestamp = now
+                )
+
+                expenseDao.insertExpense(newExpense)
+
+                // Push to Firebase
+                val group = groupDao.getGroup(expense.groupId) ?: continue
+                syncEngine.pushOp(
+                    groupId = expense.groupId,
+                    groupKeyBase64 = group.groupKeyBase64,
+                    payload = OpPayload(
+                        id = UUID.randomUUID().toString(),
+                        type = "expense",
+                        data = OpData(
+                            expenseId = newExpenseId,
+                            groupId = expense.groupId,
+                            description = expense.description,
+                            amountCents = expense.amountCents,
+                            currency = expense.currency,
+                            paidBy = expense.paidBy,
+                            splitAmong = splitAmong,
+                            createdAt = now,
+                            tag = expense.tag,
+                            paidByMap = paidByMap,
+                            splitMode = expense.splitMode,
+                            splitDetails = splitDetails,
+                            notes = expense.notes,
+                            recurringFrequency = expense.recurringFrequency,
+                            splitItems = expense.splitItems
+                        ),
+                        hlc = now,
+                        author = identity.memberId
+                    )
+                )
+            }
+        } catch (_: Exception) {
+            // Silently fail - recurring is best effort
+        }
+    }
 
     fun setSearchQuery(query: String) {
         _searchQuery.value = query

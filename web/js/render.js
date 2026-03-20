@@ -58,7 +58,7 @@ async function renderGroups(){
             const ts=getTagStyle(e.tag);const st=ts?{icon:ts.icon,bg:ts.bg}:getExpStyle(e.description);
             const gName=groupNameMap[e.groupId]||'';
             const payer=globalNm[e.paidBy]||e.paidBy.slice(0,8);
-            html+=`<div class="dash-activity-item" data-g="${e.groupId}"><div class="dai-icon" style="background:${st.bg}">${st.icon}</div><div class="dai-info"><div class="dai-desc">${esc(e.description)}</div><div class="dai-meta">${esc(payer)} &middot; ${esc(gName)} &middot; ${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div><div class="dai-amount">${fmt(e.amountCents)}</div></div>`;
+            html+=`<div class="dash-activity-item" data-g="${e.groupId}"><div class="dai-icon" style="background:${st.bg}">${st.icon}</div><div class="dai-info"><div class="dai-desc">${esc(e.description)}</div><div class="dai-meta">${esc(payer)} &middot; ${esc(gName)} &middot; ${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div><div class="dai-amount">${fmt(e.amountCents,e.currency)}</div></div>`;
         });
         html+=`</div>`;
     }
@@ -124,7 +124,7 @@ async function renderHome(){
                 const ts=getTagStyle(e.tag);const st=ts?{icon:ts.icon,bg:ts.bg}:getExpStyle(e.description);
                 const gName=groupNameMap[e.groupId]||'';
                 const payer=e.paidBy===myId?'You':(globalNm[e.paidBy]||e.paidBy.slice(0,8));
-                html+=`<div class="card exp-c" data-g="${e.groupId}" style="cursor:pointer"><div class="exp-left"><div class="exp-icon" style="background:${st.bg}">${st.icon}</div><div><div class="card-t">${esc(e.description)}</div><div class="card-s">${esc(payer)} &middot; ${esc(gName)} &middot; ${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div><div><div class="exp-a">${fmt(e.amountCents)}</div></div></div>`;
+                html+=`<div class="card exp-c" data-g="${e.groupId}" style="cursor:pointer"><div class="exp-left"><div class="exp-icon" style="background:${st.bg}">${st.icon}</div><div><div class="card-t">${esc(e.description)}</div><div class="card-s">${esc(payer)} &middot; ${esc(gName)} &middot; ${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div><div><div class="exp-a">${fmt(e.amountCents,e.currency)}</div></div></div>`;
             });
         }
 
@@ -200,7 +200,7 @@ async function renderHome(){
             const ts=getTagStyle(e.tag);const st=ts?{icon:ts.icon,bg:ts.bg}:getExpStyle(e.description);
             const gName=groupNameMap[e.groupId]||'';
             const payer=e.paidBy===myId?'You':(globalNm[e.paidBy]||e.paidBy.slice(0,8));
-            html+=`<div class="card exp-c" data-g="${e.groupId}" style="cursor:pointer"><div class="exp-left"><div class="exp-icon" style="background:${st.bg}">${st.icon}</div><div><div class="card-t">${esc(e.description)}</div><div class="card-s">${esc(payer)} &middot; ${esc(gName)} &middot; ${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div><div><div class="exp-a">${fmt(e.amountCents)}</div></div></div>`;
+            html+=`<div class="card exp-c" data-g="${e.groupId}" style="cursor:pointer"><div class="exp-left"><div class="exp-icon" style="background:${st.bg}">${st.icon}</div><div><div class="card-t">${esc(e.description)}</div><div class="card-s">${esc(payer)} &middot; ${esc(gName)} &middot; ${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div><div><div class="exp-a">${fmt(e.amountCents,e.currency)}</div></div></div>`;
         });
     }
 
@@ -796,7 +796,7 @@ async function renderProfile(){
     });
 }
 
-async function openGroup(gid){curGroup=gid;const g=await iG('groups',gid);if(!g)return;curGroupKey=g.groupKeyBase64;curGroupType=g.groupType||'';document.getElementById('gd-title').textContent=g.name;const isPersonal=g.groupType==='personal'||g.isPersonal;const pplTab=document.querySelector('.tab[data-tab="members"]');if(pplTab)pplTab.style.display=isPersonal?'none':'';const analyticsTab=document.querySelector('.tab[data-tab="analytics"]');if(analyticsTab)analyticsTab.style.display='';show('gd');startSync(gid,curGroupKey);switchGroupTab('exp')}
+async function openGroup(gid){curGroup=gid;const g=await iG('groups',gid);if(!g)return;curGroupKey=g.groupKeyBase64;curGroupType=g.groupType||'';document.getElementById('gd-title').textContent=g.name;const isPersonal=g.groupType==='personal'||g.isPersonal;const pplTab=document.querySelector('.tab[data-tab="members"]');if(pplTab)pplTab.style.display=isPersonal?'none':'';const analyticsTab=document.querySelector('.tab[data-tab="analytics"]');if(analyticsTab)analyticsTab.style.display='';show('gd');startSync(gid,curGroupKey);switchGroupTab('exp');processRecurringExpenses(gid,curGroupKey).then(n=>{if(n>0){toast(n+' recurring expense'+(n>1?'s':'')+' added');refreshTab()}}).catch(()=>{})}
 
 async function restoreExpense(eid){
     const expense=await iG('expenses',eid);if(!expense)return;
@@ -930,14 +930,16 @@ async function renderExpenses(){
             if(e.paidByMap){const names=Object.keys(e.paidByMap).map(id=>esc(nm[id]||id.slice(0,8)));paidStr='Paid by '+names.join(', ')}
             else{paidStr='Paid by '+esc(nm[e.paidBy]||e.paidBy.slice(0,8))}
             const tagHtml=ts?`<div class="tag-pill-sm" style="background:${ts.bg};color:var(--text)">${ts.icon} ${ts.label}</div>`:'';
-            const splitHtml=e.splitMode&&e.splitMode!=='equal'?`<div class="exp-split-info">${e.splitMode==='amount'?'By amount':e.splitMode==='percentage'?'By %':'By ratio'}</div>`:'';
+            const splitLabel=e.splitMode==='amount'?'By amount':e.splitMode==='percentage'?'By %':e.splitMode==='ratio'?'By ratio':e.splitMode==='items'?'By items':'';
+            const splitHtml=e.splitMode&&e.splitMode!=='equal'?`<div class="exp-split-info">${splitLabel}</div>`:'';
+            const recurringHtml=e.recurring?`<div class="recurring-badge">&#x1F501; ${e.recurring.frequency}</div>`:'';
             // Notes indicator
             let noteHtml='';
             if(e.notes){
                 noteHtml=`<div class="exp-note-indicator" data-note-target="note-${e.expenseId}">\u{1F4DD} Note</div><div id="note-${e.expenseId}" class="exp-note-text" style="display:none">${esc(e.notes)}</div>`;
             }
             const histToggle=hist.length?`<div class="history-toggle" data-hist-target="hist-${e.expenseId}">\u{1F4CB} History (${hist.length})</div><div id="hist-${e.expenseId}" style="display:none">${renderHistoryHtml(hist,nm)}${isDeleted?`<button class="restore-btn" data-restore-eid="${e.expenseId}">\u21A9 Restore</button>`:''}</div>`:(isDeleted?`<button class="restore-btn" data-restore-eid="${e.expenseId}">\u21A9 Restore</button>`:'');
-            return`<div class="card${delClass}" data-eid="${e.expenseId}"><div class="exp-c"><div class="exp-left"><div class="exp-icon" style="background:${st.bg}">${st.icon}</div><div><div class="card-t">${esc(e.description)}${delBadge}</div><div class="card-s">${paidStr}</div>${tagHtml}${splitHtml}</div></div><div><div class="exp-a">${fmt(e.amountCents)}</div><div class="exp-d">${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div>${noteHtml}${histToggle}</div>`;
+            return`<div class="card${delClass}" data-eid="${e.expenseId}"><div class="exp-c"><div class="exp-left"><div class="exp-icon" style="background:${st.bg}">${st.icon}</div><div><div class="card-t">${esc(e.description)}${delBadge}</div><div class="card-s">${paidStr}</div>${tagHtml}${splitHtml}${recurringHtml}</div></div><div><div class="exp-a">${fmt(e.amountCents,e.currency)}</div><div class="exp-d">${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div>${noteHtml}${histToggle}</div>`;
         }else{
             const s=item.data;
             const hist=histBySettlement[s.settlementId]||[];
@@ -1004,9 +1006,19 @@ async function renderBalances(){
     if(!ent.length)h+='<p style="text-align:center;padding:24px;color:var(--text-secondary);font-weight:600">All settled up! &#x1F389;</p>';
     else h+=ent.map(([id,a])=>{const col=getColor(id);return`<div class="bal-r"><div class="bal-name"><div class="bal-avatar" style="background:${col}">${getInitial(nm[id]||id)}</div><span style="font-weight:600">${esc(nm[id]||id.slice(0,8))}${id===myId?' <span class="pill" style="background:var(--primary-bg);color:var(--primary)">you</span>':''}</span></div><span class="${a>=0?'bp':'bn'}">${a>0?'+':''}${fmt(a)}</span></div>`}).join('');
     h+='</div>';
-    if(debts.length){h+='<div class="sec-t">Settlements Needed</div>';h+=debts.map(d=>{const fn=d.from===myId?'You':esc(nm[d.from]||d.from.slice(0,8)),tn=d.to===myId?'You':esc(nm[d.to]||d.to.slice(0,8)),mine=d.from===myId||d.to===myId;return`<div class="card debt-c" style="${mine?'border:2px solid var(--primary);background:var(--primary-bg)':''}"><div><div class="card-t" style="font-size:15px">${fn} &#x2192; ${tn}${mine?' <span class="pill" style="background:var(--primary);color:#fff">you</span>':''}</div><div style="color:var(--primary);font-weight:800;font-size:18px;margin-top:4px">${fmt(d.amountCents)}</div></div><button class="settle-b" data-f="${d.from}" data-t="${d.to}" data-a="${d.amountCents}" style="${mine?'':'background:var(--text-secondary);opacity:0.7'}">${mine?'Settle':'Settle'}</button></div>`}).join('')}
+    if(debts.length){h+='<div class="sec-t">Settlements Needed</div>';h+=debts.map(d=>{const fn=d.from===myId?'You':esc(nm[d.from]||d.from.slice(0,8)),tn=d.to===myId?'You':esc(nm[d.to]||d.to.slice(0,8)),mine=d.from===myId||d.to===myId;return`<div class="card debt-c" style="${mine?'border:2px solid var(--primary);background:var(--primary-bg)':''}"><div><div class="card-t" style="font-size:15px">${fn} &#x2192; ${tn}${mine?' <span class="pill" style="background:var(--primary);color:#fff">you</span>':''}</div><div style="color:var(--primary);font-weight:800;font-size:18px;margin-top:4px">${fmt(d.amountCents)}</div></div><div style="display:flex;gap:6px;align-items:center"><button class="remind-b" data-rf="${d.from}" data-rt="${d.to}" data-ra="${d.amountCents}">&#x1F514;</button><button class="settle-b" data-f="${d.from}" data-t="${d.to}" data-a="${d.amountCents}" style="${mine?'':'background:var(--text-secondary);opacity:0.7'}">${mine?'Settle':'Settle'}</button></div></div>`}).join('')}
     el.innerHTML=h;
     el.querySelectorAll('.settle-b').forEach(b=>b.addEventListener('click',()=>openSettle(b.dataset.f,b.dataset.t,+b.dataset.a)));
+    el.querySelectorAll('.remind-b').forEach(b=>b.addEventListener('click',async()=>{
+        const fromName=nm[b.dataset.rf]||b.dataset.rf.slice(0,8);
+        const toName=nm[b.dataset.rt]||b.dataset.rt.slice(0,8);
+        const amt=fmt(+b.dataset.ra);
+        const g=await iG('groups',curGroup);
+        const gName=g?g.name:'our group';
+        const msg=`Hey ${fromName}, you owe ${amt} to ${toName} for our group "${gName}" on SplitBlind. Settle up!`;
+        if(navigator.share){navigator.share({title:'SplitBlind Reminder',text:msg}).catch(()=>{})}
+        else{navigator.clipboard.writeText(msg).then(()=>toast('Reminder copied!'))}
+    }));
 }
 
 async function renderMembers(){
@@ -1170,7 +1182,19 @@ async function renderAddExpense(){
     document.getElementById('ae-split').innerHTML=aeMembers.map(m=>`<div class="chk-r"><input type="checkbox" class="sc" value="${m.memberId}" checked><span>${esc(m.displayName)}${m.memberId===myId?' (you)':''}</span></div>`).join('');
     document.getElementById('ae-split-detail').style.display='none';
     document.getElementById('ae-split-detail').innerHTML='';
+    document.getElementById('ae-items-container').style.display='none';
+    document.getElementById('ae-items-container').innerHTML='';
+    aeItemRows=[];
     document.getElementById('ae-split-validation').style.display='none';
+    // Currency selector
+    aeCurrency='INR';
+    document.getElementById('ae-currency-btn').textContent='INR \u20B9';
+    // Recurring
+    document.getElementById('ae-recurring-toggle').checked=false;
+    document.getElementById('ae-recurring-options').style.display='none';
+    aeRecurringFreq='monthly';
+    document.querySelectorAll('#ae-recurring-freq .seg-btn').forEach(b=>{b.classList.toggle('active',b.dataset.freq==='monthly');b.onclick=()=>{aeRecurringFreq=b.dataset.freq;document.querySelectorAll('#ae-recurring-freq .seg-btn').forEach(x=>x.classList.toggle('active',x===b))}});
+    document.getElementById('ae-recurring-toggle').onchange=e=>{document.getElementById('ae-recurring-options').style.display=e.target.checked?'':'none'};
     document.getElementById('ae-desc').value='';document.getElementById('ae-amt').value='';document.getElementById('ae-notes').value='';updAe();
 }
 function renderMultiPayer(){
@@ -1190,6 +1214,15 @@ function updateMultiPayerValidation(){
 }
 function renderSplitDetail(){
     const detailEl=document.getElementById('ae-split-detail');const valEl=document.getElementById('ae-split-validation');
+    const itemsEl=document.getElementById('ae-items-container');
+    if(aeSplitMode==='items'){
+        detailEl.style.display='none';detailEl.innerHTML='';
+        document.getElementById('ae-split').style.display='none';
+        itemsEl.style.display='';
+        renderItemsSplit();
+        return;
+    }
+    itemsEl.style.display='none';itemsEl.innerHTML='';
     if(aeSplitMode==='equal'){detailEl.style.display='none';detailEl.innerHTML='';valEl.style.display='none';document.getElementById('ae-split').style.display='';return}
     document.getElementById('ae-split').style.display='';
     detailEl.style.display='';
@@ -1232,14 +1265,31 @@ function updAe(){
     const a=parseFloat(document.getElementById('ae-amt').value)||0;
     const amtC=Math.round(a*100);
     const c=document.querySelectorAll('.sc:checked').length;
-    let valid=!!d&&a>0&&c>0;
+    let valid=!!d&&a>0;
+    if(aeSplitMode!=='items'&&c<=0) valid=false;
     // Multi-payer validation
     if(aePayerMode==='multi'&&amtC>0){
         let sum=0;document.querySelectorAll('.mp-amt').forEach(i=>sum+=Math.round((parseFloat(i.value)||0)*100));
         if(sum!==amtC)valid=false;
     }
     // Split validation
-    if(aeSplitMode==='amount'&&amtC>0){
+    if(aeSplitMode==='items'){
+        // Validate items: each item needs name, amount>0, at least 1 member
+        const itemRows=document.querySelectorAll('.item-row');
+        if(!itemRows.length) valid=false;
+        let itemTotal=0;
+        itemRows.forEach(row=>{
+            const name=row.querySelector('.item-name-input');
+            const amt=row.querySelector('.item-amt-input');
+            const selected=row.querySelectorAll('.item-member-chip.selected');
+            if(!name||!name.value.trim()) valid=false;
+            const iamt=Math.round((parseFloat(amt?.value)||0)*100);
+            if(iamt<=0) valid=false;
+            if(!selected.length) valid=false;
+            itemTotal+=iamt;
+        });
+        if(amtC>0&&itemTotal!==amtC) valid=false;
+    }else if(aeSplitMode==='amount'&&amtC>0){
         let sum=0;document.querySelectorAll('.sd-val').forEach(i=>sum+=Math.round((parseFloat(i.value)||0)*100));
         if(sum!==amtC)valid=false;
     }else if(aeSplitMode==='percentage'){
@@ -1252,7 +1302,8 @@ function updAe(){
     document.getElementById('ae-btn').disabled=!valid;
     // Re-validate displays when amount changes
     if(aePayerMode==='multi')updateMultiPayerValidation();
-    if(aeSplitMode!=='equal')updateSplitValidation();
+    if(aeSplitMode!=='equal'&&aeSplitMode!=='items')updateSplitValidation();
+    if(aeSplitMode==='items')updateItemsValidation();
 }
 
 function showExpenseActions(expense,nm){
@@ -1268,7 +1319,7 @@ function showExpenseActions(expense,nm){
                 <div style="font-weight:700;font-size:15px">${esc(expense.description)}</div>
                 <div style="font-size:13px;color:var(--text-secondary);margin-top:2px">${paidStr}</div>
             </div>
-            <div class="modal-amt">${fmt(expense.amountCents)}</div>
+            <div class="modal-amt">${fmt(expense.amountCents,expense.currency)}</div>
         </div>
         ${noteHtml}
         <button class="modal-btn modal-btn-edit" onclick="editExpense('${expense.expenseId}')">&#x270F;&#xFE0F; Edit Expense</button>
@@ -1370,6 +1421,25 @@ function prefillExpense(expense){
             }
         }
         updateSplitValidation();
+    }
+    // Currency
+    if(expense.currency&&expense.currency!=='INR'){
+        aeCurrency=expense.currency;
+        document.getElementById('ae-currency-btn').textContent=aeCurrency+' '+getCurrencySymbol(aeCurrency);
+    }
+    // Recurring
+    if(expense.recurring){
+        document.getElementById('ae-recurring-toggle').checked=true;
+        document.getElementById('ae-recurring-options').style.display='';
+        aeRecurringFreq=expense.recurring.frequency||'monthly';
+        document.querySelectorAll('#ae-recurring-freq .seg-btn').forEach(b=>{b.classList.toggle('active',b.dataset.freq===aeRecurringFreq)});
+    }
+    // Items split mode
+    if(expense.splitMode==='items'&&expense.splitItems){
+        aeSplitMode='items';
+        document.querySelectorAll('#ae-split-modes .seg-btn').forEach(b=>{b.classList.toggle('active',b.dataset.mode==='items')});
+        aeItemRows=expense.splitItems.map(item=>({name:item.name,amount:(item.amount/100).toFixed(2),members:[...item.members]}));
+        renderSplitDetail();
     }
     // Change button text
     document.getElementById('ae-btn').textContent='Save Changes';
@@ -1516,4 +1586,225 @@ async function renderAnalytics(){
     el.querySelectorAll('.chart-icon-btn[data-catview][data-prefix="la"]').forEach(b=>b.addEventListener('click',()=>{legacyAnalyticsCatView=b.dataset.catview;renderAnalytics()}));
     el.querySelectorAll('.chart-icon-btn[data-monthview][data-prefix="la"]').forEach(b=>b.addEventListener('click',()=>{legacyAnalyticsMonthView=b.dataset.monthview;renderAnalytics()}));
     el.querySelectorAll('.chart-icon-btn[data-memberview][data-prefix="la"]').forEach(b=>b.addEventListener('click',()=>{legacyAnalyticsMemberView=b.dataset.memberview;renderAnalytics()}));
+}
+
+// === Feature: Item-wise Split ===
+let aeItemRows=[];
+function renderItemsSplit(){
+    const container=document.getElementById('ae-items-container');
+    if(!aeItemRows.length) aeItemRows=[{name:'',amount:'',members:[]}];
+    let html='';
+    aeItemRows.forEach((item,idx)=>{
+        html+=`<div class="item-row" data-item-idx="${idx}">
+            <div class="item-row-top">
+                <input type="text" class="item-name-input" placeholder="Item name" value="${esc(item.name)}">
+                <span style="font-size:14px;color:var(--text-secondary);font-weight:700">${getCurrencySymbol(aeCurrency)}</span>
+                <input type="number" class="item-amt-input" placeholder="0.00" step="0.01" min="0" inputmode="decimal" value="${item.amount}">
+                ${aeItemRows.length>1?`<button class="item-remove-btn" data-remove-idx="${idx}">&times;</button>`:''}
+            </div>
+            <div class="item-members">
+                ${aeMembers.map(m=>`<span class="item-member-chip${item.members.includes(m.memberId)?' selected':''}" data-item-idx="${idx}" data-mid="${m.memberId}">${getInitial(m.displayName)} ${esc(m.displayName).split(' ')[0]}</span>`).join('')}
+            </div>
+        </div>`;
+    });
+    html+=`<button class="add-item-btn" id="add-item-row-btn">+ Add Item</button>`;
+    container.innerHTML=html;
+    // Wire events
+    container.querySelectorAll('.item-name-input').forEach((inp,idx)=>{inp.addEventListener('input',e=>{aeItemRows[idx].name=e.target.value;updAe()})});
+    container.querySelectorAll('.item-amt-input').forEach((inp,idx)=>{inp.addEventListener('input',e=>{aeItemRows[idx].amount=e.target.value;updateItemsValidation();updAe()})});
+    container.querySelectorAll('.item-member-chip').forEach(chip=>{
+        chip.addEventListener('click',()=>{
+            const idx=parseInt(chip.dataset.itemIdx);
+            const mid=chip.dataset.mid;
+            const arr=aeItemRows[idx].members;
+            const i=arr.indexOf(mid);
+            if(i>=0) arr.splice(i,1); else arr.push(mid);
+            chip.classList.toggle('selected');
+            updAe();
+        });
+    });
+    container.querySelectorAll('.item-remove-btn').forEach(btn=>{
+        btn.addEventListener('click',()=>{aeItemRows.splice(parseInt(btn.dataset.removeIdx),1);renderItemsSplit();updAe()});
+    });
+    document.getElementById('add-item-row-btn').addEventListener('click',()=>{aeItemRows.push({name:'',amount:'',members:[]});renderItemsSplit();updAe()});
+    updateItemsValidation();
+}
+function updateItemsValidation(){
+    const valEl=document.getElementById('ae-split-validation');
+    const total=Math.round((parseFloat(document.getElementById('ae-amt').value)||0)*100);
+    let itemTotal=0;
+    aeItemRows.forEach(item=>{itemTotal+=Math.round((parseFloat(item.amount)||0)*100)});
+    if(total<=0){valEl.style.display='none';return}
+    const rem=total-itemTotal;
+    valEl.style.display='';
+    valEl.className='split-validation'+(rem===0?' ok':' error');
+    valEl.textContent=rem===0?'\u2713 Items match total':'Remaining: '+fmt(rem,aeCurrency);
+}
+function getItemsSplitData(){
+    const splitItems=[];
+    const splitDetails={};
+    aeItemRows.forEach(item=>{
+        const amtC=Math.round((parseFloat(item.amount)||0)*100);
+        if(amtC<=0||!item.members.length) return;
+        splitItems.push({name:item.name,amount:amtC,members:item.members});
+        const perPerson=Math.floor(amtC/item.members.length);
+        const remainder=amtC-perPerson*item.members.length;
+        item.members.forEach((mid,i)=>{
+            splitDetails[mid]=(splitDetails[mid]||0)+perPerson+(i<remainder?1:0);
+        });
+    });
+    return{splitItems,splitDetails};
+}
+
+// === Feature: Currency selector ===
+let aeCurrency='INR';
+function openCurrencyModal(){
+    document.getElementById('currency-modal').style.display='flex';
+    document.getElementById('currency-search').value='';
+    renderCurrencyList('');
+    document.getElementById('currency-search').focus();
+    document.getElementById('currency-search').addEventListener('input',e=>renderCurrencyList(e.target.value));
+}
+function closeCurrencyModal(){document.getElementById('currency-modal').style.display='none'}
+function renderCurrencyList(query){
+    const q=query.toLowerCase().trim();
+    const el=document.getElementById('currency-list');
+    const top5=CURRENCIES.filter(c=>c.top);
+    const rest=CURRENCIES.filter(c=>!c.top);
+    const filter=list=>q?list.filter(c=>c.code.toLowerCase().includes(q)||c.name.toLowerCase().includes(q)||c.symbol.includes(q)):list;
+    const filteredTop=filter(top5);
+    const filteredRest=filter(rest);
+    let html='';
+    if(filteredTop.length){
+        html+=`<div class="currency-section-title">Frequently Used</div>`;
+        filteredTop.forEach(c=>{html+=currencyItemHtml(c)});
+    }
+    if(filteredRest.length){
+        html+=`<div class="currency-section-title" style="margin-top:8px">All Currencies</div>`;
+        filteredRest.forEach(c=>{html+=currencyItemHtml(c)});
+    }
+    if(!filteredTop.length&&!filteredRest.length){
+        html=`<div style="text-align:center;padding:24px;color:var(--text-secondary)">No currencies found</div>`;
+    }
+    el.innerHTML=html;
+    el.querySelectorAll('.currency-item').forEach(item=>{
+        item.addEventListener('click',()=>{
+            aeCurrency=item.dataset.code;
+            document.getElementById('ae-currency-btn').textContent=aeCurrency+' '+getCurrencySymbol(aeCurrency);
+            closeCurrencyModal();
+            if(aeSplitMode==='items') renderItemsSplit();
+        });
+    });
+}
+function currencyItemHtml(c){
+    return`<div class="currency-item${c.code===aeCurrency?' selected':''}" data-code="${c.code}">
+        <span class="currency-symbol">${c.symbol}</span>
+        <span class="currency-code">${c.code}</span>
+        <span class="currency-name">${c.name}</span>
+    </div>`;
+}
+
+// === Feature: Calculator ===
+let calcExpr='',calcHasResult=false;
+function openCalcModal(){
+    calcExpr='';calcHasResult=false;
+    document.getElementById('calc-expression').textContent='';
+    document.getElementById('calc-result').textContent='0';
+    document.getElementById('calc-modal').style.display='flex';
+}
+function closeCalcModal(){document.getElementById('calc-modal').style.display='none'}
+function calcKeyPress(key){
+    if(key==='C'){calcExpr='';calcHasResult=false}
+    else if(key==='backspace'){if(calcHasResult){calcExpr='';calcHasResult=false}else{calcExpr=calcExpr.slice(0,-1)}}
+    else if(key==='='){
+        try{
+            const result=Function('"use strict";return('+calcExpr.replace(/[^0-9+\-*/.()]/g,'')+')')();
+            if(isFinite(result)){
+                document.getElementById('calc-result').textContent=parseFloat(result.toFixed(2));
+                calcHasResult=true;
+            }
+        }catch(e){}
+        return;
+    }else{
+        if(calcHasResult&&'0123456789.'.includes(key)){calcExpr='';calcHasResult=false}
+        else if(calcHasResult){calcHasResult=false}
+        calcExpr+=key;
+    }
+    document.getElementById('calc-expression').textContent=calcExpr.replace(/\*/g,'\u00D7').replace(/\//g,'\u00F7');
+    try{
+        const result=Function('"use strict";return('+calcExpr.replace(/[^0-9+\-*/.()]/g,'')+')')();
+        if(isFinite(result)) document.getElementById('calc-result').textContent=parseFloat(result.toFixed(2));
+    }catch(e){}
+}
+
+// === Feature: Export CSV/PDF ===
+async function exportCSV(){
+    const g=await iG('groups',curGroup);
+    const exps=(await iA('expenses')).filter(e=>e.groupId===curGroup&&!e.isDeleted);
+    const sets=(await iA('settlements')).filter(s=>s.groupId===curGroup&&!s.isDeleted);
+    const mems=(await iA('members')).filter(m=>m.groupId===curGroup);
+    const nm={};mems.forEach(m=>nm[m.memberId]=m.displayName);
+    let csv='Date,Description,Tag,Amount,Currency,Paid By,Split Among,Notes,Type\n';
+    exps.sort((a,b)=>a.createdAt-b.createdAt).forEach(e=>{
+        const date=new Date(e.createdAt).toLocaleDateString('en-GB');
+        const desc='"'+(e.description||'').replace(/"/g,'""')+'"';
+        const tag=e.tag||'';
+        const amt=(e.amountCents/100).toFixed(2);
+        const cur=e.currency||'INR';
+        let paidBy;
+        if(e.paidByMap){paidBy=Object.keys(e.paidByMap).map(id=>nm[id]||id.slice(0,8)).join('; ')}
+        else{paidBy=nm[e.paidBy]||e.paidBy.slice(0,8)}
+        const splitAmong=(e.splitAmong||[]).map(id=>nm[id]||id.slice(0,8)).join('; ');
+        const notes='"'+(e.notes||'').replace(/"/g,'""')+'"';
+        csv+=`${date},${desc},${tag},${amt},${cur},"${paidBy}","${splitAmong}",${notes},expense\n`;
+    });
+    sets.sort((a,b)=>a.createdAt-b.createdAt).forEach(s=>{
+        const date=new Date(s.createdAt).toLocaleDateString('en-GB');
+        const from=nm[s.fromMember]||s.fromMember.slice(0,8);
+        const to=nm[s.toMember]||s.toMember.slice(0,8);
+        const amt=(s.amountCents/100).toFixed(2);
+        csv+=`${date},"${from} paid ${to}",settlement,${amt},INR,"${from}","${to}",,settlement\n`;
+    });
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=(g?g.name:'group')+'-expenses.csv';
+    a.click();URL.revokeObjectURL(a.href);
+    toast('CSV exported!');
+}
+async function exportPDF(){
+    const g=await iG('groups',curGroup);
+    const exps=(await iA('expenses')).filter(e=>e.groupId===curGroup&&!e.isDeleted);
+    const sets=(await iA('settlements')).filter(s=>s.groupId===curGroup&&!s.isDeleted);
+    const mems=(await iA('members')).filter(m=>m.groupId===curGroup);
+    const nm={};mems.forEach(m=>nm[m.memberId]=m.displayName);
+    const gName=g?g.name:'Group';
+    let rows='';
+    exps.sort((a,b)=>a.createdAt-b.createdAt).forEach(e=>{
+        const date=new Date(e.createdAt).toLocaleDateString('en-GB');
+        const tag=e.tag?((TAGS[e.tag]||TAGS.other).label):'';
+        const cur=e.currency||'INR';
+        let paidBy=e.paidByMap?Object.keys(e.paidByMap).map(id=>nm[id]||id.slice(0,8)).join(', '):(nm[e.paidBy]||e.paidBy.slice(0,8));
+        rows+=`<tr><td>${date}</td><td>${esc(e.description)}</td><td>${tag}</td><td>${fmt(e.amountCents,cur)}</td><td>${esc(paidBy)}</td><td>Expense</td></tr>`;
+    });
+    sets.sort((a,b)=>a.createdAt-b.createdAt).forEach(s=>{
+        const date=new Date(s.createdAt).toLocaleDateString('en-GB');
+        const from=nm[s.fromMember]||s.fromMember.slice(0,8);
+        const to=nm[s.toMember]||s.toMember.slice(0,8);
+        rows+=`<tr><td>${date}</td><td>${esc(from)} paid ${esc(to)}</td><td>Settlement</td><td>${fmt(s.amountCents)}</td><td>${esc(from)}</td><td>Settlement</td></tr>`;
+    });
+    const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${esc(gName)} - Expenses</title>
+    <style>body{font-family:system-ui,sans-serif;padding:32px;color:#333}h1{font-size:24px;margin-bottom:4px}
+    .sub{color:#777;font-size:14px;margin-bottom:24px}table{width:100%;border-collapse:collapse;font-size:13px}
+    th{text-align:left;padding:10px 8px;border-bottom:2px solid #7C6FE0;font-weight:700;color:#7C6FE0;text-transform:uppercase;font-size:11px;letter-spacing:0.5px}
+    td{padding:8px;border-bottom:1px solid #eee}tr:nth-child(even){background:#f9f9f9}
+    @media print{body{padding:16px}}</style></head><body>
+    <h1>${esc(gName)}</h1><div class="sub">Exported from SplitBlind on ${new Date().toLocaleDateString()}</div>
+    <table><thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th>Paid By</th><th>Type</th></tr></thead>
+    <tbody>${rows}</tbody></table></body></html>`;
+    const win=window.open('','_blank');
+    win.document.write(html);
+    win.document.close();
+    setTimeout(()=>win.print(),500);
+    toast('PDF ready to print!');
 }

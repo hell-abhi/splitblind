@@ -17,7 +17,9 @@ data class ExpenseEntity(
     val hlcTimestamp: Long,
     val tag: String? = null,
     val paidByMap: String? = null,       // JSON: {"memberId": cents}
-    val splitMode: String? = null,       // "equal", "amount", "percentage", "ratio"
+    val splitMode: String? = null,       // "equal", "amount", "percentage", "ratio", "items"
     val splitDetails: String? = null,    // JSON: {"memberId": cents}
-    val notes: String? = null
+    val notes: String? = null,
+    val recurringFrequency: String? = null, // "weekly", "monthly", "yearly"
+    val splitItems: String? = null       // JSON array of item-wise split data
 )

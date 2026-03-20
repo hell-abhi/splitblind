@@ -28,7 +28,70 @@ enum class SplitMode(val slug: String, val label: String) {
     EQUAL("equal", "Equal"),
     AMOUNT("amount", "Amount"),
     PERCENTAGE("percentage", "Percent"),
-    RATIO("ratio", "Ratio")
+    RATIO("ratio", "Ratio"),
+    ITEMS("items", "Items")
+}
+
+data class SplitItem(
+    val name: String = "",
+    val amount: String = "",
+    val members: Set<String> = emptySet()
+)
+
+data class CurrencyInfo(
+    val code: String,
+    val symbol: String,
+    val name: String
+) {
+    companion object {
+        val FREQUENTLY_USED = listOf(
+            CurrencyInfo("INR", "\u20B9", "Indian Rupee"),
+            CurrencyInfo("USD", "$", "US Dollar"),
+            CurrencyInfo("EUR", "\u20AC", "Euro"),
+            CurrencyInfo("GBP", "\u00A3", "British Pound"),
+            CurrencyInfo("AED", "AED", "UAE Dirham")
+        )
+
+        val ALL = listOf(
+            CurrencyInfo("INR", "\u20B9", "Indian Rupee"),
+            CurrencyInfo("USD", "$", "US Dollar"),
+            CurrencyInfo("EUR", "\u20AC", "Euro"),
+            CurrencyInfo("GBP", "\u00A3", "British Pound"),
+            CurrencyInfo("AED", "AED", "UAE Dirham"),
+            CurrencyInfo("AUD", "A$", "Australian Dollar"),
+            CurrencyInfo("BDT", "\u09F3", "Bangladeshi Taka"),
+            CurrencyInfo("BRL", "R$", "Brazilian Real"),
+            CurrencyInfo("CAD", "C$", "Canadian Dollar"),
+            CurrencyInfo("CHF", "CHF", "Swiss Franc"),
+            CurrencyInfo("CNY", "\u00A5", "Chinese Yuan"),
+            CurrencyInfo("CZK", "K\u010D", "Czech Koruna"),
+            CurrencyInfo("DKK", "kr", "Danish Krone"),
+            CurrencyInfo("HKD", "HK$", "Hong Kong Dollar"),
+            CurrencyInfo("IDR", "Rp", "Indonesian Rupiah"),
+            CurrencyInfo("ILS", "\u20AA", "Israeli Shekel"),
+            CurrencyInfo("JPY", "\u00A5", "Japanese Yen"),
+            CurrencyInfo("KRW", "\u20A9", "South Korean Won"),
+            CurrencyInfo("MXN", "MX$", "Mexican Peso"),
+            CurrencyInfo("MYR", "RM", "Malaysian Ringgit"),
+            CurrencyInfo("NGN", "\u20A6", "Nigerian Naira"),
+            CurrencyInfo("NOK", "kr", "Norwegian Krone"),
+            CurrencyInfo("NZD", "NZ$", "New Zealand Dollar"),
+            CurrencyInfo("PHP", "\u20B1", "Philippine Peso"),
+            CurrencyInfo("PLN", "z\u0142", "Polish Zloty"),
+            CurrencyInfo("RUB", "\u20BD", "Russian Ruble"),
+            CurrencyInfo("SAR", "SAR", "Saudi Riyal"),
+            CurrencyInfo("SEK", "kr", "Swedish Krona"),
+            CurrencyInfo("SGD", "S$", "Singapore Dollar"),
+            CurrencyInfo("THB", "\u0E3F", "Thai Baht"),
+            CurrencyInfo("TRY", "\u20BA", "Turkish Lira"),
+            CurrencyInfo("TWD", "NT$", "Taiwan Dollar"),
+            CurrencyInfo("ZAR", "R", "South African Rand")
+        )
+
+        fun symbolFor(code: String): String {
+            return ALL.find { it.code == code }?.symbol ?: code
+        }
+    }
 }
 
 data class ExpenseTag(
@@ -74,7 +137,14 @@ data class AddExpenseState(
     // Notes
     val notes: String = "",
     // Edit mode
-    val isEditing: Boolean = false
+    val isEditing: Boolean = false,
+    // Recurring
+    val isRecurring: Boolean = false,
+    val recurringFrequency: String = "monthly",
+    // Currency
+    val currency: String = "INR",
+    // Item-wise split
+    val splitItems: List<SplitItem> = listOf(SplitItem())
 )
 
 @HiltViewModel
@@ -164,6 +234,51 @@ class AddExpenseViewModel @Inject constructor(
         _state.value = _state.value.copy(selectedTag = tag ?: "other")
     }
 
+    fun setRecurring(enabled: Boolean) {
+        _state.value = _state.value.copy(isRecurring = enabled)
+    }
+
+    fun setRecurringFrequency(freq: String) {
+        _state.value = _state.value.copy(recurringFrequency = freq)
+    }
+
+    fun setCurrency(currency: String) {
+        _state.value = _state.value.copy(currency = currency)
+    }
+
+    fun addSplitItem() {
+        _state.value = _state.value.copy(splitItems = _state.value.splitItems + SplitItem())
+    }
+
+    fun removeSplitItem(index: Int) {
+        val items = _state.value.splitItems.toMutableList()
+        if (items.size > 1) {
+            items.removeAt(index)
+            _state.value = _state.value.copy(splitItems = items)
+        }
+    }
+
+    fun updateSplitItemName(index: Int, name: String) {
+        val items = _state.value.splitItems.toMutableList()
+        items[index] = items[index].copy(name = name)
+        _state.value = _state.value.copy(splitItems = items)
+    }
+
+    fun updateSplitItemAmount(index: Int, amount: String) {
+        if (amount.isEmpty() || amount.matches(Regex("^\\d*\\.?\\d{0,2}$"))) {
+            val items = _state.value.splitItems.toMutableList()
+            items[index] = items[index].copy(amount = amount)
+            _state.value = _state.value.copy(splitItems = items)
+        }
+    }
+
+    fun toggleSplitItemMember(index: Int, memberId: String) {
+        val items = _state.value.splitItems.toMutableList()
+        val current = items[index].members
+        items[index] = items[index].copy(members = if (memberId in current) current - memberId else current + memberId)
+        _state.value = _state.value.copy(splitItems = items)
+    }
+
     fun setMultiPayer(enabled: Boolean) {
         _state.value = _state.value.copy(isMultiPayer = enabled)
     }
@@ -237,7 +352,41 @@ class AddExpenseViewModel @Inject constructor(
         // Compute splitDetails
         val splitMembers = s.splitAmong.toList()
         var splitDetailsCents: Map<String, Long>? = null
+        var splitItemsJson: String? = null
         when (s.splitMode) {
+            SplitMode.ITEMS -> {
+                // Validate items
+                val items = s.splitItems.filter { it.name.isNotBlank() && it.amount.isNotBlank() }
+                if (items.isEmpty()) {
+                    _state.value = s.copy(error = "Add at least one item")
+                    return
+                }
+                val itemTotalCents = items.sumOf { ((it.amount.toDoubleOrNull() ?: 0.0) * 100).toLong() }
+                if (itemTotalCents != amountCents) {
+                    _state.value = s.copy(error = "Item amounts must sum to total (off by ${String.format("%.2f", (amountCents - itemTotalCents) / 100.0)})")
+                    return
+                }
+                for (item in items) {
+                    if (item.members.isEmpty()) {
+                        _state.value = s.copy(error = "Each item must have at least one member: ${item.name}")
+                        return
+                    }
+                }
+                // Compute per-person shares
+                val personShares = mutableMapOf<String, Long>()
+                for (item in items) {
+                    val itemCents = ((item.amount.toDoubleOrNull() ?: 0.0) * 100).toLong()
+                    val perPerson = itemCents / item.members.size
+                    val remainder = itemCents - perPerson * item.members.size
+                    item.members.forEachIndexed { idx, memberId ->
+                        val share = perPerson + if (idx == 0) remainder else 0
+                        personShares[memberId] = (personShares[memberId] ?: 0) + share
+                    }
+                }
+                splitDetailsCents = personShares
+                // Store items as JSON for reference
+                splitItemsJson = Json.encodeToString(items.map { mapOf("name" to it.name, "amount" to it.amount, "members" to it.members.toList()) })
+            }
             SplitMode.EQUAL -> {
                 // No splitDetails needed — BalanceCalculator handles equal split
                 splitDetailsCents = null
@@ -327,13 +476,14 @@ class AddExpenseViewModel @Inject constructor(
             val splitModeStr = if (s.splitMode != SplitMode.EQUAL) s.splitMode.slug else null
 
             val notesValue = s.notes.trim().ifEmpty { null }
+            val recurringFreq = if (s.isRecurring) s.recurringFrequency else null
 
             val expense = ExpenseEntity(
                 expenseId = expenseId,
                 groupId = groupId,
                 description = s.description.trim(),
                 amountCents = amountCents,
-                currency = "INR",
+                currency = s.currency,
                 paidBy = legacyPaidBy,
                 splitAmong = Json.encodeToString(splitList),
                 createdAt = now,
@@ -342,7 +492,9 @@ class AddExpenseViewModel @Inject constructor(
                 paidByMap = paidByMapJson,
                 splitMode = splitModeStr,
                 splitDetails = splitDetailsJson,
-                notes = notesValue
+                notes = notesValue,
+                recurringFrequency = recurringFreq,
+                splitItems = splitItemsJson
             )
 
             expenseDao.insertExpense(expense)
@@ -361,7 +513,7 @@ class AddExpenseViewModel @Inject constructor(
                             groupId = groupId,
                             description = s.description.trim(),
                             amountCents = amountCents,
-                            currency = "INR",
+                            currency = s.currency,
                             paidBy = legacyPaidBy,
                             splitAmong = splitList,
                             createdAt = now,
@@ -369,7 +521,9 @@ class AddExpenseViewModel @Inject constructor(
                             paidByMap = paidByMapCents,
                             splitMode = splitModeStr,
                             splitDetails = splitDetailsCents,
-                            notes = notesValue
+                            notes = notesValue,
+                            recurringFrequency = recurringFreq,
+                            splitItems = splitItemsJson
                         ),
                         hlc = now,
                         author = identity.memberId

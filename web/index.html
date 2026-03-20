@@ -210,6 +210,7 @@
         <div class="topbar">
             <button class="back" id="gd-back">&#x2190;</button>
             <h1 id="gd-title">Group</h1>
+            <button class="icon-btn" id="btn-export" title="Export" style="font-size:13px">&#x1F4E5;</button>
             <button class="sync-btn" id="btn-refresh"><span class="sync-icon">&#x21BB;</span> Sync</button>
             <span class="sync-dot sync-off" id="sync-dot" title="Sync status"></span>
         </div>
@@ -234,7 +235,13 @@
             <div class="ae-section">
                 <div class="ae-section-title"><span class="sec-emoji">&#x1F4DD;</span> What & How Much</div>
                 <div class="fg" style="margin-bottom:14px"><input type="text" id="ae-desc" placeholder="What's this expense for?"></div>
-                <div class="fg" style="margin-bottom:0"><input type="number" id="ae-amt" placeholder="0.00" step="0.01" min="0" inputmode="decimal" style="font-size:24px;font-weight:800;letter-spacing:-0.5px"></div>
+                <div class="fg" style="margin-bottom:0">
+                    <div style="display:flex;gap:8px;align-items:stretch">
+                        <button class="currency-btn" id="ae-currency-btn" title="Change currency">INR &#x20B9;</button>
+                        <input type="number" id="ae-amt" placeholder="0.00" step="0.01" min="0" inputmode="decimal" style="font-size:24px;font-weight:800;letter-spacing:-0.5px;flex:1">
+                        <button class="calc-btn" id="ae-calc-btn" title="Calculator">&#x1F9EE;</button>
+                    </div>
+                </div>
             </div>
 
             <!-- Tag -->
@@ -263,9 +270,11 @@
                     <button class="seg-btn" data-mode="amount">Amount</button>
                     <button class="seg-btn" data-mode="percentage">%</button>
                     <button class="seg-btn" data-mode="ratio">Ratio</button>
+                    <button class="seg-btn" data-mode="items">&#x1F9FE; Items</button>
                 </div>
                 <div id="ae-split"></div>
                 <div id="ae-split-detail" style="display:none"></div>
+                <div id="ae-items-container" style="display:none"></div>
                 <div id="ae-split-validation" class="split-validation" style="display:none"></div>
             </div>
 
@@ -274,6 +283,25 @@
                 <div class="ae-section-title"><span class="sec-emoji">&#x1F4DD;</span> Notes (optional)</div>
                 <div class="fg" style="margin-bottom:0">
                     <textarea id="ae-notes" placeholder="Add any notes about this expense..." rows="2"></textarea>
+                </div>
+            </div>
+
+            <!-- Recurring -->
+            <div class="ae-section" id="ae-recurring-section">
+                <div class="ae-section-title"><span class="sec-emoji">&#x1F501;</span> Repeat</div>
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                    <span style="font-weight:600;font-size:14px">Repeat this expense</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="ae-recurring-toggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div id="ae-recurring-options" style="display:none;margin-top:12px">
+                    <div class="seg-control" id="ae-recurring-freq">
+                        <button class="seg-btn active" data-freq="weekly">Weekly</button>
+                        <button class="seg-btn" data-freq="monthly">Monthly</button>
+                        <button class="seg-btn" data-freq="yearly">Yearly</button>
+                    </div>
                 </div>
             </div>
 
@@ -433,6 +461,62 @@
             <button class="btn btn-o" style="flex:1;font-size:13px" id="qr-share-btn">&#x1F4E4; Share QR</button>
             <button class="btn btn-p" style="flex:1;font-size:13px" onclick="closeQrModal()">Done</button>
         </div>
+    </div>
+</div>
+
+<!-- Calculator Modal -->
+<div class="calc-modal-overlay" id="calc-modal" style="display:none" onclick="if(event.target===this)closeCalcModal()">
+    <div class="calc-modal-content" onclick="event.stopPropagation()">
+        <div class="calc-display">
+            <div class="calc-expression" id="calc-expression"></div>
+            <div class="calc-result" id="calc-result">0</div>
+        </div>
+        <div class="calc-grid">
+            <button class="calc-key calc-fn" data-key="C">C</button>
+            <button class="calc-key calc-fn" data-key="backspace">&#x232B;</button>
+            <button class="calc-key calc-op" data-key="/">&divide;</button>
+            <button class="calc-key calc-op" data-key="*">&times;</button>
+            <button class="calc-key" data-key="7">7</button>
+            <button class="calc-key" data-key="8">8</button>
+            <button class="calc-key" data-key="9">9</button>
+            <button class="calc-key calc-op" data-key="-">&minus;</button>
+            <button class="calc-key" data-key="4">4</button>
+            <button class="calc-key" data-key="5">5</button>
+            <button class="calc-key" data-key="6">6</button>
+            <button class="calc-key calc-op" data-key="+">+</button>
+            <button class="calc-key" data-key="1">1</button>
+            <button class="calc-key" data-key="2">2</button>
+            <button class="calc-key" data-key="3">3</button>
+            <button class="calc-key calc-eq" data-key="=" style="grid-row:span 2">=</button>
+            <button class="calc-key" data-key="0" style="grid-column:span 2">0</button>
+            <button class="calc-key" data-key=".">.</button>
+        </div>
+        <button class="btn btn-p" id="calc-done" style="margin-top:12px">Done</button>
+    </div>
+</div>
+
+<!-- Currency Picker Modal -->
+<div class="calc-modal-overlay" id="currency-modal" style="display:none" onclick="if(event.target===this)closeCurrencyModal()">
+    <div class="currency-modal-content" onclick="event.stopPropagation()">
+        <div style="font-size:18px;font-weight:800;margin-bottom:12px;letter-spacing:-0.3px">Select Currency</div>
+        <div class="fg" style="margin-bottom:12px">
+            <input type="text" id="currency-search" placeholder="Search currencies..." style="font-size:14px;padding:12px 14px">
+        </div>
+        <div id="currency-list" style="max-height:50vh;overflow-y:auto"></div>
+    </div>
+</div>
+
+<!-- Export Dropdown Modal -->
+<div class="calc-modal-overlay" id="export-modal" style="display:none" onclick="if(event.target===this)closeExportModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-handle"></div>
+        <div style="text-align:center;padding:8px 0 12px">
+            <div style="font-size:32px;margin-bottom:8px">&#x1F4E5;</div>
+            <h3 style="font-size:17px;font-weight:800">Export Data</h3>
+        </div>
+        <button class="modal-btn modal-btn-edit" id="export-csv-btn">&#x1F4C4; Export as CSV</button>
+        <button class="modal-btn modal-btn-edit" id="export-pdf-btn">&#x1F5A8; Export as PDF</button>
+        <button class="modal-btn modal-btn-cancel" onclick="closeExportModal()">Cancel</button>
     </div>
 </div>
 

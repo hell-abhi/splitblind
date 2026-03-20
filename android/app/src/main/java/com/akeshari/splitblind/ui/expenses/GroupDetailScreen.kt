@@ -31,6 +31,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -91,9 +93,10 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-private fun formatAmount(cents: Long): String {
-    val rupees = cents / 100.0
-    return String.format(Locale.getDefault(), "\u20B9%.2f", rupees)
+private fun formatAmount(cents: Long, currency: String = "INR"): String {
+    val value = cents / 100.0
+    val symbol = CurrencyInfo.symbolFor(currency)
+    return String.format(Locale.getDefault(), "%s%.2f", symbol, value)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -134,6 +137,36 @@ fun GroupDetailScreen(
                 },
                 actions = {
                     val context = LocalContext.current
+                    var showExportDialog by remember { mutableStateOf(false) }
+
+                    if (showExportDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showExportDialog = false },
+                            title = { Text("Export Data") },
+                            text = { Text("Export all expenses and settlements for this group as a CSV file.") },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    showExportDialog = false
+                                    viewModel.exportCsv(context)
+                                }) {
+                                    Text("Export CSV")
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showExportDialog = false }) {
+                                    Text("Cancel")
+                                }
+                            }
+                        )
+                    }
+
+                    IconButton(onClick = { showExportDialog = true }) {
+                        Icon(
+                            Icons.Default.FileDownload,
+                            contentDescription = "Export",
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
                     TextButton(onClick = {
                         viewModel.refresh()
                         android.widget.Toast.makeText(context, "Sync completed", android.widget.Toast.LENGTH_SHORT).show()
@@ -191,6 +224,8 @@ fun GroupDetailScreen(
                     memberNames = state.memberNames,
                     myId = state.myId,
                     groupId = viewModel.groupId,
+                    groupName = state.group?.name ?: "Group",
+                    inviteLink = state.inviteLink,
                     onSettle = onSettle
                 )
                 !isPersonal && selectedTab == 2 -> MembersTab(
@@ -242,7 +277,7 @@ private fun ExpensesTab(
         AlertDialog(
             onDismissRequest = { showExpenseDialog = false; selectedExpense = null },
             title = { Text(selectedExpense!!.description) },
-            text = { Text(formatAmount(selectedExpense!!.amountCents)) },
+            text = { Text(formatAmount(selectedExpense!!.amountCents, selectedExpense!!.currency)) },
             confirmButton = {
                 TextButton(onClick = {
                     val exp = selectedExpense!!
@@ -274,7 +309,7 @@ private fun ExpensesTab(
         AlertDialog(
             onDismissRequest = { showExpenseDialog = false; selectedExpense = null },
             title = { Text("Deleted Expense") },
-            text = { Text("${selectedExpense!!.description} - ${formatAmount(selectedExpense!!.amountCents)}") },
+            text = { Text("${selectedExpense!!.description} - ${formatAmount(selectedExpense!!.amountCents, selectedExpense!!.currency)}") },
             confirmButton = {
                 TextButton(onClick = {
                     onRestoreExpense(selectedExpense!!)
@@ -606,7 +641,7 @@ private fun ExpensesTab(
                                             Text(dateFormat.format(Date(expense.createdAt)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = itemAlpha))
                                         }
                                         Text(
-                                            formatAmount(expense.amountCents),
+                                            formatAmount(expense.amountCents, expense.currency),
                                             style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = if (isDeleted) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
@@ -856,8 +891,11 @@ private fun BalancesTab(
     memberNames: Map<String, String>,
     myId: String,
     groupId: String,
+    groupName: String,
+    inviteLink: String?,
     onSettle: (String, String, String, Long) -> Unit
 ) {
+    val context = LocalContext.current
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -924,13 +962,37 @@ private fun BalancesTab(
                             }
                             Text(formatAmount(debt.amountCents), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         }
-                        if (isMyDebt) {
-                            androidx.compose.material3.Button(onClick = { onSettle(groupId, debt.from, debt.to, debt.amountCents) }) {
-                                Text("Settle")
+                        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            if (isMyDebt) {
+                                androidx.compose.material3.Button(onClick = { onSettle(groupId, debt.from, debt.to, debt.amountCents) }) {
+                                    Text("Settle")
+                                }
+                            } else {
+                                OutlinedButton(onClick = { onSettle(groupId, debt.from, debt.to, debt.amountCents) }) {
+                                    Text("Settle")
+                                }
                             }
-                        } else {
-                            OutlinedButton(onClick = { onSettle(groupId, debt.from, debt.to, debt.amountCents) }) {
-                                Text("Settle")
+                            // Remind button
+                            TextButton(onClick = {
+                                val ownerName = if (debt.from == myId) "You" else (memberNames[debt.from] ?: debt.from.take(8))
+                                val oweeName = if (debt.to == myId) "You" else (memberNames[debt.to] ?: debt.to.take(8))
+                                val amountStr = formatAmount(debt.amountCents)
+                                val link = inviteLink ?: ""
+                                val message = "Hey $ownerName, you owe $oweeName $amountStr in our SplitBlind group '$groupName'. Settle up! $link"
+                                val sendIntent = Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    putExtra(Intent.EXTRA_TEXT, message)
+                                    type = "text/plain"
+                                }
+                                context.startActivity(Intent.createChooser(sendIntent, "Send reminder"))
+                            }) {
+                                Icon(
+                                    Icons.Default.NotificationsActive,
+                                    contentDescription = "Remind",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Remind", style = MaterialTheme.typography.labelSmall)
                             }
                         }
                     }

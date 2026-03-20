@@ -74,7 +74,11 @@ data class OpData(
     val changedByName: String? = null,
     val changedAt: Long? = null,
     // notes
-    val notes: String? = null
+    val notes: String? = null,
+    // recurring
+    val recurringFrequency: String? = null,
+    // item-wise split
+    val splitItems: String? = null
 )
 
 private val json = Json { ignoreUnknownKeys = true }
@@ -225,7 +229,9 @@ class SyncEngine @Inject constructor(
                             paidByMap = d.paidByMap?.let { json.encodeToString(it) },
                             splitMode = d.splitMode,
                             splitDetails = d.splitDetails?.let { json.encodeToString(it) },
-                            notes = d.notes
+                            notes = d.notes,
+                            recurringFrequency = d.recurringFrequency,
+                            splitItems = d.splitItems
                         )
                     )
                 }

@@ -28,7 +28,9 @@ async function handleJoin(){
 }
 
 let obPassphrase='';
+let aeRecurringFreq='monthly';
 function showObPp(){document.getElementById('ob-pp-display').textContent=obPassphrase}
+function closeExportModal(){document.getElementById('export-modal').style.display='none'}
 
 // Add Reminder
 let ldDirection='they-owe';
@@ -241,6 +243,22 @@ function wireEvents(){
     document.getElementById('cg-name').addEventListener('input',e=>{document.getElementById('cg-btn').disabled=!e.target.value.trim()});
     let newGid='';
     document.getElementById('cg-btn').addEventListener('click',async()=>{const name=document.getElementById('cg-name').value.trim(),gid=uid(),now=Date.now(),key=await genKey();await iP('groups',{groupId:gid,name,createdBy:myId,createdAt:now,inviteToken:uid(),groupKeyBase64:key,hlcTimestamp:now,hlcNodeId:myId});await iP('members',{_key:gid+'_'+myId,groupId:gid,memberId:myId,displayName:myName,joinedAt:now,isDeleted:false,hlcTimestamp:now});await pushOp(gid,key,{id:uid(),type:'member_join',data:{memberId:myId,displayName:myName,joinedAt:now},hlc:now,author:myId});newGid=gid;const link=await makeShortLink(gid,key,name);document.getElementById('inv-display').textContent=link;document.getElementById('cg-form').style.display='none';document.getElementById('cg-done').style.display='';document.getElementById('share-btn').onclick=()=>shareLink(link,name);document.getElementById('qr-btn-cg').onclick=()=>showQrModal(link,name);document.getElementById('goto-btn').onclick=async()=>{openGroup(newGid)};autoBackup().catch(()=>{})});
+    // Export button
+    document.getElementById('btn-export').addEventListener('click',()=>{
+        document.getElementById('export-modal').style.display='flex';
+    });
+    document.getElementById('export-csv-btn').addEventListener('click',()=>{closeExportModal();exportCSV()});
+    document.getElementById('export-pdf-btn').addEventListener('click',()=>{closeExportModal();exportPDF()});
+    // Calculator
+    document.getElementById('ae-calc-btn').addEventListener('click',openCalcModal);
+    document.querySelectorAll('.calc-key').forEach(k=>k.addEventListener('click',()=>calcKeyPress(k.dataset.key)));
+    document.getElementById('calc-done').addEventListener('click',()=>{
+        const val=document.getElementById('calc-result').textContent;
+        if(val&&val!=='0'){document.getElementById('ae-amt').value=val;updAe()}
+        closeCalcModal();
+    });
+    // Currency picker
+    document.getElementById('ae-currency-btn').addEventListener('click',openCurrencyModal);
     document.getElementById('fab-ae').addEventListener('click',()=>{show('ae');renderAddExpense()});
     document.getElementById('ae-desc').addEventListener('input',updAe);
     document.getElementById('ae-amt').addEventListener('input',updAe);
@@ -248,7 +266,7 @@ function wireEvents(){
     document.getElementById('ae-btn').addEventListener('click',async()=>{
         const desc=document.getElementById('ae-desc').value.trim();
         const amtC=Math.round((parseFloat(document.getElementById('ae-amt').value)||0)*100);
-        const split=[...document.querySelectorAll('.sc:checked')].map(c=>c.value);
+        const split=aeSplitMode==='items'?[...new Set(aeItemRows.flatMap(r=>r.members))]:[...document.querySelectorAll('.sc:checked')].map(c=>c.value);
         const now=Date.now(),eid=uid();
         // Tag
         const activeTag=document.querySelector('#ae-tags .tag-pill.active');
@@ -262,7 +280,12 @@ function wireEvents(){
         // Split — always populate splitAmong for backward compat; compute splitDetails in cents
         let splitMode=aeSplitMode!=='equal'?aeSplitMode:null;
         let splitDetails=null;
-        if(aeSplitMode==='amount'){
+        let splitItems=null;
+        if(aeSplitMode==='items'){
+            const itemsData=getItemsSplitData();
+            splitDetails=itemsData.splitDetails;
+            splitItems=itemsData.splitItems;
+        }else if(aeSplitMode==='amount'){
             splitDetails={};document.querySelectorAll('.sd-val').forEach(i=>{const v=Math.round((parseFloat(i.value)||0)*100);if(v>0)splitDetails[i.dataset.mid]=v});
         }else if(aeSplitMode==='percentage'){
             splitDetails={};const inputs=[...document.querySelectorAll('.sd-val')];
@@ -277,7 +300,12 @@ function wireEvents(){
         const finalEid=isEdit?editingExpense.expenseId:eid;
         const createdAt=isEdit?editingExpense.createdAt:now;
         const notes=document.getElementById('ae-notes').value.trim()||null;
-        const data={expenseId:finalEid,groupId:curGroup,description:desc,amountCents:amtC,currency:'INR',paidBy,splitAmong:split,createdAt,isDeleted:false,tag,paidByMap,splitMode,splitDetails,notes};
+        // Recurring
+        const recurringEnabled=document.getElementById('ae-recurring-toggle').checked;
+        const recurring=recurringEnabled?{frequency:aeRecurringFreq}:null;
+        // Currency
+        const currency=aeCurrency||'INR';
+        const data={expenseId:finalEid,groupId:curGroup,description:desc,amountCents:amtC,currency,paidBy,splitAmong:split,createdAt,isDeleted:false,tag,paidByMap,splitMode,splitDetails,notes,recurring,splitItems};
         // Save history
         if(isEdit){
             const prevData={...editingExpense};delete prevData.hlcTimestamp;
