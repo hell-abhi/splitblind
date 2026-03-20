@@ -735,6 +735,31 @@
         .chart-month-amount { font-size:10px; font-weight:700; margin-top:2px; }
         .chart-months-row { display:flex; gap:4px; }
 
+        /* Donut charts & analytics enhancements */
+        .donut-container { display:flex; gap:20px; align-items:center; }
+        .donut { width:140px; height:140px; border-radius:50%; position:relative; flex-shrink:0; }
+        .donut-hole { position:absolute; top:22px; left:22px; right:22px; bottom:22px; border-radius:50%; background:var(--card); display:flex; align-items:center; justify-content:center; flex-direction:column; }
+        .donut-legend { flex:1; }
+        .donut-legend-item { display:flex; align-items:center; gap:8px; padding:4px 0; font-size:13px; }
+        .donut-legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+        .chart-toggle { display:flex; gap:4px; margin-bottom:12px; }
+        .chart-toggle-btn { padding:6px 14px; border:none; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; background:var(--border); color:var(--text-secondary); transition:all .2s; }
+        .chart-toggle-btn.active { background:var(--primary); color:#fff; }
+        .stats-table { width:100%; border-collapse:collapse; font-size:13px; }
+        .stats-table th { text-align:left; padding:8px 6px; font-weight:700; color:var(--text-secondary); font-size:11px; text-transform:uppercase; border-bottom:2px solid var(--border); }
+        .stats-table td { padding:8px 6px; border-bottom:1px solid var(--border); }
+        .stats-table td:not(:first-child) { text-align:right; font-weight:600; }
+        .stats-table tr:last-child td { border-bottom:none; }
+        .stats-table tr:nth-child(even) td { background:var(--surface); }
+        .trend-up { color:var(--negative); }
+        .trend-down { color:var(--positive); }
+        .summary-stat-row { display:flex; justify-content:center; gap:6px; font-size:13px; color:var(--text-secondary); font-weight:600; margin-top:6px; }
+        .summary-sub { font-size:14px; font-weight:600; color:var(--text-secondary); margin-top:4px; }
+        .summary-detail { font-size:13px; color:var(--text-secondary); font-weight:600; margin-top:8px; line-height:1.6; }
+        .settlement-line { display:flex; justify-content:center; gap:12px; margin-top:10px; font-size:13px; font-weight:700; }
+        .settlement-settled { color:var(--positive); }
+        .settlement-outstanding { color:var(--negative); }
+
         /* Bottom Navigation */
         .bottom-nav {
             position:fixed; bottom:0; left:50%; transform:translateX(-50%);
@@ -1937,6 +1962,168 @@ function getMyShare(expense, userId) {
 // Analytics tab render
 let analyticsGroupFilter='';
 let analyticsViewMode='group';
+let analyticsCatView='donut';
+let analyticsMonthView='chart';
+let groupAnalyticsCatView='donut';
+let groupAnalyticsMonthView='chart';
+
+function buildDonutGradient(entries,colorFn){
+    let cumPct=0;const stops=[];
+    entries.forEach(([key,amt],i)=>{
+        const color=colorFn(key);
+        const startPct=cumPct;
+        cumPct+=amt;
+        stops.push(`${color} ${startPct}% ${cumPct}%`);
+    });
+    if(!stops.length) return 'var(--border)';
+    return `conic-gradient(${stops.join(', ')})`;
+}
+
+function buildAnalyticsSummaryCard(opts){
+    const {isYours,totalGroupSpend,totalYourShare,displayTotal,totalLabel,allExps,tagAmts,tagSorted,monthAmts,
+           settledTotal,outstandingTotal,monthKeys}=opts;
+    const tagColors=opts.tagColors;
+    let h=`<div class="analytics-card"><div style="text-align:center">`;
+    h+=`<div style="font-size:13px;color:var(--text-secondary);font-weight:600;margin-bottom:4px">${totalLabel}</div>`;
+    h+=`<div style="font-size:32px;font-weight:800;color:${isYours?'var(--primary)':'var(--text)'}; letter-spacing:-1px">${fmt(displayTotal)}</div>`;
+    // Sub row: complementary amount
+    if(isYours){
+        h+=`<div class="summary-sub">Group Total: ${fmt(totalGroupSpend)}</div>`;
+    } else {
+        h+=`<div class="summary-sub">Your Share: ${fmt(totalYourShare)}</div>`;
+    }
+    // Stats row: avg/mo and expense count
+    const numMonthsWithData=monthKeys?monthKeys.filter(k=>monthAmts[k]>0).length:1;
+    const avgPerMonth=numMonthsWithData>0?Math.round(displayTotal/numMonthsWithData):0;
+    const expCount=allExps.length;
+    h+=`<div class="summary-stat-row">${fmt(avgPerMonth)}/mo avg &middot; ${expCount} expense${expCount!==1?'s':''}</div>`;
+    // Top category
+    if(tagSorted.length){
+        const [topTag,topAmt]=tagSorted[0];
+        const t=TAGS[topTag]||TAGS.other;
+        const topPct=displayTotal>0?Math.round(topAmt/displayTotal*100):0;
+        h+=`<div class="summary-detail">${t.icon} ${t.label} is your top category (${topPct}%)</div>`;
+    }
+    // Trend: compare current month to previous month
+    if(monthKeys&&monthKeys.length>=2){
+        const curKey=monthKeys[monthKeys.length-1];
+        const prevKey=monthKeys[monthKeys.length-2];
+        const curAmt=monthAmts[curKey]||0;
+        const prevAmt=monthAmts[prevKey]||0;
+        if(prevAmt>0){
+            const changePct=Math.round((curAmt-prevAmt)/prevAmt*100);
+            if(changePct>0){
+                h+=`<div class="summary-detail trend-up">&#x1F4C8; +${changePct}% vs last month</div>`;
+            } else if(changePct<0){
+                h+=`<div class="summary-detail trend-down">&#x1F4C9; ${changePct}% vs last month</div>`;
+            } else {
+                h+=`<div class="summary-detail">&#x1F4CA; Same as last month</div>`;
+            }
+        }
+    }
+    // Settlement summary
+    if(settledTotal>0||outstandingTotal>0){
+        h+=`<div class="settlement-line">`;
+        h+=`<span class="settlement-settled">${fmt(settledTotal)} settled</span>`;
+        h+=`<span class="settlement-outstanding">${fmt(outstandingTotal)} outstanding</span>`;
+        h+=`</div>`;
+    }
+    h+=`</div></div>`;
+    return h;
+}
+
+function buildCategorySection(tagSorted,tagAmts,displayTotal,tagColors,prefix,catView){
+    let h=`<div class="analytics-card"><h3>&#x1F3F7; By Category</h3>`;
+    h+=`<div class="chart-toggle"><button class="chart-toggle-btn${catView==='donut'?' active':''}" data-catview="donut" data-prefix="${prefix}">Donut</button><button class="chart-toggle-btn${catView==='bars'?' active':''}" data-catview="bars" data-prefix="${prefix}">Bars</button></div>`;
+    if(catView==='donut'){
+        // Donut view
+        const totalAmt=tagSorted.reduce((a,[,v])=>a+v,0)||1;
+        const pctEntries=tagSorted.map(([tag,amt])=>[tag,amt/totalAmt*100]);
+        const gradient=buildDonutGradient(pctEntries,tag=>tagColors[tag]||'#BDC3C7');
+        const donutTotal=tagSorted.reduce((a,[,v])=>a+v,0);
+        h+=`<div class="donut-container"><div class="donut" style="background:${gradient}"><div class="donut-hole"><div style="font-size:16px;font-weight:800">${fmt(donutTotal)}</div><div style="font-size:10px;color:var(--text-secondary);font-weight:600">Total</div></div></div>`;
+        h+=`<div class="donut-legend">`;
+        tagSorted.forEach(([tag,amt])=>{
+            const t=TAGS[tag]||TAGS.other;
+            const color=tagColors[tag]||'#BDC3C7';
+            const pct=displayTotal>0?Math.round(amt/displayTotal*100):0;
+            h+=`<div class="donut-legend-item"><span class="donut-legend-dot" style="background:${color}"></span><span style="flex:1">${t.label}</span><span style="color:var(--text-secondary)">${pct}%</span><span style="font-weight:700">${fmt(amt)}</span></div>`;
+        });
+        h+=`</div></div>`;
+    } else {
+        // Bars view
+        const catMax=tagSorted.length?tagSorted[0][1]:1;
+        tagSorted.forEach(([tag,amt])=>{
+            const t=TAGS[tag]||TAGS.other;
+            const color=tagColors[tag]||'#BDC3C7';
+            const pct=catMax>0?(amt/catMax*100):0;
+            const pctOfTotal=displayTotal>0?Math.round(amt/displayTotal*100):0;
+            h+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span class="donut-legend-dot" style="background:${color}"></span><span style="font-size:13px;font-weight:600;width:70px;flex-shrink:0">${t.label}</span><div class="chart-bar-track" style="flex:1"><div class="chart-bar-fill" style="width:${Math.max(pct,3)}%;background:${color}"><span></span></div></div><span style="font-size:12px;font-weight:700;width:65px;text-align:right;flex-shrink:0">${fmt(amt)}</span><span style="font-size:11px;color:var(--text-secondary);width:32px;text-align:right;flex-shrink:0">${pctOfTotal}%</span></div>`;
+        });
+    }
+    h+=`</div>`;
+    return h;
+}
+
+function buildMonthSection(monthAmts,monthKeys,monthNames,monthExpCounts,prefix,monthView){
+    const monthMax=Math.max(...Object.values(monthAmts),1);
+    let h=`<div class="analytics-card"><h3>&#x1F4C5; By Month</h3>`;
+    h+=`<div class="chart-toggle"><button class="chart-toggle-btn${monthView==='chart'?' active':''}" data-monthview="chart" data-prefix="${prefix}">Chart</button><button class="chart-toggle-btn${monthView==='table'?' active':''}" data-monthview="table" data-prefix="${prefix}">Table</button></div>`;
+    if(monthView==='chart'){
+        const monthVals=monthKeys.map(k=>monthAmts[k]);
+        monthKeys.forEach((key,idx)=>{
+            const amt=monthAmts[key];
+            const pct=monthMax>0?(amt/monthMax*100):0;
+            const m=parseInt(key.split('-')[1])-1;
+            const yr=key.split('-')[0].slice(2);
+            let changeHtml='';
+            if(idx>0){
+                const prevAmt=monthVals[idx-1];
+                if(prevAmt>0){
+                    const chg=Math.round((amt-prevAmt)/prevAmt*100);
+                    if(chg>0) changeHtml=` <span class="trend-up" style="font-size:11px;font-weight:700">&uarr;${chg}%</span>`;
+                    else if(chg<0) changeHtml=` <span class="trend-down" style="font-size:11px;font-weight:700">&darr;${Math.abs(chg)}%</span>`;
+                }
+            }
+            h+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;font-weight:600">${monthNames[m]} '${yr}${changeHtml}</span><span style="font-size:12px;color:var(--text-secondary)">${fmt(amt)}</span></div>`;
+            h+=`<div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,3)}%;background:var(--primary)"><span></span></div></div>`;
+            h+=`</div>`;
+        });
+    } else {
+        // Table view
+        h+=`<table class="stats-table"><tr><th>Month</th><th>Expenses</th><th>Amount</th><th>Avg</th></tr>`;
+        monthKeys.forEach(key=>{
+            const amt=monthAmts[key];
+            const m=parseInt(key.split('-')[1])-1;
+            const yr=key.split('-')[0];
+            const cnt=monthExpCounts[key]||0;
+            const avg=cnt>0?Math.round(amt/cnt):0;
+            h+=`<tr><td>${monthNames[m]} ${yr}</td><td>${cnt}</td><td>${fmt(amt)}</td><td>${fmt(avg)}</td></tr>`;
+        });
+        h+=`</table>`;
+    }
+    h+=`</div>`;
+    return h;
+}
+
+function buildMemberDonut(memberPaid,nameMap,prefix){
+    const paidSorted=Object.entries(memberPaid).sort((a,b)=>b[1]-a[1]);
+    const totalPaid=paidSorted.reduce((a,[,v])=>a+v,0)||1;
+    const memberCount=paidSorted.length;
+    const pctEntries=paidSorted.map(([id,amt])=>[id,amt/totalPaid*100]);
+    const gradient=buildDonutGradient(pctEntries,id=>getColor(id));
+    let h=`<div class="analytics-card"><h3>&#x1F4B3; By Member</h3>`;
+    h+=`<div class="donut-container"><div class="donut" style="background:${gradient}"><div class="donut-hole"><div style="font-size:22px;font-weight:800">${memberCount}</div><div style="font-size:10px;color:var(--text-secondary);font-weight:600">member${memberCount!==1?'s':''}</div></div></div>`;
+    h+=`<div class="donut-legend">`;
+    paidSorted.forEach(([id,amt])=>{
+        const col=getColor(id);
+        const pct=Math.round(amt/totalPaid*100);
+        h+=`<div class="donut-legend-item"><span class="donut-legend-dot" style="background:${col}"></span><span style="flex:1">${esc(nameMap[id]||id.slice(0,8))}</span><span style="font-weight:700">${fmt(amt)}</span><span style="color:var(--text-secondary)">${pct}%</span></div>`;
+    });
+    h+=`</div></div></div>`;
+    return h;
+}
+
 async function renderAnalyticsTab(){
     const allExpsRaw=(await iA('expenses')).filter(e=>!e.isDeleted);
     const allSetsRaw=(await iA('settlements')).filter(s=>!s.isDeleted);
@@ -1970,32 +2157,17 @@ async function renderAnalyticsTab(){
     const displayTotal=isYours?totalYourShare:totalGroupSpend;
     const totalLabel=isYours?'Your Spending':'Total Group Spending';
 
-    html+=`<div class="analytics-card"><div style="text-align:center">`;
-    html+=`<div style="font-size:13px;color:var(--text-secondary);font-weight:600;margin-bottom:4px">${totalLabel}</div><div style="font-size:28px;font-weight:800;color:${isYours?'var(--primary)':'var(--text)'}">${fmt(displayTotal)}</div>`;
-    html+=`</div></div>`;
-
-    // By Category (single bar based on toggle)
+    // By Category
     const tagTotals={};
     const tagMyTotals={};
     allExps.forEach(e=>{const t=e.tag||'other';tagTotals[t]=(tagTotals[t]||0)+e.amountCents;tagMyTotals[t]=(tagMyTotals[t]||0)+getMyShare(e,myId)});
     const tagAmts=isYours?tagMyTotals:tagTotals;
     const tagSorted=Object.entries(tagAmts).sort((a,b)=>b[1]-a[1]);
-    const catMax=tagSorted.length?tagSorted[0][1]:1;
 
-    html+=`<div class="analytics-card"><h3>&#x1F3F7; By Category</h3>`;
-    tagSorted.forEach(([tag,amt])=>{
-        const t=TAGS[tag]||TAGS.other;
-        const color=tagColors[tag]||'#BDC3C7';
-        const pct=catMax>0?(amt/catMax*100):0;
-        html+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:13px;font-weight:600">${t.icon} ${t.label}</span><span style="font-size:12px;color:var(--text-secondary)">${fmt(amt)}</span></div>`;
-        html+=`<div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,3)}%;background:${color}"><span></span></div></div>`;
-        html+=`</div>`;
-    });
-    html+=`</div>`;
-
-    // By Month (single bar based on toggle)
+    // By Month
     const monthTotals={};
     const monthMyTotals={};
+    const monthExpCounts={};
     const now=new Date();
     const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     for(let i=5;i>=0;i--){
@@ -2003,31 +2175,43 @@ async function renderAnalyticsTab(){
         const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
         monthTotals[key]=0;
         monthMyTotals[key]=0;
+        monthExpCounts[key]=0;
     }
     allExps.forEach(e=>{
         const d=new Date(e.createdAt);
         const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-        if(key in monthTotals){monthTotals[key]+=e.amountCents;monthMyTotals[key]+=getMyShare(e,myId)}
+        if(key in monthTotals){monthTotals[key]+=e.amountCents;monthMyTotals[key]+=getMyShare(e,myId);monthExpCounts[key]++}
     });
     const monthAmts=isYours?monthMyTotals:monthTotals;
-    const monthMax=Math.max(...Object.values(monthAmts),1);
+    const monthKeys=Object.keys(monthAmts);
 
-    html+=`<div class="analytics-card"><h3>&#x1F4C5; By Month</h3>`;
-    Object.entries(monthAmts).forEach(([key,amt])=>{
-        const pct=monthMax>0?(amt/monthMax*100):0;
-        const m=parseInt(key.split('-')[1])-1;
-        const yr=key.split('-')[0].slice(2);
-        html+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;font-weight:600">${monthNames[m]} '${yr}</span><span style="font-size:12px;color:var(--text-secondary)">${fmt(amt)}</span></div>`;
-        html+=`<div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,3)}%;background:var(--primary)"><span></span></div></div>`;
-        html+=`</div>`;
-    });
-    html+=`</div>`;
+    // Settlement totals
+    const settledTotal=allSets.reduce((a,s)=>a+s.amountCents,0);
+    const grpsToCheck=analyticsGroupFilter?groups.filter(g=>g.groupId===analyticsGroupFilter):groups;
+    let outstandingTotal=0;
+    for(const g of grpsToCheck){
+        const gExps=allExps.filter(e=>e.groupId===g.groupId);
+        const gSets=allSets.filter(s=>s.groupId===g.groupId);
+        const bal=calcBal(gExps,gSets);
+        for(const[id,b] of Object.entries(bal)){
+            if(b<0) outstandingTotal+=Math.abs(b);
+        }
+    }
 
-    // Category by Month (stacked horizontal bar chart - last 6 months)
+    // 1. Rich Summary Card
+    html+=buildAnalyticsSummaryCard({isYours,totalGroupSpend,totalYourShare,displayTotal,totalLabel,allExps,tagAmts,tagSorted,monthAmts,settledTotal,outstandingTotal,tagColors,monthKeys});
+
+    // 2. By Category (Donut/Bars toggle)
+    html+=buildCategorySection(tagSorted,tagAmts,displayTotal,tagColors,'at',analyticsCatView);
+
+    // 3. By Month (Chart/Table toggle)
+    html+=buildMonthSection(monthAmts,monthKeys,monthNames,monthExpCounts,'at',analyticsMonthView);
+
+    // 4. Category by Month (stacked bars with legend)
     html+=`<div class="analytics-card"><h3>&#x1F4CA; Category by Month</h3>`;
     const allTags=[...new Set(allExps.map(e=>e.tag||'other'))];
     html+=`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">`;
-    allTags.forEach(tag=>{const t=TAGS[tag]||TAGS.other;const color=tagColors[tag]||'#BDC3C7';html+=`<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--text-secondary)"><span style="width:10px;height:10px;border-radius:2px;background:${color};display:inline-block"></span>${t.label}</span>`});
+    allTags.forEach(tag=>{const t=TAGS[tag]||TAGS.other;const color=tagColors[tag]||'#BDC3C7';html+=`<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--text-secondary)"><span class="donut-legend-dot" style="background:${color};border-radius:2px"></span>${t.label}</span>`});
     html+=`</div>`;
     const monthCatData={};
     Object.keys(monthTotals).forEach(key=>{monthCatData[key]={}});
@@ -2061,50 +2245,25 @@ async function renderAnalyticsTab(){
     });
     html+=`</div>`;
 
-    // By Member (hidden in "yours" mode)
+    // 5. By Member — Donut chart (hidden in "yours" mode)
     if(!isYours){
         const memberPaid={};
         allExps.forEach(e=>{
             if(e.paidByMap){for(const[id,a] of Object.entries(e.paidByMap))memberPaid[id]=(memberPaid[id]||0)+a}
             else{memberPaid[e.paidBy]=(memberPaid[e.paidBy]||0)+e.amountCents}
         });
-        const memberOwes={};
-        const grpsToCheck=analyticsGroupFilter?groups.filter(g=>g.groupId===analyticsGroupFilter):groups;
-        for(const g of grpsToCheck){
-            const gExps=allExps.filter(e=>e.groupId===g.groupId);
-            const gSets=allSets.filter(s=>s.groupId===g.groupId);
-            const bal=calcBal(gExps,gSets);
-            for(const[id,b] of Object.entries(bal)){
-                if(b<0)memberOwes[id]=(memberOwes[id]||0)+Math.abs(b);
-            }
-        }
-        const paidSorted=Object.entries(memberPaid).sort((a,b)=>b[1]-a[1]);
-        const paidMax=paidSorted.length?paidSorted[0][1]:1;
-        const owesSorted=Object.entries(memberOwes).sort((a,b)=>b[1]-a[1]);
-        const owesMax=owesSorted.length?owesSorted[0][1]:1;
-
-        html+=`<div class="analytics-card"><h3>&#x1F4B3; Who Paid Most</h3>`;
-        paidSorted.forEach(([id,amt])=>{
-            const pct=paidMax>0?(amt/paidMax*100):0;
-            const col=getColor(id);
-            html+=`<div class="chart-bar-row"><div class="chart-bar-label">${esc(globalNm[id]||id.slice(0,8))}</div><div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,5)}%;background:${col}"><span>${fmt(amt)}</span></div></div><div class="chart-bar-value">${fmt(amt)}</div></div>`;
-        });
-        html+=`</div>`;
-
-        if(owesSorted.length){
-            html+=`<div class="analytics-card"><h3>&#x1F4B8; Who Owes Most</h3>`;
-            owesSorted.forEach(([id,amt])=>{
-                const pct=owesMax>0?(amt/owesMax*100):0;
-                const col=getColor(id);
-                html+=`<div class="chart-bar-row"><div class="chart-bar-label">${esc(globalNm[id]||id.slice(0,8))}</div><div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,5)}%;background:${col}"><span>${fmt(amt)}</span></div></div><div class="chart-bar-value">${fmt(amt)}</div></div>`;
-            });
-            html+=`</div>`;
+        if(Object.keys(memberPaid).length){
+            html+=buildMemberDonut(memberPaid,globalNm,'at');
         }
     }
 
     el.innerHTML=html;
+
+    // Event listeners
     el.querySelector('#analytics-group-select').addEventListener('change',e=>{analyticsGroupFilter=e.target.value;renderAnalyticsTab()});
     el.querySelectorAll('#analytics-view-toggle .seg-btn').forEach(b=>b.addEventListener('click',()=>{analyticsViewMode=b.dataset.mode;renderAnalyticsTab()}));
+    el.querySelectorAll('.chart-toggle-btn[data-catview][data-prefix="at"]').forEach(b=>b.addEventListener('click',()=>{analyticsCatView=b.dataset.catview;renderAnalyticsTab()}));
+    el.querySelectorAll('.chart-toggle-btn[data-monthview][data-prefix="at"]').forEach(b=>b.addEventListener('click',()=>{analyticsMonthView=b.dataset.monthview;renderAnalyticsTab()}));
 }
 
 // Profile tab render
@@ -2511,32 +2670,17 @@ async function renderGroupAnalytics(){
     const displayTotal=isYours?totalYourShare:totalGroupSpend;
     const totalLabel=isYours?'Your Spending':'Total Group Spending';
 
-    html+=`<div class="analytics-card"><div style="text-align:center">`;
-    html+=`<div style="font-size:13px;color:var(--text-secondary);font-weight:600;margin-bottom:4px">${totalLabel}</div><div style="font-size:28px;font-weight:800;color:${isYours?'var(--primary)':'var(--text)'}">${fmt(displayTotal)}</div>`;
-    html+=`</div></div>`;
-
-    // By Category (single bar based on toggle)
+    // By Category
     const tagTotals={};
     const tagMyTotals={};
     exps.forEach(e=>{const t=e.tag||'other';tagTotals[t]=(tagTotals[t]||0)+e.amountCents;tagMyTotals[t]=(tagMyTotals[t]||0)+getMyShare(e,myId)});
     const tagAmts=isYours?tagMyTotals:tagTotals;
     const tagSorted=Object.entries(tagAmts).sort((a,b)=>b[1]-a[1]);
-    const catMax=tagSorted.length?tagSorted[0][1]:1;
 
-    html+=`<div class="analytics-card"><h3>&#x1F3F7; By Category</h3>`;
-    tagSorted.forEach(([tag,amt])=>{
-        const t=TAGS[tag]||TAGS.other;
-        const color=tagColors[tag]||'#BDC3C7';
-        const pct=catMax>0?(amt/catMax*100):0;
-        html+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:13px;font-weight:600">${t.icon} ${t.label}</span><span style="font-size:12px;color:var(--text-secondary)">${fmt(amt)}</span></div>`;
-        html+=`<div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,3)}%;background:${color}"><span></span></div></div>`;
-        html+=`</div>`;
-    });
-    html+=`</div>`;
-
-    // By Month (single bar based on toggle)
+    // By Month
     const monthTotals={};
     const monthMyTotals={};
+    const monthExpCounts={};
     const now=new Date();
     const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     for(let i=5;i>=0;i--){
@@ -2544,31 +2688,38 @@ async function renderGroupAnalytics(){
         const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
         monthTotals[key]=0;
         monthMyTotals[key]=0;
+        monthExpCounts[key]=0;
     }
     exps.forEach(e=>{
         const d=new Date(e.createdAt);
         const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-        if(key in monthTotals){monthTotals[key]+=e.amountCents;monthMyTotals[key]+=getMyShare(e,myId)}
+        if(key in monthTotals){monthTotals[key]+=e.amountCents;monthMyTotals[key]+=getMyShare(e,myId);monthExpCounts[key]++}
     });
     const monthAmts=isYours?monthMyTotals:monthTotals;
-    const monthMax=Math.max(...Object.values(monthAmts),1);
+    const monthKeys=Object.keys(monthAmts);
 
-    html+=`<div class="analytics-card"><h3>&#x1F4C5; By Month</h3>`;
-    Object.entries(monthAmts).forEach(([key,amt])=>{
-        const pct=monthMax>0?(amt/monthMax*100):0;
-        const m=parseInt(key.split('-')[1])-1;
-        const yr=key.split('-')[0].slice(2);
-        html+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;font-weight:600">${monthNames[m]} '${yr}</span><span style="font-size:12px;color:var(--text-secondary)">${fmt(amt)}</span></div>`;
-        html+=`<div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,3)}%;background:var(--primary)"><span></span></div></div>`;
-        html+=`</div>`;
-    });
-    html+=`</div>`;
+    // Settlement totals
+    const settledTotal=sets.reduce((a,s)=>a+s.amountCents,0);
+    const bal=calcBal(exps,sets);
+    let outstandingTotal=0;
+    for(const[id,b] of Object.entries(bal)){
+        if(b<0) outstandingTotal+=Math.abs(b);
+    }
 
-    // Category by Month (stacked horizontal bar chart)
-    const allTags=[...new Set(exps.map(e=>e.tag||'other'))];
+    // 1. Rich Summary Card
+    html+=buildAnalyticsSummaryCard({isYours,totalGroupSpend,totalYourShare,displayTotal,totalLabel,allExps:exps,tagAmts,tagSorted,monthAmts,settledTotal,outstandingTotal,tagColors,monthKeys});
+
+    // 2. By Category (Donut/Bars toggle)
+    html+=buildCategorySection(tagSorted,tagAmts,displayTotal,tagColors,'ga',groupAnalyticsCatView);
+
+    // 3. By Month (Chart/Table toggle)
+    html+=buildMonthSection(monthAmts,monthKeys,monthNames,monthExpCounts,'ga',groupAnalyticsMonthView);
+
+    // 4. Category by Month (stacked bars with legend)
     html+=`<div class="analytics-card"><h3>&#x1F4CA; Category by Month</h3>`;
+    const allTags=[...new Set(exps.map(e=>e.tag||'other'))];
     html+=`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">`;
-    allTags.forEach(tag=>{const t=TAGS[tag]||TAGS.other;const color=tagColors[tag]||'#BDC3C7';html+=`<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--text-secondary)"><span style="width:10px;height:10px;border-radius:2px;background:${color};display:inline-block"></span>${t.label}</span>`});
+    allTags.forEach(tag=>{const t=TAGS[tag]||TAGS.other;const color=tagColors[tag]||'#BDC3C7';html+=`<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--text-secondary)"><span class="donut-legend-dot" style="background:${color};border-radius:2px"></span>${t.label}</span>`});
     html+=`</div>`;
     const monthCatData={};
     Object.keys(monthTotals).forEach(key=>{monthCatData[key]={}});
@@ -2602,26 +2753,24 @@ async function renderGroupAnalytics(){
     });
     html+=`</div>`;
 
-    // By Member (skip for personal groups, hidden in "yours" mode)
+    // 5. By Member — Donut chart (skip for personal groups, hidden in "yours" mode)
     if(!isPersonal&&!isYours){
         const memberPaid={};
         exps.forEach(e=>{
             if(e.paidByMap){for(const[id,a] of Object.entries(e.paidByMap))memberPaid[id]=(memberPaid[id]||0)+a}
             else{memberPaid[e.paidBy]=(memberPaid[e.paidBy]||0)+e.amountCents}
         });
-        const paidSorted=Object.entries(memberPaid).sort((a,b)=>b[1]-a[1]);
-        const paidMax=paidSorted.length?paidSorted[0][1]:1;
-        html+=`<div class="analytics-card"><h3>&#x1F4B3; Who Paid Most</h3>`;
-        paidSorted.forEach(([id,amt])=>{
-            const pct=paidMax>0?(amt/paidMax*100):0;
-            const col=getColor(id);
-            html+=`<div class="chart-bar-row"><div class="chart-bar-label">${esc(nm[id]||id.slice(0,8))}</div><div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,5)}%;background:${col}"><span>${fmt(amt)}</span></div></div><div class="chart-bar-value">${fmt(amt)}</div></div>`;
-        });
-        html+=`</div>`;
+        if(Object.keys(memberPaid).length){
+            html+=buildMemberDonut(memberPaid,nm,'ga');
+        }
     }
 
     el.innerHTML=html;
+
+    // Event listeners
     el.querySelectorAll('#group-analytics-view-toggle .seg-btn').forEach(b=>b.addEventListener('click',()=>{groupAnalyticsViewMode=b.dataset.mode;renderGroupAnalytics()}));
+    el.querySelectorAll('.chart-toggle-btn[data-catview][data-prefix="ga"]').forEach(b=>b.addEventListener('click',()=>{groupAnalyticsCatView=b.dataset.catview;renderGroupAnalytics()}));
+    el.querySelectorAll('.chart-toggle-btn[data-monthview][data-prefix="ga"]').forEach(b=>b.addEventListener('click',()=>{groupAnalyticsMonthView=b.dataset.monthview;renderGroupAnalytics()}));
 }
 
 function switchGroupTab(tab){expSearchQuery='';expTagFilter=null;expDateFilter='all';document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));document.getElementById('t-exp').style.display=tab==='exp'?'':'none';document.getElementById('t-bal').style.display=tab==='bal'?'':'none';document.getElementById('t-mem').style.display=tab==='members'?'':'none';document.getElementById('t-analytics').style.display=tab==='analytics'?'':'none';document.getElementById('fab-ae').style.display=tab==='exp'?'':'none';if(tab==='exp')renderExpenses();else if(tab==='bal')renderBalances();else if(tab==='analytics')renderGroupAnalytics();else renderMembers()}
@@ -3036,99 +3185,85 @@ function wireEvents(){
     document.getElementById('stl-btn').addEventListener('click',async()=>{const settleAmt=Math.round((parseFloat(document.getElementById('stl-input').value)||0)*100);if(settleAmt<=0||settleAmt>settleData.amountCents)return;const now=Date.now(),sid=uid(),data={settlementId:sid,groupId:curGroup,fromMember:settleData.from,toMember:settleData.to,amountCents:settleAmt,createdAt:now,isDeleted:false};await saveHistory(makeHistoryEntry({settlementId:sid,entityType:'settlement',action:'created',previousData:null,newData:data}));await iP('settlements',{...data,hlcTimestamp:now});await pushOp(curGroup,curGroupKey,{id:uid(),type:'settlement',data,hlc:now,author:myId});goBack();switchGroupTab('bal');toast(settleAmt<settleData.amountCents?'Partially settled!':'Settled!')});
 }
 
-// Analytics
+// Analytics (legacy stack screen)
+let legacyAnalyticsCatView='donut';
+let legacyAnalyticsMonthView='chart';
 async function renderAnalytics(){
     const allExps=(await iA('expenses')).filter(e=>!e.isDeleted);
     const allSets=(await iA('settlements')).filter(s=>!s.isDeleted);
     const allMems=await iA('members');
+    const groups=await iA('groups');
     const globalNm={};allMems.forEach(m=>globalNm[m.memberId]=m.displayName);
     const el=document.getElementById('analytics-content');
 
     if(!allExps.length){el.innerHTML='<div class="empty"><div class="ic">&#x1F4CA;</div><h3>No data yet</h3><p>Add expenses to see analytics</p></div>';return}
 
-    let html='';
-
-    // By Category
-    const tagTotals={};
-    allExps.forEach(e=>{const t=e.tag||'other';tagTotals[t]=(tagTotals[t]||0)+e.amountCents});
-    const totalSpend=Object.values(tagTotals).reduce((a,b)=>a+b,0);
-    const tagSorted=Object.entries(tagTotals).sort((a,b)=>b[1]-a[1]);
     const tagColors={'food':'#7C6FE0','transport':'#89C4F4','shopping':'#F2A0C4','entertainment':'#F8C4A4',
         'travel':'#BB8FCE','bills':'#F7DC6F','groceries':'#8DDCC5','health':'#F1948A','rent':'#F8C4A4','other':'#BDC3C7'};
 
-    html+=`<div class="analytics-card"><h3>&#x1F3F7; By Category</h3>`;
-    tagSorted.forEach(([tag,amt])=>{
-        const pct=totalSpend>0?(amt/totalSpend*100):0;
-        const t=TAGS[tag]||TAGS.other;
-        const color=tagColors[tag]||'#BDC3C7';
-        html+=`<div class="chart-bar-row"><div class="chart-bar-label">${t.icon} ${t.label}</div><div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,5)}%;background:${color}"><span>${pct.toFixed(0)}%</span></div></div><div class="chart-bar-value">${fmt(amt)}</div></div>`;
-    });
-    html+=`</div>`;
+    let html='';
 
-    // By Month (last 6 months)
+    // Totals
+    const tagTotals={};
+    allExps.forEach(e=>{const t=e.tag||'other';tagTotals[t]=(tagTotals[t]||0)+e.amountCents});
+    const totalSpend=Object.values(tagTotals).reduce((a,b)=>a+b,0);
+    const totalYourShare=allExps.reduce((a,e)=>a+getMyShare(e,myId),0);
+    const tagSorted=Object.entries(tagTotals).sort((a,b)=>b[1]-a[1]);
+
+    // Month data
     const monthTotals={};
+    const monthExpCounts={};
     const now=new Date();
+    const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     for(let i=5;i>=0;i--){
         const d=new Date(now.getFullYear(),now.getMonth()-i,1);
         const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
         monthTotals[key]=0;
+        monthExpCounts[key]=0;
     }
     allExps.forEach(e=>{
         const d=new Date(e.createdAt);
         const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-        if(key in monthTotals)monthTotals[key]+=e.amountCents;
+        if(key in monthTotals){monthTotals[key]+=e.amountCents;monthExpCounts[key]++}
     });
-    const monthMax=Math.max(...Object.values(monthTotals),1);
-    const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const monthKeys=Object.keys(monthTotals);
 
-    html+=`<div class="analytics-card"><h3>&#x1F4C5; By Month</h3><div class="chart-months-row">`;
-    Object.entries(monthTotals).forEach(([key,amt])=>{
-        const pct=monthMax>0?(amt/monthMax*100):0;
-        const m=parseInt(key.split('-')[1])-1;
-        html+=`<div class="chart-month-bar"><div class="chart-month-col"><div class="chart-month-fill" style="height:${Math.max(pct,3)}%;background:linear-gradient(to top,var(--primary),var(--primary-soft))"></div></div><div class="chart-month-label">${monthNames[m]}</div><div class="chart-month-amount">${fmt(amt)}</div></div>`;
-    });
-    html+=`</div></div>`;
-
-    // By Member
-    const memberPaid={},memberOwes={};
-    allExps.forEach(e=>{
-        if(e.paidByMap){for(const[id,a] of Object.entries(e.paidByMap))memberPaid[id]=(memberPaid[id]||0)+a}
-        else{memberPaid[e.paidBy]=(memberPaid[e.paidBy]||0)+e.amountCents}
-    });
-    // Compute who owes most from balances across all groups
-    const groups=await iA('groups');
+    // Settlement totals
+    const settledTotal=allSets.reduce((a,s)=>a+s.amountCents,0);
+    let outstandingTotal=0;
     for(const g of groups){
         const gExps=allExps.filter(e=>e.groupId===g.groupId);
         const gSets=allSets.filter(s=>s.groupId===g.groupId);
         const bal=calcBal(gExps,gSets);
         for(const[id,b] of Object.entries(bal)){
-            if(b<0)memberOwes[id]=(memberOwes[id]||0)+Math.abs(b);
+            if(b<0) outstandingTotal+=Math.abs(b);
         }
     }
-    const paidSorted=Object.entries(memberPaid).sort((a,b)=>b[1]-a[1]);
-    const paidMax=paidSorted.length?paidSorted[0][1]:1;
-    const owesSorted=Object.entries(memberOwes).sort((a,b)=>b[1]-a[1]);
-    const owesMax=owesSorted.length?owesSorted[0][1]:1;
 
-    html+=`<div class="analytics-card"><h3>&#x1F4B3; Who Paid Most</h3>`;
-    paidSorted.forEach(([id,amt])=>{
-        const pct=paidMax>0?(amt/paidMax*100):0;
-        const col=getColor(id);
-        html+=`<div class="chart-bar-row"><div class="chart-bar-label">${esc(globalNm[id]||id.slice(0,8))}</div><div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,5)}%;background:${col}"><span>${fmt(amt)}</span></div></div><div class="chart-bar-value">${fmt(amt)}</div></div>`;
+    // 1. Rich Summary Card
+    html+=buildAnalyticsSummaryCard({isYours:false,totalGroupSpend:totalSpend,totalYourShare,displayTotal:totalSpend,totalLabel:'Total Group Spending',allExps,tagAmts:tagTotals,tagSorted,monthAmts:monthTotals,settledTotal,outstandingTotal,tagColors,monthKeys});
+
+    // 2. By Category (Donut/Bars toggle)
+    html+=buildCategorySection(tagSorted,tagTotals,totalSpend,tagColors,'la',legacyAnalyticsCatView);
+
+    // 3. By Month (Chart/Table toggle)
+    html+=buildMonthSection(monthTotals,monthKeys,monthNames,monthExpCounts,'la',legacyAnalyticsMonthView);
+
+    // 4. By Member — Donut chart
+    const memberPaid={};
+    allExps.forEach(e=>{
+        if(e.paidByMap){for(const[id,a] of Object.entries(e.paidByMap))memberPaid[id]=(memberPaid[id]||0)+a}
+        else{memberPaid[e.paidBy]=(memberPaid[e.paidBy]||0)+e.amountCents}
     });
-    html+=`</div>`;
-
-    if(owesSorted.length){
-        html+=`<div class="analytics-card"><h3>&#x1F4B8; Who Owes Most</h3>`;
-        owesSorted.forEach(([id,amt])=>{
-            const pct=owesMax>0?(amt/owesMax*100):0;
-            const col=getColor(id);
-            html+=`<div class="chart-bar-row"><div class="chart-bar-label">${esc(globalNm[id]||id.slice(0,8))}</div><div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,5)}%;background:${col}"><span>${fmt(amt)}</span></div></div><div class="chart-bar-value">${fmt(amt)}</div></div>`;
-        });
-        html+=`</div>`;
+    if(Object.keys(memberPaid).length){
+        html+=buildMemberDonut(memberPaid,globalNm,'la');
     }
 
     el.innerHTML=html;
+
+    // Event listeners
+    el.querySelectorAll('.chart-toggle-btn[data-catview][data-prefix="la"]').forEach(b=>b.addEventListener('click',()=>{legacyAnalyticsCatView=b.dataset.catview;renderAnalytics()}));
+    el.querySelectorAll('.chart-toggle-btn[data-monthview][data-prefix="la"]').forEach(b=>b.addEventListener('click',()=>{legacyAnalyticsMonthView=b.dataset.monthview;renderAnalytics()}));
 }
 
 // Add Reminder
