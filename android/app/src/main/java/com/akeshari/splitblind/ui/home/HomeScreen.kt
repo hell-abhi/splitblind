@@ -26,7 +26,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -61,6 +65,8 @@ fun HomeScreen(
     onPersonalTrackerClick: ((String) -> Unit)? = null,
     onSyncClick: () -> Unit = {},
     onSecurityClick: () -> Unit = {},
+    onScanQrClick: () -> Unit = {},
+    onCreateGroupClick: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val dashboard by viewModel.dashboardState.collectAsState()
@@ -83,6 +89,23 @@ fun HomeScreen(
                 },
                 windowInsets = WindowInsets(0.dp)
             )
+        },
+        floatingActionButton = {
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                SmallFloatingActionButton(
+                    onClick = onScanQrClick,
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.primary
+                ) {
+                    Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan QR")
+                }
+                FloatingActionButton(onClick = onCreateGroupClick) {
+                    Icon(Icons.Default.Add, contentDescription = "Create Group")
+                }
+            }
         }
     ) { paddingValues ->
         LazyColumn(

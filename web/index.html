@@ -176,6 +176,22 @@
             transition:all .2s;
         }
         .fab:active { transform:scale(.88) rotate(90deg); }
+        .fab-stack {
+            position:fixed; bottom:max(90px,calc(70px + env(safe-area-inset-bottom)));
+            right:calc(50% - 212px);
+            display:flex; flex-direction:column; align-items:center; gap:12px; z-index:20;
+        }
+        @media(max-width:480px){ .fab-stack{right:24px;} }
+        .fab-small {
+            width:46px; height:46px;
+            background:var(--card); color:var(--primary);
+            border:2px solid var(--primary); border-radius:16px;
+            font-size:20px; cursor:pointer;
+            box-shadow:var(--shadow);
+            display:flex; align-items:center; justify-content:center;
+            transition:all .2s;
+        }
+        .fab-small:active { transform:scale(.88); }
         @media(max-width:480px){ .fab{right:24px;} }
 
         /* Forms */
@@ -950,6 +966,10 @@
             <button class="icon-btn" id="home-security" title="Security">&#x1F512;</button>
         </div>
         <div class="content" id="home-content"></div>
+        <div class="fab-stack" id="home-fabs">
+            <button class="fab-small" id="home-fab-scan" title="Scan QR">&#x1F4F7;</button>
+            <button class="fab" id="home-fab-create" title="Create Group">+</button>
+        </div>
     </div>
 
     <!-- Groups Tab -->
@@ -3124,6 +3144,8 @@ function wireEvents(){
     document.getElementById('groups-scan-btn').onclick=()=>openQrScanner();
     document.getElementById('home-sync').onclick=()=>{document.getElementById('sg-pin').value='';document.getElementById('sg-btn').disabled=true;document.getElementById('sg-result').style.display='none';document.getElementById('sg-btn').style.display='';show('sync-gen')};
     document.getElementById('home-security').onclick=()=>show('security');
+    document.getElementById('home-fab-scan').onclick=()=>openQrScanner();
+    document.getElementById('home-fab-create').onclick=()=>{document.getElementById('cg-form').style.display='';document.getElementById('cg-done').style.display='none';document.getElementById('cg-name').value='';document.getElementById('cg-btn').disabled=true;show('cg')};
     document.getElementById('analytics-back').onclick=goBack;
     document.getElementById('ld-back').onclick=goBack;
 

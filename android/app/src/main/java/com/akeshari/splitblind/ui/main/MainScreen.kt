@@ -127,7 +127,9 @@ fun MainScreen(
                         navController.navigate(Routes.groupDetail(groupId))
                     },
                     onSyncClick = { navController.navigate(Routes.SYNC_GENERATE) },
-                    onSecurityClick = { navController.navigate(Routes.SECURITY) }
+                    onSecurityClick = { navController.navigate(Routes.SECURITY) },
+                    onScanQrClick = { navController.navigate(Routes.SCAN_QR) },
+                    onCreateGroupClick = { navController.navigate(Routes.CREATE_GROUP) }
                 )
             }
 
