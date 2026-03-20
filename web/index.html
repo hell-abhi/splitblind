@@ -557,7 +557,7 @@
         .quick-debt-card .qd-info { flex:1; }
         .quick-debt-card .qd-amount { font-size:16px; font-weight:800; flex-shrink:0; }
 
-        /* Add Reminder button */
+        /* Add Reminder button (legacy) */
         .log-debt-btn {
             display:flex; align-items:center; justify-content:center; gap:8px;
             background:var(--primary-bg); color:var(--primary);
@@ -567,6 +567,39 @@
             margin-bottom:18px; width:100%;
         }
         .log-debt-btn:active { transform:scale(.97); }
+
+        /* Personal Tracker card */
+        .personal-tracker-card {
+            background:linear-gradient(135deg, #7C6FE0, #A89AF2, #F2A0C4);
+            border-radius:var(--r); padding:20px; margin-bottom:18px;
+            color:#fff; box-shadow:0 6px 24px rgba(124,111,224,0.3);
+            cursor:pointer; transition:all .2s; border:none;
+        }
+        .personal-tracker-card:hover { transform:translateY(-2px); box-shadow:0 8px 32px rgba(124,111,224,0.4); }
+        .personal-tracker-card:active { transform:scale(.98); }
+        .personal-tracker-card .pt-header { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
+        .personal-tracker-card .pt-icon {
+            width:44px; height:44px; border-radius:14px; background:rgba(255,255,255,0.2);
+            display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0;
+        }
+        .personal-tracker-card .pt-title { font-size:17px; font-weight:800; letter-spacing:-0.3px; }
+        .personal-tracker-card .pt-subtitle { font-size:13px; opacity:0.85; font-weight:500; }
+        .personal-tracker-card .pt-amount { font-size:24px; font-weight:800; letter-spacing:-0.5px; margin-top:6px; }
+        .personal-tracker-card .pt-create-btn {
+            background:rgba(255,255,255,0.25); border:2px dashed rgba(255,255,255,0.5);
+            border-radius:12px; padding:10px 20px; color:#fff; font-size:14px; font-weight:700;
+            cursor:pointer; font-family:'Inter',sans-serif; transition:all .2s; margin-top:8px;
+        }
+        .personal-tracker-card .pt-create-btn:active { transform:scale(.95); }
+        .personal-tracker-card.pt-empty {
+            background:var(--card); color:var(--text); border:2px dashed var(--primary-soft);
+            box-shadow:var(--shadow);
+        }
+        .personal-tracker-card.pt-empty .pt-icon { background:var(--primary-bg); }
+        .personal-tracker-card.pt-empty .pt-subtitle { color:var(--text-secondary); opacity:1; }
+        .personal-tracker-card.pt-empty .pt-create-btn {
+            background:var(--primary); border:none; color:#fff;
+        }
 
         /* Analytics button on dashboard */
         .analytics-btn {
@@ -872,6 +905,8 @@
     <div class="screen" id="s-groups-tab">
         <div class="topbar">
             <h1>Groups</h1>
+            <button class="icon-btn" id="groups-sync-btn" title="Sync Device">&#x1F504;</button>
+            <button class="icon-btn" id="groups-security-btn" title="Security">&#x1F512;</button>
         </div>
         <div class="content" id="groups-tab-list"></div>
         <button class="fab" id="fab-cg" style="bottom:90px">+</button>
@@ -1662,22 +1697,6 @@ async function renderGroups(){
     }
     const net=totalOwed-totalOwe;
 
-    // Collect personal reminders (1-on-1 debts across all groups)
-    let allDebts=[];
-    for(const g of groups){
-        const gExps=allExps.filter(e=>e.groupId===g.groupId);
-        const gSets=allSets.filter(s=>s.groupId===g.groupId);
-        const bal=calcBal(gExps,gSets);
-        const debts=simplify(bal);
-        const gMems=(await iA('members')).filter(m=>m.groupId===g.groupId);
-        const nm={};gMems.forEach(m=>nm[m.memberId]=m.displayName);
-        debts.forEach(d=>{
-            if(d.from===myId||d.to===myId){
-                allDebts.push({...d,groupName:g.name,groupId:g.groupId,nm});
-            }
-        });
-    }
-
     // Summary card
     let html=`<div class="dash-summary">
         <h2>Your Overview</h2>
@@ -1690,21 +1709,16 @@ async function renderGroups(){
         </div>
     </div>`;
 
-    // Analytics & Add Reminder buttons
+    // Analytics button
     html+=`<button class="analytics-btn" id="dash-analytics-btn">&#x1F4CA; Spending Analytics</button>`;
-    html+=`<button class="log-debt-btn" id="dash-log-debt-btn">&#x1F4B8; Add Reminder</button>`;
 
-    // My Reminders section
-    if(allDebts.length){
-        html+=`<div class="quick-debts"><div class="dash-activity-header"><h3>My Reminders</h3></div>`;
-        allDebts.forEach(d=>{
-            const otherId=d.from===myId?d.to:d.from;
-            const otherName=d.nm[otherId]||otherId.slice(0,8);
-            const col=getColor(otherId);
-            const isIOwe=d.from===myId;
-            html+=`<div class="quick-debt-card"><div class="qd-avatar" style="background:${col}">${getInitial(otherName)}</div><div class="qd-info"><div style="font-weight:600;font-size:14px">${esc(otherName)}</div><div style="font-size:11px;color:var(--text-secondary);font-weight:500">${esc(d.groupName)}</div></div><div class="qd-amount ${isIOwe?'bn':'bp'}">${isIOwe?'You owe ':'Owes you '}${fmt(d.amountCents)}</div></div>`;
-        });
-        html+=`</div>`;
+    // Personal Tracker summary
+    const personalGroup=groups.find(g=>g.groupType==='personal'||g.isPersonal);
+    if(personalGroup){
+        const pgExps=allExps.filter(e=>e.groupId===personalGroup.groupId);
+        const now=new Date();const monthStart=new Date(now.getFullYear(),now.getMonth(),1).getTime();
+        const thisMonthTotal=pgExps.filter(e=>e.createdAt>=monthStart).reduce((s,e)=>s+e.amountCents,0);
+        html+=`<div class="personal-tracker-card" data-g="${personalGroup.groupId}"><div class="pt-header"><div class="pt-icon">&#x1F4DD;</div><div><div class="pt-title">Personal Tracker</div><div class="pt-subtitle">This month's spending</div></div></div><div class="pt-amount">${fmt(thisMonthTotal)}</div></div>`;
     }
 
     // Recent activity feed (last 5 expenses across all groups)
@@ -1741,8 +1755,6 @@ async function renderGroups(){
     el.querySelectorAll('[data-g]').forEach(c=>c.addEventListener('click',()=>openGroup(c.dataset.g)));
     const analyticsBtn=document.getElementById('dash-analytics-btn');
     if(analyticsBtn)analyticsBtn.addEventListener('click',()=>{show('analytics');renderAnalytics()});
-    const logDebtBtn=document.getElementById('dash-log-debt-btn');
-    if(logDebtBtn)logDebtBtn.addEventListener('click',()=>{show('log-debt');initLogDebt()});
 }
 
 // Home tab render
@@ -1776,34 +1788,13 @@ async function renderHome(){
         </div>
     </div>`;
 
-    // Add Reminder quick action
-    html+=`<button class="log-debt-btn" id="home-log-debt-btn">&#x1F4B8; Add Reminder</button>`;
-
-    // My Reminders section
-    let allDebts=[];
-    for(const g of groups){
-        const gExps=allExps.filter(e=>e.groupId===g.groupId);
-        const gSets=allSets.filter(s=>s.groupId===g.groupId);
-        const bal=calcBal(gExps,gSets);
-        const debts=simplify(bal);
-        const gMems=(await iA('members')).filter(m=>m.groupId===g.groupId);
-        const nm={};gMems.forEach(m=>nm[m.memberId]=m.displayName);
-        debts.forEach(d=>{
-            if(d.from===myId||d.to===myId){
-                allDebts.push({...d,groupName:g.name,groupId:g.groupId,nm});
-            }
-        });
-    }
-    if(allDebts.length){
-        html+=`<div class="quick-debts"><div class="dash-activity-header"><h3>My Reminders</h3></div>`;
-        allDebts.forEach(d=>{
-            const otherId=d.from===myId?d.to:d.from;
-            const otherName=d.nm[otherId]||otherId.slice(0,8);
-            const col=getColor(otherId);
-            const isIOwe=d.from===myId;
-            html+=`<div class="quick-debt-card"><div class="qd-avatar" style="background:${col}">${getInitial(otherName)}</div><div class="qd-info"><div style="font-weight:600;font-size:14px">${esc(otherName)}</div><div style="font-size:11px;color:var(--text-secondary);font-weight:500">${esc(d.groupName)}</div></div><div class="qd-amount ${isIOwe?'bn':'bp'}">${isIOwe?'You owe ':'Owes you '}${fmt(d.amountCents)}</div></div>`;
-        });
-        html+=`</div>`;
+    // Personal Tracker summary
+    const personalGroup=groups.find(g=>g.groupType==='personal'||g.isPersonal);
+    if(personalGroup){
+        const pgExps=allExps.filter(e=>e.groupId===personalGroup.groupId);
+        const now=new Date();const monthStart=new Date(now.getFullYear(),now.getMonth(),1).getTime();
+        const thisMonthTotal=pgExps.filter(e=>e.createdAt>=monthStart).reduce((s,e)=>s+e.amountCents,0);
+        html+=`<div class="personal-tracker-card" id="home-personal-tracker" data-g="${personalGroup.groupId}"><div class="pt-header"><div class="pt-icon">&#x1F4DD;</div><div><div class="pt-title">Personal Tracker</div><div class="pt-subtitle">This month's spending</div></div></div><div class="pt-amount">${fmt(thisMonthTotal)}</div></div>`;
     }
 
     // Recent activity (last 5)
@@ -1828,15 +1819,12 @@ async function renderHome(){
 
     el.innerHTML=html;
     el.querySelectorAll('[data-g]').forEach(c=>c.addEventListener('click',()=>openGroup(c.dataset.g)));
-    const logDebtBtn=document.getElementById('home-log-debt-btn');
-    if(logDebtBtn)logDebtBtn.addEventListener('click',()=>{show('log-debt');initLogDebt()});
 }
 
 // Groups tab render
 async function renderGroupsTab(){
     const groups=(await iA('groups')).sort((a,b)=>b.createdAt-a.createdAt);
     const el=document.getElementById('groups-tab-list');
-    if(!groups.length){el.innerHTML='<div class="empty"><div class="ic">&#x1F465;</div><h3>No groups yet</h3><p>Tap + to create your first split group</p></div>';return}
     const allM=await iA('members');
     const allExps=(await iA('expenses')).filter(e=>!e.isDeleted);
     const allSets=(await iA('settlements')).filter(s=>!s.isDeleted);
@@ -1849,11 +1837,23 @@ async function renderGroupsTab(){
         groupBalances[g.groupId]=bal[myId]||0;
     }
 
-    // Split into regular groups and personal reminders
-    const regularGroups=groups.filter(g=>!g.isIOU);
-    const iouGroups=groups.filter(g=>g.isIOU);
-
     let html='';
+
+    // Personal Tracker card at top
+    const personalGroup=groups.find(g=>g.groupType==='personal'||g.isPersonal);
+    if(personalGroup){
+        const pgExps=allExps.filter(e=>e.groupId===personalGroup.groupId);
+        const now=new Date();const monthStart=new Date(now.getFullYear(),now.getMonth(),1).getTime();
+        const thisMonthTotal=pgExps.filter(e=>e.createdAt>=monthStart).reduce((s,e)=>s+e.amountCents,0);
+        const totalAll=pgExps.reduce((s,e)=>s+e.amountCents,0);
+        html+=`<div class="personal-tracker-card" id="gt-personal-tracker" data-g="${personalGroup.groupId}"><div class="pt-header"><div class="pt-icon">&#x1F4DD;</div><div><div class="pt-title">Personal Tracker</div><div class="pt-subtitle">${pgExps.length} expense${pgExps.length!==1?'s':''} tracked</div></div></div><div class="pt-amount">${fmt(thisMonthTotal)} <span style="font-size:13px;opacity:0.8;font-weight:500">this month</span></div></div>`;
+    }else{
+        html+=`<div class="personal-tracker-card pt-empty" id="gt-personal-create"><div class="pt-header"><div class="pt-icon">&#x1F4DD;</div><div><div class="pt-title">Personal Tracker</div><div class="pt-subtitle">Track your personal expenses</div></div></div><button class="pt-create-btn" id="pt-create-btn">Start Tracking</button></div>`;
+    }
+
+    // Split into regular groups and personal/iou reminders
+    const regularGroups=groups.filter(g=>!g.isIOU&&g.groupType!=='personal'&&!g.isPersonal);
+    const iouGroups=groups.filter(g=>g.isIOU);
 
     if(regularGroups.length){
         html+=`<div class="sec-t">Groups</div>`;
@@ -1881,8 +1881,27 @@ async function renderGroupsTab(){
         }).join('');
     }
 
+    if(!regularGroups.length&&!iouGroups.length&&!personalGroup){
+        html+='<div class="empty"><div class="ic">&#x1F465;</div><h3>No groups yet</h3><p>Tap + to create your first split group</p></div>';
+    }
+
     el.innerHTML=html;
     el.querySelectorAll('[data-g]').forEach(c=>c.addEventListener('click',()=>openGroup(c.dataset.g)));
+    const ptCreateBtn=document.getElementById('pt-create-btn');
+    if(ptCreateBtn)ptCreateBtn.addEventListener('click',async(e)=>{e.stopPropagation();await createPersonalGroup();renderGroupsTab()});
+}
+
+// Create personal tracker group
+async function createPersonalGroup(){
+    const now=Date.now();
+    const gid=uid();const key=await genKey();
+    await iP('groups',{groupId:gid,name:'Personal',createdBy:myId,createdAt:now,inviteToken:uid(),groupKeyBase64:key,hlcTimestamp:now,hlcNodeId:myId,groupType:'personal',isPersonal:true});
+    await iP('members',{_key:gid+'_'+myId,groupId:gid,memberId:myId,displayName:myName,joinedAt:now,isDeleted:false,hlcTimestamp:now});
+    await pushOp(gid,key,{id:uid(),type:'member_join',data:{memberId:myId,displayName:myName,joinedAt:now},hlc:now,author:myId});
+    await iPK('identity','personalGroupId',gid);
+    startSync(gid,key);
+    toast('Personal Tracker created!');
+    autoBackup().catch(()=>{});
 }
 
 // Analytics tab render
@@ -2544,7 +2563,17 @@ function wireEvents(){
     document.getElementById('analytics-back').onclick=goBack;
     document.getElementById('ld-back').onclick=goBack;
 
-    // Add Reminder wiring
+    // Groups tab sync & security buttons
+    document.getElementById('groups-sync-btn').onclick=()=>{
+        document.getElementById('sg-pin').value='';
+        document.getElementById('sg-btn').disabled=true;
+        document.getElementById('sg-result').style.display='none';
+        document.getElementById('sg-btn').style.display='';
+        show('sync-gen');
+    };
+    document.getElementById('groups-security-btn').onclick=()=>show('security');
+
+    // Add Reminder wiring (legacy)
     document.querySelectorAll('#ld-direction .seg-btn').forEach(b=>{
         b.addEventListener('click',()=>{
             ldDirection=b.dataset.dir;

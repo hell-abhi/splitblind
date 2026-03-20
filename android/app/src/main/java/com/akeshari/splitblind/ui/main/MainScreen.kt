@@ -119,7 +119,11 @@ fun MainScreen(
             }
 
             composable(Routes.HOME) {
-                HomeScreen()
+                HomeScreen(
+                    onPersonalTrackerClick = { groupId ->
+                        navController.navigate(Routes.groupDetail(groupId))
+                    }
+                )
             }
 
             composable(Routes.GROUPS) {
@@ -129,6 +133,12 @@ fun MainScreen(
                     },
                     onCreateGroup = {
                         navController.navigate(Routes.CREATE_GROUP)
+                    },
+                    onSyncClick = {
+                        navController.navigate(Routes.SYNC_GENERATE)
+                    },
+                    onSecurityClick = {
+                        navController.navigate(Routes.SECURITY)
                     },
                     joinGroupId = deepLinkData?.groupId,
                     joinGroupKey = deepLinkData?.groupKey,

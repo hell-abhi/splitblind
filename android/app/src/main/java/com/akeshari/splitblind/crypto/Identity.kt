@@ -36,5 +36,9 @@ class Identity(context: Context) {
         get() = prefs.getString("recovery_passphrase", null)
         set(value) = prefs.edit().putString("recovery_passphrase", value).apply()
 
+    var personalGroupId: String?
+        get() = prefs.getString("personal_group_id", null)
+        set(value) = prefs.edit().putString("personal_group_id", value).apply()
+
     val isOnboarded: Boolean get() = displayName.isNotBlank()
 }

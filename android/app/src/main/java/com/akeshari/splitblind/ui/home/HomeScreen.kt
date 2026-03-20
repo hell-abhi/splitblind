@@ -1,6 +1,7 @@
 package com.akeshari.splitblind.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,33 +17,23 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -61,20 +52,10 @@ private fun formatAmount(cents: Long): String {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    onPersonalTrackerClick: ((String) -> Unit)? = null,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val dashboard by viewModel.dashboardState.collectAsState()
-    var showIouDialog by remember { mutableStateOf(false) }
-
-    if (showIouDialog) {
-        LogDebtDialog(
-            onDismiss = { showIouDialog = false },
-            onSave = { friendName, amount, iOwe, description ->
-                viewModel.createIouGroup(friendName, amount, iOwe, description)
-                showIouDialog = false
-            }
-        )
-    }
 
     Scaffold(
         topBar = {
@@ -85,14 +66,6 @@ fun HomeScreen(
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showIouDialog = true },
-                containerColor = MaterialTheme.colorScheme.secondaryContainer
-            ) {
-                Text("\uD83E\uDD1D", fontSize = 20.sp)
-            }
         }
     ) { paddingValues ->
         LazyColumn(
@@ -112,6 +85,18 @@ fun HomeScreen(
                 )
             }
 
+            // Personal Tracker summary card
+            if (dashboard.personalGroupId != null && dashboard.personalMonthSpend > 0) {
+                item {
+                    PersonalTrackerSummaryCard(
+                        monthSpend = dashboard.personalMonthSpend,
+                        onClick = {
+                            dashboard.personalGroupId?.let { onPersonalTrackerClick?.invoke(it) }
+                        }
+                    )
+                }
+            }
+
             if (dashboard.recentExpenses.isNotEmpty()) {
                 item {
                     Text(
@@ -127,6 +112,65 @@ fun HomeScreen(
             }
 
             item { Spacer(modifier = Modifier.height(80.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun PersonalTrackerSummaryCard(monthSpend: Long, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xFF7C6FE0),
+                            Color(0xFFA89AF2),
+                            Color(0xFFF2A0C4)
+                        )
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                )
+                .padding(18.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Color.White.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("\uD83D\uDCDD", fontSize = 20.sp)
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Personal Tracker",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Text(
+                        "This month's spending",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
+                }
+                Text(
+                    formatAmount(monthSpend),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White
+                )
+            }
         }
     }
 }
@@ -262,73 +306,4 @@ private fun RecentExpenseCard(expense: ExpenseEntity) {
             )
         }
     }
-}
-
-@Composable
-private fun LogDebtDialog(
-    onDismiss: () -> Unit,
-    onSave: (friendName: String, amount: Double, iOwe: Boolean, description: String) -> Unit
-) {
-    var friendName by remember { mutableStateOf("") }
-    var amountText by remember { mutableStateOf("") }
-    var iOwe by remember { mutableStateOf(true) }
-    var description by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Add Reminder") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = friendName,
-                    onValueChange = { friendName = it },
-                    label = { Text("Friend's Name") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = amountText,
-                    onValueChange = {
-                        if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d{0,2}$"))) {
-                            amountText = it
-                        }
-                    },
-                    label = { Text("Amount (\u20B9)") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    label = { Text("Description (optional)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Text("Who owes?", style = MaterialTheme.typography.bodySmall)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(selected = iOwe, onClick = { iOwe = true })
-                    Text("I owe them")
-                    Spacer(modifier = Modifier.width(16.dp))
-                    RadioButton(selected = !iOwe, onClick = { iOwe = false })
-                    Text("They owe me")
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    val amount = amountText.toDoubleOrNull()
-                    if (friendName.isNotBlank() && amount != null && amount > 0) {
-                        onSave(friendName.trim(), amount, iOwe, description.trim())
-                    }
-                }
-            ) {
-                Text("Save")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
-    )
 }
