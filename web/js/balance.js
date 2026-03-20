@@ -137,7 +137,16 @@ function computeChanges(prev,next){
     if(prev.paidBy!==next.paidBy)changes.push({field:'Paid by',from:prev.paidBy,to:next.paidBy});
     if(JSON.stringify(prev.splitAmong||[])!==JSON.stringify(next.splitAmong||[])){const pArr=prev.splitAmong||[];const nArr=next.splitAmong||[];const added=nArr.filter(m=>!pArr.includes(m));const removed=pArr.filter(m=>!nArr.includes(m));let desc=[];if(added.length)desc.push('+'+added.length+' added');if(removed.length)desc.push(removed.length+' removed');changes.push({field:'Split among',from:pArr.length+' people',to:nArr.length+' people'+(desc.length?' ('+desc.join(', ')+')':'')})}
     if((prev.splitMode||'equal')!==(next.splitMode||'equal'))changes.push({field:'Split mode',from:prev.splitMode||'equal',to:next.splitMode||'equal'});
+    // Track splitDetails value changes (unequal split amounts changed)
+    if(prev.splitDetails&&next.splitDetails&&JSON.stringify(prev.splitDetails)!==JSON.stringify(next.splitDetails)){
+        const diffs=[];
+        const allKeys=new Set([...Object.keys(prev.splitDetails),...Object.keys(next.splitDetails)]);
+        for(const k of allKeys){const pv=prev.splitDetails[k]||0;const nv=next.splitDetails[k]||0;if(pv!==nv)diffs.push(k)}
+        if(diffs.length)changes.push({field:'Split amounts',from:diffs.length+' share'+(diffs.length>1?'s':'')+' changed',to:'updated'})
+    }
     if((prev.notes||'')!==(next.notes||''))changes.push({field:'Notes',from:prev.notes||'(none)',to:next.notes||'(none)'});
+    if((prev.currency||'INR')!==(next.currency||'INR'))changes.push({field:'Currency',from:prev.currency||'INR',to:next.currency||'INR'});
+    if((prev.recurringFrequency||'')!==(next.recurringFrequency||''))changes.push({field:'Recurring',from:prev.recurringFrequency||'none',to:next.recurringFrequency||'none'});
     return changes;
 }
 

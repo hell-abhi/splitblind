@@ -906,6 +906,16 @@ private fun HistoryEntryRow(history: HistoryEntity, dateFormat: SimpleDateFormat
                 if (prev["splitMode"] != next["splitMode"]) {
                     changes.add("Split: ${prev["splitMode"] ?: "equal"} \u2192 ${next["splitMode"] ?: "equal"}")
                 }
+                if (prev["splitDetails"] != null && next["splitDetails"] != null && prev["splitDetails"] != next["splitDetails"]) {
+                    try {
+                        val oldDetails: Map<String, Long> = Json.decodeFromString(prev["splitDetails"]!!)
+                        val newDetails: Map<String, Long> = Json.decodeFromString(next["splitDetails"]!!)
+                        val changedCount = (oldDetails.keys + newDetails.keys).count { k -> (oldDetails[k] ?: 0) != (newDetails[k] ?: 0) }
+                        if (changedCount > 0) changes.add("Split amounts: $changedCount share${if (changedCount > 1) "s" else ""} changed")
+                    } catch (_: Exception) {
+                        changes.add("Split amounts updated")
+                    }
+                }
                 if (prev["notes"] != next["notes"]) {
                     changes.add("Notes updated")
                 }
