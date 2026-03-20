@@ -96,5 +96,14 @@ dependencies {
     implementation("androidx.hilt:hilt-work:1.2.0")
     ksp("androidx.hilt:hilt-compiler:1.2.0")
 
+    // QR Code generation (ZXing)
+    implementation("com.google.zxing:core:3.5.3")
+
+    // QR Code scanning (CameraX + ML Kit)
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
+    implementation("androidx.camera:camera-camera2:1.4.1")
+    implementation("androidx.camera:camera-lifecycle:1.4.1")
+    implementation("androidx.camera:camera-view:1.4.1")
+
     testImplementation("junit:junit:4.13.2")
 }

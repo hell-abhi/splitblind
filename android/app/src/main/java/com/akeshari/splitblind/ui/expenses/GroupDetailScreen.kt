@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -82,6 +83,7 @@ import com.akeshari.splitblind.data.database.entity.ExpenseEntity
 import com.akeshari.splitblind.data.database.entity.HistoryEntity
 import com.akeshari.splitblind.data.database.entity.SettlementEntity
 import com.akeshari.splitblind.data.database.entity.MemberEntity
+import com.akeshari.splitblind.ui.qr.QrCodeDialog
 import com.akeshari.splitblind.util.Debt
 import kotlinx.serialization.json.Json
 import java.text.SimpleDateFormat
@@ -950,6 +952,14 @@ private fun MembersTab(
     groupName: String
 ) {
     val context = LocalContext.current
+    var showQrDialog by remember { mutableStateOf(false) }
+
+    if (showQrDialog && inviteLink != null) {
+        QrCodeDialog(
+            inviteLink = inviteLink,
+            onDismiss = { showQrDialog = false }
+        )
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -993,20 +1003,33 @@ private fun MembersTab(
         if (inviteLink != null) {
             item {
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = {
-                        val sendIntent = Intent().apply {
-                            action = Intent.ACTION_SEND
-                            putExtra(Intent.EXTRA_TEXT, "Join my SplitBlind group \"$groupName\":\n$inviteLink")
-                            type = "text/plain"
-                        }
-                        context.startActivity(Intent.createChooser(sendIntent, "Share invite link"))
-                    },
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(Icons.Default.Share, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Invite Members")
+                    OutlinedButton(
+                        onClick = {
+                            val sendIntent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                putExtra(Intent.EXTRA_TEXT, "Join my SplitBlind group \"$groupName\":\n$inviteLink")
+                                type = "text/plain"
+                            }
+                            context.startActivity(Intent.createChooser(sendIntent, "Share invite link"))
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = null)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Invite")
+                    }
+                    OutlinedButton(
+                        onClick = { showQrDialog = true },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.QrCode, contentDescription = null)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Show QR")
+                    }
                 }
             }
         }

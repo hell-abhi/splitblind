@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -65,6 +66,7 @@ fun GroupListScreen(
     onCreateGroup: () -> Unit,
     onSyncClick: () -> Unit = {},
     onSecurityClick: () -> Unit = {},
+    onScanQrClick: () -> Unit = {},
     joinGroupId: String? = null,
     joinGroupKey: String? = null,
     joinGroupName: String? = null,
@@ -88,6 +90,13 @@ fun GroupListScreen(
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
                 actions = {
+                    IconButton(onClick = onScanQrClick) {
+                        Icon(
+                            Icons.Default.QrCodeScanner,
+                            contentDescription = "Scan QR Code",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
                     IconButton(onClick = onSyncClick) {
                         Icon(
                             Icons.Default.Sync,

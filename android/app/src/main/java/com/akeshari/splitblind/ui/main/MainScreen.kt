@@ -12,6 +12,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -37,6 +38,8 @@ import com.akeshari.splitblind.ui.recovery.RecoverScreen
 import com.akeshari.splitblind.ui.recovery.SetupPassphraseScreen
 import com.akeshari.splitblind.ui.security.SecurityScreen
 import com.akeshari.splitblind.ui.settle.SettleUpScreen
+import android.widget.Toast
+import com.akeshari.splitblind.ui.qr.ScanQrScreen
 import com.akeshari.splitblind.ui.sync.SyncDeviceScreen
 
 data class BottomTab(
@@ -141,6 +144,9 @@ fun MainScreen(
                     },
                     onSecurityClick = {
                         navController.navigate(Routes.SECURITY)
+                    },
+                    onScanQrClick = {
+                        navController.navigate(Routes.SCAN_QR)
                     },
                     joinGroupId = deepLinkData?.groupId,
                     joinGroupKey = deepLinkData?.groupKey,
@@ -255,6 +261,37 @@ fun MainScreen(
                             popUpTo(0) { inclusive = true }
                         }
                     }
+                )
+            }
+
+            composable(Routes.SCAN_QR) {
+                val scanViewModel: com.akeshari.splitblind.ui.qr.ScanQrViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+                val scanResult by scanViewModel.scanResult.collectAsState()
+                val context = androidx.compose.ui.platform.LocalContext.current
+
+                androidx.compose.runtime.LaunchedEffect(scanResult) {
+                    when (val result = scanResult) {
+                        is com.akeshari.splitblind.ui.qr.ScanResult.Joined -> {
+                            Toast.makeText(context, "Joined group!", Toast.LENGTH_SHORT).show()
+                            navController.popBackStack()
+                            navController.navigate(Routes.groupDetail(result.groupId))
+                        }
+                        is com.akeshari.splitblind.ui.qr.ScanResult.AlreadyMember -> {
+                            Toast.makeText(context, "Already in this group!", Toast.LENGTH_SHORT).show()
+                            navController.popBackStack()
+                            navController.navigate(Routes.groupDetail(result.groupId))
+                        }
+                        is com.akeshari.splitblind.ui.qr.ScanResult.Error -> {
+                            Toast.makeText(context, result.message, Toast.LENGTH_SHORT).show()
+                            navController.popBackStack()
+                        }
+                        else -> {}
+                    }
+                }
+
+                ScanQrScreen(
+                    onBack = { navController.popBackStack() },
+                    onScanned = { scannedUrl -> scanViewModel.handleScannedUrl(scannedUrl) }
                 )
             }
 

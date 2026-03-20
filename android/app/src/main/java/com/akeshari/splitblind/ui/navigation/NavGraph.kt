@@ -15,6 +15,7 @@ object Routes {
     const val SYNC_GENERATE = "sync_generate"
     const val SYNC_RESTORE = "sync_restore"
     const val ANALYTICS = "analytics"
+    const val SCAN_QR = "scan_qr"
 
     fun groupDetail(groupId: String) = "group_detail/$groupId"
     fun addExpense(groupId: String) = "add_expense/$groupId"
