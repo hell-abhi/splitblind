@@ -199,6 +199,12 @@
         }
         .fab-small:active { transform:scale(.88); }
 
+        /* Constrain html5-qrcode library elements */
+        #qr-reader video { width:100%!important; height:100%!important; object-fit:cover!important; border-radius:16px; }
+        #qr-reader img { max-width:100%!important; }
+        #qr-reader { position:relative; background:var(--card); }
+        #qr-reader > div { max-height:100%!important; }
+
         /* Forms */
         .fg { margin-bottom:22px; }
         .fg label {
@@ -1265,9 +1271,9 @@
 <!-- Scan QR -->
 <div class="screen" id="s-scan-qr">
     <div class="topbar"><button class="back" id="scan-back">&#x2190;</button><h1>Scan QR Code</h1></div>
-    <div style="flex:1;display:flex;flex-direction:column;padding:8px 16px">
-        <p style="text-align:center;color:var(--text-secondary);padding:8px 0;font-size:13px;font-weight:500">Point your camera at a SplitBlind QR code</p>
-        <div id="qr-reader" style="flex:1;width:100%;max-height:70vh;border-radius:16px;overflow:hidden"></div>
+    <div class="content" style="display:flex;flex-direction:column;align-items:center;padding-top:8px;overflow:hidden">
+        <p style="text-align:center;color:var(--text-secondary);padding:4px 0 8px;font-size:13px;font-weight:500">Point your camera at a SplitBlind QR code</p>
+        <div id="qr-reader" style="width:100%;max-width:min(400px,100%);aspect-ratio:1;border-radius:16px;overflow:hidden"></div>
     </div>
 </div>
 
@@ -1669,12 +1675,18 @@ async function shareQrImage(){
 
 let qrScanner=null;
 function openQrScanner(){
+    stopQrScanner();
+    // Clear any leftover content from previous scans
+    document.getElementById('qr-reader').innerHTML='';
     show('scan-qr');
     setTimeout(()=>{
+        const readerEl=document.getElementById('qr-reader');
+        const w=readerEl.clientWidth;
+        const qrSize=Math.min(w-40,250);
         qrScanner=new Html5Qrcode('qr-reader');
         qrScanner.start(
             {facingMode:'environment'},
-            {fps:10,qrbox:{width:250,height:250}},
+            {fps:10,qrbox:{width:qrSize,height:qrSize},aspectRatio:1},
             async(decodedText)=>{
                 qrScanner.stop().catch(()=>{});qrScanner=null;
                 await handleScannedUrl(decodedText);
@@ -1683,7 +1695,7 @@ function openQrScanner(){
         ).catch(err=>{
             toast('Camera not available');console.error('QR scan error:',err);goBack();
         });
-    },300);
+    },500);
 }
 function stopQrScanner(){
     if(qrScanner){try{qrScanner.stop().catch(()=>{})}catch(e){}qrScanner=null}
