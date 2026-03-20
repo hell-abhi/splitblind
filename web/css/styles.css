@@ -491,7 +491,10 @@
         /* History */
         .history-toggle { font-size:12px; color:var(--primary); cursor:pointer; font-weight:600; margin-top:6px; user-select:none; }
         .history-log { padding:8px 0 0; border-top:1px solid var(--border); margin-top:8px; }
-        .history-entry { font-size:12px; color:var(--text-secondary); padding:4px 0; display:flex; align-items:center; gap:6px; }
+        .history-entry { font-size:12px; color:var(--text-secondary); padding:6px 0; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+        .history-clickable { cursor:pointer; padding:6px 8px; border-radius:8px; transition:background .2s; }
+        .history-clickable:hover { background:var(--primary-bg); }
+        .history-clickable:active { transform:scale(.98); }
         .history-detail { font-size:11px; color:var(--text-secondary); opacity:0.7; display:block; padding-left:20px; }
         .deleted-card { opacity:0.5; }
         .deleted-card .card-t, .deleted-card .exp-a { text-decoration:line-through; }

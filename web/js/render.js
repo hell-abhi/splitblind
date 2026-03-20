@@ -839,25 +839,53 @@ function renderHistoryHtml(entries,nm){
     const actionIcons={created:'\u{1F4DD}',edited:'\u270F\uFE0F',deleted:'\u{1F5D1}\uFE0F'};
     const actionLabels={created:'Created',edited:'Edited',deleted:'Deleted'};
     let html='<div class="history-log">';
-    sorted.forEach(h=>{
+    sorted.forEach((h,i)=>{
         const icon=actionIcons[h.action]||'\u{1F4CB}';
         const label=actionLabels[h.action]||h.action;
         const byName=esc(h.changedByName||nm[h.changedBy]||h.changedBy.slice(0,8));
-        const dateStr=new Date(h.changedAt).toLocaleDateString('en',{month:'short',day:'numeric'});
-        html+=`<div class="history-entry">${icon} ${label} by ${byName} \u00B7 ${dateStr}</div>`;
-        if(h.action==='edited'&&h.previousData&&h.newData){
-            const changes=computeChanges(h.previousData,h.newData);
-            changes.forEach(c=>{
-                if(c.field==='Split among'||c.field==='Split mode'){
-                    html+=`<span class="history-detail">${esc(c.field)}: ${esc(c.to)}</span>`;
-                }else{
-                    html+=`<span class="history-detail">${esc(c.field)}: ${esc(c.from)} \u2192 ${esc(c.to)}</span>`;
-                }
-            });
-        }
+        const dateStr=new Date(h.changedAt).toLocaleDateString('en',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+        const hasDetail=h.previousData||h.newData;
+        html+=`<div class="history-entry${hasDetail?' history-clickable':''}" ${hasDetail?'data-hid="'+h.historyId+'"':''}>${icon} ${label} by ${byName} \u00B7 ${dateStr}${hasDetail?' <span style="color:var(--primary);font-size:10px">details &rsaquo;</span>':''}</div>`;
     });
     html+='</div>';
     return html;
+}
+
+function showHistoryDetail(historyId){
+    iG('history',historyId).then(h=>{
+        if(!h)return;
+        const icon={created:'\u{1F4DD}',edited:'\u270F\uFE0F',deleted:'\u{1F5D1}\uFE0F'}[h.action]||'\u{1F4CB}';
+        const label={created:'Created',edited:'Edited',deleted:'Deleted'}[h.action]||h.action;
+        const dateStr=new Date(h.changedAt).toLocaleDateString('en',{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+        let body=`<div style="text-align:center;padding:8px 0"><div style="font-size:32px;margin-bottom:8px">${icon}</div><h3 style="font-size:17px;font-weight:800">${label}</h3><p style="color:var(--text-secondary);font-size:13px;margin-top:4px">by ${esc(h.changedByName||h.changedBy.slice(0,8))} &middot; ${dateStr}</p></div>`;
+        if(h.action==='edited'&&h.previousData&&h.newData){
+            const changes=computeChanges(h.previousData,h.newData);
+            if(changes.length){
+                body+='<div style="margin-top:12px">';
+                changes.forEach(c=>{
+                    body+=`<div style="padding:10px 0;border-bottom:1px solid var(--border)"><div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">${esc(c.field)}</div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="background:rgba(255,107,107,0.1);color:var(--negative);padding:4px 8px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:line-through">${esc(c.from)}</span><span style="color:var(--text-secondary)">\u2192</span><span style="background:rgba(107,203,119,0.1);color:var(--positive);padding:4px 8px;border-radius:8px;font-size:13px;font-weight:600">${esc(c.to)}</span></div></div>`;
+                });
+                body+='</div>';
+            }else{body+='<p style="color:var(--text-secondary);text-align:center;padding:12px">No field changes detected</p>';}
+        }
+        if(h.action==='created'&&h.newData){
+            body+='<div style="margin-top:12px"><div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Created with</div>';
+            const d=h.newData;
+            if(d.description)body+=`<div style="padding:4px 0"><span style="color:var(--text-secondary);font-size:12px">Description:</span> <span style="font-weight:600">${esc(d.description)}</span></div>`;
+            if(d.amountCents)body+=`<div style="padding:4px 0"><span style="color:var(--text-secondary);font-size:12px">Amount:</span> <span style="font-weight:600">${fmt(d.amountCents,d.currency)}</span></div>`;
+            if(d.tag){const t=TAGS[d.tag];body+=`<div style="padding:4px 0"><span style="color:var(--text-secondary);font-size:12px">Category:</span> <span style="font-weight:600">${t?t.icon+' '+t.label:d.tag}</span></div>`;}
+            body+='</div>';
+        }
+        if(h.action==='deleted'&&h.previousData){
+            body+='<div style="margin-top:12px"><div style="font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Deleted expense</div>';
+            const d=h.previousData;
+            if(d.description)body+=`<div style="padding:4px 0"><span style="color:var(--text-secondary);font-size:12px">Description:</span> <span style="font-weight:600;text-decoration:line-through">${esc(d.description)}</span></div>`;
+            if(d.amountCents)body+=`<div style="padding:4px 0"><span style="color:var(--text-secondary);font-size:12px">Amount:</span> <span style="font-weight:600;text-decoration:line-through">${fmt(d.amountCents,d.currency)}</span></div>`;
+            body+='</div>';
+        }
+        body+=`<button class="modal-btn modal-btn-cancel" onclick="closeModal()" style="margin-top:16px">Close</button>`;
+        openModal(body);
+    });
 }
 let expSearchQuery='',expTagFilter=null,expDateFilter='all';
 async function renderExpenses(){
@@ -999,6 +1027,10 @@ async function renderExpenses(){
             const target=document.getElementById(t.dataset.histTarget);
             if(target){target.style.display=target.style.display==='none'?'':'none';t.textContent=target.style.display==='none'?t.textContent.replace('\u25B2','\u25BC'):t.textContent.replace('\u25BC','\u25B2')}
         });
+    });
+    // History detail popup handlers
+    el.querySelectorAll('.history-clickable').forEach(e=>{
+        e.addEventListener('click',ev=>{ev.stopPropagation();showHistoryDetail(e.dataset.hid)});
     });
     // Restore button handlers
     el.querySelectorAll('[data-restore-eid]').forEach(b=>{

@@ -839,10 +839,92 @@ private fun HistoryEntryRow(history: HistoryEntity, dateFormat: SimpleDateFormat
         else -> history.action.replaceFirstChar { it.uppercase() }
     }
 
+    // Pre-compute changes summary for edited entries
+    val changesSummary = if (history.action == "edited" && history.previousData != null && history.newData != null) {
+        remember(history.historyId) {
+            try {
+                val prev: Map<String, String> = Json.decodeFromString(history.previousData)
+                val next: Map<String, String> = Json.decodeFromString(history.newData)
+                val changes = mutableListOf<String>()
+                if (prev["description"] != next["description"]) changes.add("Description: \"${prev["description"]}\" \u2192 \"${next["description"]}\"")
+                if (prev["amountCents"] != next["amountCents"]) { val o=(prev["amountCents"]?.toLongOrNull()?:0)/100.0; val n=(next["amountCents"]?.toLongOrNull()?:0)/100.0; changes.add(String.format(Locale.getDefault(),"Amount: \u20B9%.2f \u2192 \u20B9%.2f",o,n)) }
+                if (prev["tag"] != next["tag"]) changes.add("Category: ${ExpenseTag.fromSlug(prev["tag"]).label} \u2192 ${ExpenseTag.fromSlug(next["tag"]).label}")
+                if (prev["paidBy"] != next["paidBy"]) changes.add("Paid by: ${memberNames[prev["paidBy"]]?:prev["paidBy"]?.take(8)?:"?"} \u2192 ${memberNames[next["paidBy"]]?:next["paidBy"]?.take(8)?:"?"}")
+                if (prev["paidByMap"] != next["paidByMap"]) changes.add("Payers updated")
+                if (prev["splitAmong"] != next["splitAmong"]) changes.add("Split members updated")
+                if (prev["splitDetails"] != null && next["splitDetails"] != null && prev["splitDetails"] != next["splitDetails"]) changes.add("Split amounts updated")
+                if (prev["splitMode"] != next["splitMode"]) changes.add("Split: ${prev["splitMode"]?:"equal"} \u2192 ${next["splitMode"]?:"equal"}")
+                if (prev["notes"] != next["notes"]) changes.add("Notes updated")
+                if (prev["currency"] != next["currency"]) changes.add("Currency: ${prev["currency"]?:"INR"} \u2192 ${next["currency"]?:"INR"}")
+                if (prev["recurringFrequency"] != next["recurringFrequency"]) changes.add("Recurring: ${prev["recurringFrequency"]?:"none"} \u2192 ${next["recurringFrequency"]?:"none"}")
+                if (changes.isNotEmpty()) changes.joinToString("\n") else null
+            } catch (_: Exception) { null }
+        }
+    } else null
+
+    val hasDetail = history.previousData != null || history.newData != null
+    var showDetailDialog by remember { mutableStateOf(false) }
+
+    // Pre-compute detail lines outside composable (no try-catch around @Composable)
+    val detailLines = remember(history.historyId) {
+        when {
+            history.action == "edited" && changesSummary != null -> changesSummary.split("\n").map { Pair(it, false) }
+            history.action == "created" && history.newData != null -> {
+                try {
+                    val data: Map<String, String> = Json.decodeFromString(history.newData)
+                    listOfNotNull(
+                        data["description"]?.let { Pair("Description: $it", false) },
+                        data["amountCents"]?.toLongOrNull()?.let { Pair("Amount: ${formatAmount(it, data["currency"] ?: "INR")}", false) },
+                        data["tag"]?.let { Pair("Category: ${ExpenseTag.fromSlug(it).label}", false) }
+                    )
+                } catch (_: Exception) { emptyList() }
+            }
+            history.action == "deleted" && history.previousData != null -> {
+                try {
+                    val data: Map<String, String> = Json.decodeFromString(history.previousData)
+                    listOfNotNull(
+                        data["description"]?.let { Pair("Description: $it", true) },
+                        data["amountCents"]?.toLongOrNull()?.let { Pair("Amount: ${formatAmount(it, data["currency"] ?: "INR")}", true) }
+                    )
+                } catch (_: Exception) { emptyList() }
+            }
+            else -> emptyList()
+        }
+    }
+
+    if (showDetailDialog && hasDetail) {
+        AlertDialog(
+            onDismissRequest = { showDetailDialog = false },
+            title = { Text("$icon $actionText") },
+            text = {
+                Column {
+                    Text(
+                        "by ${history.changedByName} \u00B7 ${dateFormat.format(Date(history.changedAt))}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    detailLines.forEach { (line, strikethrough) ->
+                        Text(
+                            line,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(vertical = 2.dp),
+                            textDecoration = if (strikethrough) androidx.compose.ui.text.style.TextDecoration.LineThrough else null
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showDetailDialog = false }) { Text("Close") }
+            }
+        )
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 2.dp),
+            .let { if (hasDetail) it.clickable { showDetailDialog = true } else it }
+            .padding(vertical = 4.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
@@ -851,115 +933,23 @@ private fun HistoryEntryRow(history: HistoryEntity, dateFormat: SimpleDateFormat
             "$actionText by ${history.changedByName}",
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            "\u00B7",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f)
         )
         Text(
             dateFormat.format(Date(history.changedAt)),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
         )
-    }
-
-    if (history.action == "edited" && history.previousData != null && history.newData != null) {
-        val changesSummary = remember(history.historyId) {
-            try {
-                val prev: Map<String, String> = Json.decodeFromString(history.previousData)
-                val next: Map<String, String> = Json.decodeFromString(history.newData)
-                val changes = mutableListOf<String>()
-                if (prev["description"] != next["description"]) {
-                    changes.add("Description: \"${prev["description"]}\" \u2192 \"${next["description"]}\"")
-                }
-                if (prev["amountCents"] != next["amountCents"]) {
-                    val oldAmt = (prev["amountCents"]?.toLongOrNull() ?: 0) / 100.0
-                    val newAmt = (next["amountCents"]?.toLongOrNull() ?: 0) / 100.0
-                    changes.add(String.format(Locale.getDefault(), "Amount: \u20B9%.2f \u2192 \u20B9%.2f", oldAmt, newAmt))
-                }
-                if (prev["tag"] != next["tag"]) {
-                    val oldTag = ExpenseTag.fromSlug(prev["tag"]).label
-                    val newTag = ExpenseTag.fromSlug(next["tag"]).label
-                    changes.add("Category: $oldTag \u2192 $newTag")
-                }
-                if (prev["paidBy"] != next["paidBy"]) {
-                    val oldPayer = memberNames[prev["paidBy"]] ?: prev["paidBy"]?.take(8) ?: "?"
-                    val newPayer = memberNames[next["paidBy"]] ?: next["paidBy"]?.take(8) ?: "?"
-                    changes.add("Paid by: $oldPayer \u2192 $newPayer")
-                }
-                // Track paidByMap changes (multi-payer)
-                if (prev["paidByMap"] != next["paidByMap"]) {
-                    try {
-                        val oldMap: Map<String, Long>? = prev["paidByMap"]?.let { Json.decodeFromString(it) }
-                        val newMap: Map<String, Long>? = next["paidByMap"]?.let { Json.decodeFromString(it) }
-                        when {
-                            oldMap == null && newMap != null -> changes.add("Payers: Single \u2192 ${newMap.size} payers")
-                            oldMap != null && newMap == null -> changes.add("Payers: ${oldMap.size} payers \u2192 Single")
-                            oldMap != null && newMap != null -> {
-                                val added = newMap.keys.count { it !in oldMap }
-                                val removed = oldMap.keys.count { it !in newMap }
-                                val updated = oldMap.keys.count { it in newMap && oldMap[it] != newMap[it] }
-                                val desc = mutableListOf<String>()
-                                if (added > 0) desc.add("+$added added")
-                                if (removed > 0) desc.add("$removed removed")
-                                if (updated > 0) desc.add("$updated amount${if (updated > 1) "s" else ""} changed")
-                                if (desc.isNotEmpty()) changes.add("Payers: ${desc.joinToString(", ")}")
-                            }
-                        }
-                    } catch (_: Exception) {
-                        changes.add("Payers updated")
-                    }
-                }
-                if (prev["splitAmong"] != next["splitAmong"]) {
-                    try {
-                        val oldList: List<String> = prev["splitAmong"]?.let { Json.decodeFromString(it) } ?: emptyList()
-                        val newList: List<String> = next["splitAmong"]?.let { Json.decodeFromString(it) } ?: emptyList()
-                        val added = newList.filter { it !in oldList }.size
-                        val removed = oldList.filter { it !in newList }.size
-                        val desc = mutableListOf<String>()
-                        if (added > 0) desc.add("+$added added")
-                        if (removed > 0) desc.add("$removed removed")
-                        changes.add("Split among: ${oldList.size} \u2192 ${newList.size} people${if (desc.isNotEmpty()) " (${desc.joinToString(", ")})" else ""}")
-                    } catch (_: Exception) {
-                        changes.add("Split among: updated")
-                    }
-                }
-                if (prev["splitMode"] != next["splitMode"]) {
-                    changes.add("Split: ${prev["splitMode"] ?: "equal"} \u2192 ${next["splitMode"] ?: "equal"}")
-                }
-                if (prev["splitDetails"] != null && next["splitDetails"] != null && prev["splitDetails"] != next["splitDetails"]) {
-                    try {
-                        val oldDetails: Map<String, Long> = Json.decodeFromString(prev["splitDetails"]!!)
-                        val newDetails: Map<String, Long> = Json.decodeFromString(next["splitDetails"]!!)
-                        val changedCount = (oldDetails.keys + newDetails.keys).count { k -> (oldDetails[k] ?: 0) != (newDetails[k] ?: 0) }
-                        if (changedCount > 0) changes.add("Split amounts: $changedCount share${if (changedCount > 1) "s" else ""} changed")
-                    } catch (_: Exception) {
-                        changes.add("Split amounts updated")
-                    }
-                }
-                if (prev["notes"] != next["notes"]) {
-                    changes.add("Notes updated")
-                }
-                if (prev["currency"] != next["currency"]) {
-                    changes.add("Currency: ${prev["currency"] ?: "INR"} \u2192 ${next["currency"] ?: "INR"}")
-                }
-                if (prev["recurringFrequency"] != next["recurringFrequency"]) {
-                    changes.add("Recurring: ${prev["recurringFrequency"] ?: "none"} \u2192 ${next["recurringFrequency"] ?: "none"}")
-                }
-                if (changes.isNotEmpty()) changes.joinToString("\n") else null
-            } catch (_: Exception) { null }
-        }
-        if (changesSummary != null) {
+        if (hasDetail) {
             Text(
-                changesSummary,
+                "\u203A",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                modifier = Modifier.padding(start = 24.dp)
+                color = MaterialTheme.colorScheme.primary
             )
         }
     }
+
 }
 
 @Composable
