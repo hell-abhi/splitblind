@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -79,7 +80,8 @@ fun HomeScreen(
                     IconButton(onClick = onSecurityClick) {
                         Icon(Icons.Default.Lock, contentDescription = "Security", tint = MaterialTheme.colorScheme.onPrimaryContainer)
                     }
-                }
+                },
+                windowInsets = WindowInsets(0.dp)
             )
         }
     ) { paddingValues ->
