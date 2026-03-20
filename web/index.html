@@ -9,6 +9,14 @@
     <title>SplitBlind</title>
     <link rel="manifest" href="manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+    // Apply theme immediately to prevent flash
+    (function(){
+        var t=localStorage.getItem('theme');
+        if(t==='dark')document.documentElement.classList.add('dark');
+        else if(t==='light')document.documentElement.classList.add('light');
+    })();
+    </script>
     <style>
         :root {
             --primary: #7C6FE0;
@@ -31,7 +39,14 @@
             --r: 20px;
             --rs: 14px;
         }
-        :root.dark, @media(prefers-color-scheme:dark){:root:not(.light){
+        :root.dark {
+            --primary:#A89AF2;--primary-soft:#7C6FE0;--primary-bg:#2A2540;
+            --accent-pink:#D9789B;--accent-mint:#5CB8A0;--accent-peach:#D4956E;--accent-sky:#5A9BD5;--accent-yellow:#D4BA3C;
+            --surface:#1A1720;--card:#252230;--text:#EDE9FC;--text-secondary:#8E8A9E;--border:#342F45;
+            --positive:#6BCB77;--negative:#FF6B6B;
+            --shadow:0 2px 16px rgba(0,0,0,0.2);--shadow-lg:0 8px 32px rgba(0,0,0,0.3);
+        }
+        @media(prefers-color-scheme:dark){:root:not(.light):not(.dark){
             --primary:#A89AF2;--primary-soft:#7C6FE0;--primary-bg:#2A2540;
             --accent-pink:#D9789B;--accent-mint:#5CB8A0;--accent-peach:#D4956E;--accent-sky:#5A9BD5;--accent-yellow:#D4BA3C;
             --surface:#1A1720;--card:#252230;--text:#EDE9FC;--text-secondary:#8E8A9E;--border:#342F45;
