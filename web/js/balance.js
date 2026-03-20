@@ -135,7 +135,7 @@ function computeChanges(prev,next){
     if(prev.amountCents!==next.amountCents)changes.push({field:'Amount',from:fmt(prev.amountCents),to:fmt(next.amountCents)});
     if(prev.tag!==next.tag){const pt=prev.tag&&TAGS[prev.tag]?TAGS[prev.tag].label:(prev.tag||'None');const nt=next.tag&&TAGS[next.tag]?TAGS[next.tag].label:(next.tag||'None');changes.push({field:'Category',from:pt,to:nt})}
     if(prev.paidBy!==next.paidBy)changes.push({field:'Paid by',from:prev.paidBy,to:next.paidBy});
-    if(JSON.stringify(prev.splitAmong||[])!==JSON.stringify(next.splitAmong||[]))changes.push({field:'Split among',from:'changed',to:'updated'});
+    if(JSON.stringify(prev.splitAmong||[])!==JSON.stringify(next.splitAmong||[])){const pArr=prev.splitAmong||[];const nArr=next.splitAmong||[];const added=nArr.filter(m=>!pArr.includes(m));const removed=pArr.filter(m=>!nArr.includes(m));let desc=[];if(added.length)desc.push('+'+added.length+' added');if(removed.length)desc.push(removed.length+' removed');changes.push({field:'Split among',from:pArr.length+' people',to:nArr.length+' people'+(desc.length?' ('+desc.join(', ')+')':'')})}
     if((prev.splitMode||'equal')!==(next.splitMode||'equal'))changes.push({field:'Split mode',from:prev.splitMode||'equal',to:next.splitMode||'equal'});
     if((prev.notes||'')!==(next.notes||''))changes.push({field:'Notes',from:prev.notes||'(none)',to:next.notes||'(none)'});
     return changes;

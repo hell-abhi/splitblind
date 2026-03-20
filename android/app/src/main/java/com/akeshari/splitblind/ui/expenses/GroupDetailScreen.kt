@@ -889,6 +889,20 @@ private fun HistoryEntryRow(history: HistoryEntity, dateFormat: SimpleDateFormat
                     val newPayer = memberNames[next["paidBy"]] ?: next["paidBy"]?.take(8) ?: "?"
                     changes.add("Paid by: $oldPayer \u2192 $newPayer")
                 }
+                if (prev["splitAmong"] != next["splitAmong"]) {
+                    try {
+                        val oldList: List<String> = prev["splitAmong"]?.let { Json.decodeFromString(it) } ?: emptyList()
+                        val newList: List<String> = next["splitAmong"]?.let { Json.decodeFromString(it) } ?: emptyList()
+                        val added = newList.filter { it !in oldList }.size
+                        val removed = oldList.filter { it !in newList }.size
+                        val desc = mutableListOf<String>()
+                        if (added > 0) desc.add("+$added added")
+                        if (removed > 0) desc.add("$removed removed")
+                        changes.add("Split among: ${oldList.size} \u2192 ${newList.size} people${if (desc.isNotEmpty()) " (${desc.joinToString(", ")})" else ""}")
+                    } catch (_: Exception) {
+                        changes.add("Split among: updated")
+                    }
+                }
                 if (prev["splitMode"] != next["splitMode"]) {
                     changes.add("Split: ${prev["splitMode"] ?: "equal"} \u2192 ${next["splitMode"] ?: "equal"}")
                 }
