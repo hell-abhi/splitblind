@@ -889,6 +889,29 @@ private fun HistoryEntryRow(history: HistoryEntity, dateFormat: SimpleDateFormat
                     val newPayer = memberNames[next["paidBy"]] ?: next["paidBy"]?.take(8) ?: "?"
                     changes.add("Paid by: $oldPayer \u2192 $newPayer")
                 }
+                // Track paidByMap changes (multi-payer)
+                if (prev["paidByMap"] != next["paidByMap"]) {
+                    try {
+                        val oldMap: Map<String, Long>? = prev["paidByMap"]?.let { Json.decodeFromString(it) }
+                        val newMap: Map<String, Long>? = next["paidByMap"]?.let { Json.decodeFromString(it) }
+                        when {
+                            oldMap == null && newMap != null -> changes.add("Payers: Single \u2192 ${newMap.size} payers")
+                            oldMap != null && newMap == null -> changes.add("Payers: ${oldMap.size} payers \u2192 Single")
+                            oldMap != null && newMap != null -> {
+                                val added = newMap.keys.count { it !in oldMap }
+                                val removed = oldMap.keys.count { it !in newMap }
+                                val updated = oldMap.keys.count { it in newMap && oldMap[it] != newMap[it] }
+                                val desc = mutableListOf<String>()
+                                if (added > 0) desc.add("+$added added")
+                                if (removed > 0) desc.add("$removed removed")
+                                if (updated > 0) desc.add("$updated amount${if (updated > 1) "s" else ""} changed")
+                                if (desc.isNotEmpty()) changes.add("Payers: ${desc.joinToString(", ")}")
+                            }
+                        }
+                    } catch (_: Exception) {
+                        changes.add("Payers updated")
+                    }
+                }
                 if (prev["splitAmong"] != next["splitAmong"]) {
                     try {
                         val oldList: List<String> = prev["splitAmong"]?.let { Json.decodeFromString(it) } ?: emptyList()

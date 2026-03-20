@@ -135,6 +135,13 @@ function computeChanges(prev,next){
     if(prev.amountCents!==next.amountCents)changes.push({field:'Amount',from:fmt(prev.amountCents),to:fmt(next.amountCents)});
     if(prev.tag!==next.tag){const pt=prev.tag&&TAGS[prev.tag]?TAGS[prev.tag].label:(prev.tag||'None');const nt=next.tag&&TAGS[next.tag]?TAGS[next.tag].label:(next.tag||'None');changes.push({field:'Category',from:pt,to:nt})}
     if(prev.paidBy!==next.paidBy)changes.push({field:'Paid by',from:prev.paidBy,to:next.paidBy});
+    // Track paidByMap changes (multi-payer add/remove/update)
+    const pMap=prev.paidByMap||null,nMap=next.paidByMap||null;
+    if(JSON.stringify(pMap)!==JSON.stringify(nMap)){
+        if(!pMap&&nMap)changes.push({field:'Payers',from:'Single payer',to:Object.keys(nMap).length+' payers'});
+        else if(pMap&&!nMap)changes.push({field:'Payers',from:Object.keys(pMap).length+' payers',to:'Single payer'});
+        else if(pMap&&nMap){const pk=Object.keys(pMap),nk=Object.keys(nMap);const added=nk.filter(k=>!pk.includes(k)).length;const removed=pk.filter(k=>!nk.includes(k)).length;const updated=pk.filter(k=>nk.includes(k)&&pMap[k]!==nMap[k]).length;const desc=[];if(added)desc.push('+'+added+' added');if(removed)desc.push(removed+' removed');if(updated)desc.push(updated+' amount'+(updated>1?'s':'')+' changed');if(desc.length)changes.push({field:'Payers',from:pk.length+' payers',to:nk.length+' payers ('+desc.join(', ')+')'});}
+    }
     if(JSON.stringify(prev.splitAmong||[])!==JSON.stringify(next.splitAmong||[])){const pArr=prev.splitAmong||[];const nArr=next.splitAmong||[];const added=nArr.filter(m=>!pArr.includes(m));const removed=pArr.filter(m=>!nArr.includes(m));let desc=[];if(added.length)desc.push('+'+added.length+' added');if(removed.length)desc.push(removed.length+' removed');changes.push({field:'Split among',from:pArr.length+' people',to:nArr.length+' people'+(desc.length?' ('+desc.join(', ')+')':'')})}
     if((prev.splitMode||'equal')!==(next.splitMode||'equal'))changes.push({field:'Split mode',from:prev.splitMode||'equal',to:next.splitMode||'equal'});
     // Track splitDetails value changes (unequal split amounts changed)
