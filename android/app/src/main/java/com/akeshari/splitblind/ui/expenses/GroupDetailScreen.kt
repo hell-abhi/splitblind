@@ -705,7 +705,7 @@ private fun ExpensesTab(
                                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                                             ) {
                                                 history.forEach { h ->
-                                                    HistoryEntryRow(h, dateTimeFormat)
+                                                    HistoryEntryRow(h, dateTimeFormat, memberNames)
                                                 }
                                             }
                                         }
@@ -808,7 +808,7 @@ private fun ExpensesTab(
                                             verticalArrangement = Arrangement.spacedBy(4.dp)
                                         ) {
                                             history.forEach { h ->
-                                                HistoryEntryRow(h, dateTimeFormat)
+                                                HistoryEntryRow(h, dateTimeFormat, memberNames)
                                             }
                                         }
                                     }
@@ -823,7 +823,7 @@ private fun ExpensesTab(
 }
 
 @Composable
-private fun HistoryEntryRow(history: HistoryEntity, dateFormat: SimpleDateFormat) {
+private fun HistoryEntryRow(history: HistoryEntity, dateFormat: SimpleDateFormat, memberNames: Map<String, String> = emptyMap()) {
     val icon = when (history.action) {
         "created" -> "\uD83D\uDCDD"
         "edited" -> "\u270F\uFE0F"
@@ -885,7 +885,9 @@ private fun HistoryEntryRow(history: HistoryEntity, dateFormat: SimpleDateFormat
                     changes.add("Category: $oldTag \u2192 $newTag")
                 }
                 if (prev["paidBy"] != next["paidBy"]) {
-                    changes.add("Paid by: ${prev["paidBy"]?.take(8) ?: "?"} \u2192 ${next["paidBy"]?.take(8) ?: "?"}")
+                    val oldPayer = memberNames[prev["paidBy"]] ?: prev["paidBy"]?.take(8) ?: "?"
+                    val newPayer = memberNames[next["paidBy"]] ?: next["paidBy"]?.take(8) ?: "?"
+                    changes.add("Paid by: $oldPayer \u2192 $newPayer")
                 }
                 if (prev["splitMode"] != next["splitMode"]) {
                     changes.add("Split: ${prev["splitMode"] ?: "equal"} \u2192 ${next["splitMode"] ?: "equal"}")
