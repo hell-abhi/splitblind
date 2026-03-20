@@ -88,8 +88,9 @@ fun GroupDetailScreen(
     viewModel: GroupDetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val isPersonal = state.group?.groupType == "personal"
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Expenses", "Balances", "Members")
+    val tabs = if (isPersonal) listOf("Expenses", "Balances") else listOf("Expenses", "Balances", "Members")
 
     Scaffold(
         topBar = {

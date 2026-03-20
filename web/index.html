@@ -1277,7 +1277,7 @@ const TAGS={
 function getTagStyle(tag){if(tag&&TAGS[tag])return{icon:TAGS[tag].icon,bg:TAGS[tag].color,label:TAGS[tag].label};return null}
 
 // Nav
-let curScreen='',curGroup='',curGroupKey='',hist=[];
+let curScreen='',curGroup='',curGroupKey='',curGroupType='',hist=[];
 const TAB_SCREENS=['home','groups-tab','analytics-tab','profile'];
 function show(id,push=true){
     const isTab=TAB_SCREENS.includes(id);
@@ -1795,6 +1795,8 @@ async function renderHome(){
         const now=new Date();const monthStart=new Date(now.getFullYear(),now.getMonth(),1).getTime();
         const thisMonthTotal=pgExps.filter(e=>e.createdAt>=monthStart).reduce((s,e)=>s+e.amountCents,0);
         html+=`<div class="personal-tracker-card" id="home-personal-tracker" data-g="${personalGroup.groupId}"><div class="pt-header"><div class="pt-icon">&#x1F4DD;</div><div><div class="pt-title">Personal Tracker</div><div class="pt-subtitle">This month's spending</div></div></div><div class="pt-amount">${fmt(thisMonthTotal)}</div></div>`;
+    }else{
+        html+=`<div class="personal-tracker-card pt-empty" id="home-personal-create"><div class="pt-header"><div class="pt-icon">&#x1F4DD;</div><div><div class="pt-title">Personal Tracker</div><div class="pt-subtitle">Track your personal expenses</div></div></div><button class="pt-create-btn" id="home-pt-create-btn">Start Tracking</button></div>`;
     }
 
     // Recent activity (last 5)
@@ -1819,6 +1821,8 @@ async function renderHome(){
 
     el.innerHTML=html;
     el.querySelectorAll('[data-g]').forEach(c=>c.addEventListener('click',()=>openGroup(c.dataset.g)));
+    const homePtBtn=document.getElementById('home-pt-create-btn');
+    if(homePtBtn)homePtBtn.addEventListener('click',async(e)=>{e.stopPropagation();await createPersonalGroup();renderHome()});
 }
 
 // Groups tab render
@@ -2156,7 +2160,7 @@ async function renderProfile(){
     };
 }
 
-async function openGroup(gid){curGroup=gid;const g=await iG('groups',gid);if(!g)return;curGroupKey=g.groupKeyBase64;document.getElementById('gd-title').textContent=g.name;show('gd');startSync(gid,curGroupKey);switchGroupTab('exp')}
+async function openGroup(gid){curGroup=gid;const g=await iG('groups',gid);if(!g)return;curGroupKey=g.groupKeyBase64;curGroupType=g.groupType||'';document.getElementById('gd-title').textContent=g.name;const isPersonal=g.groupType==='personal'||g.isPersonal;const pplTab=document.querySelector('.tab[data-tab="members"]');if(pplTab)pplTab.style.display=isPersonal?'none':'';show('gd');startSync(gid,curGroupKey);switchGroupTab('exp')}
 
 async function restoreExpense(eid){
     const expense=await iG('expenses',eid);if(!expense)return;

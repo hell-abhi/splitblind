@@ -2,18 +2,26 @@ package com.akeshari.splitblind.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.akeshari.splitblind.crypto.CryptoEngine
 import com.akeshari.splitblind.crypto.Identity
 import com.akeshari.splitblind.data.database.dao.ExpenseDao
 import com.akeshari.splitblind.data.database.dao.GroupDao
 import com.akeshari.splitblind.data.database.dao.SettlementDao
 import com.akeshari.splitblind.data.database.entity.ExpenseEntity
+import com.akeshari.splitblind.data.database.entity.GroupEntity
+import com.akeshari.splitblind.data.database.entity.MemberEntity
+import com.akeshari.splitblind.sync.OpData
+import com.akeshari.splitblind.sync.OpPayload
+import com.akeshari.splitblind.sync.SyncEngine
 import com.akeshari.splitblind.util.BalanceCalculator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.util.Calendar
+import java.util.UUID
 import javax.inject.Inject
 
 data class HomeDashboardState(
@@ -30,6 +38,7 @@ class HomeViewModel @Inject constructor(
     private val groupDao: GroupDao,
     private val expenseDao: ExpenseDao,
     private val settlementDao: SettlementDao,
+    private val syncEngine: SyncEngine,
     private val identity: Identity
 ) : ViewModel() {
 
@@ -78,4 +87,56 @@ class HomeViewModel @Inject constructor(
             personalMonthSpend = personalMonthSpend
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeDashboardState())
+
+    fun createPersonalGroup() {
+        viewModelScope.launch {
+            val existing = groupDao.getAllGroupsList().find { it.groupType == "personal" }
+            if (existing != null) return@launch
+
+            val now = System.currentTimeMillis()
+            val groupId = UUID.randomUUID().toString().take(16)
+            val groupKey = CryptoEngine.generateGroupKey()
+
+            groupDao.insertGroup(
+                GroupEntity(
+                    groupId = groupId,
+                    name = "Personal",
+                    createdBy = identity.memberId,
+                    createdAt = now,
+                    groupKeyBase64 = groupKey,
+                    hlcTimestamp = now,
+                    groupType = "personal"
+                )
+            )
+
+            groupDao.insertMember(
+                MemberEntity(
+                    groupId = groupId,
+                    memberId = identity.memberId,
+                    displayName = identity.displayName,
+                    joinedAt = now,
+                    hlcTimestamp = now
+                )
+            )
+
+            syncEngine.startListening(groupId, groupKey)
+            syncEngine.pushOp(
+                groupId = groupId,
+                groupKeyBase64 = groupKey,
+                payload = OpPayload(
+                    id = UUID.randomUUID().toString(),
+                    type = "member_join",
+                    data = OpData(
+                        memberId = identity.memberId,
+                        displayName = identity.displayName,
+                        joinedAt = now
+                    ),
+                    hlc = now,
+                    author = identity.memberId
+                )
+            )
+
+            identity.personalGroupId = groupId
+        }
+    }
 }

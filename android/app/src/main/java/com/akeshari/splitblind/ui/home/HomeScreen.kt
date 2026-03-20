@@ -86,7 +86,7 @@ fun HomeScreen(
             }
 
             // Personal Tracker summary card
-            if (dashboard.personalGroupId != null && dashboard.personalMonthSpend > 0) {
+            if (dashboard.personalGroupId != null) {
                 item {
                     PersonalTrackerSummaryCard(
                         monthSpend = dashboard.personalMonthSpend,
@@ -94,6 +94,10 @@ fun HomeScreen(
                             dashboard.personalGroupId?.let { onPersonalTrackerClick?.invoke(it) }
                         }
                     )
+                }
+            } else {
+                item {
+                    StartTrackingCard(onClick = { viewModel.createPersonalGroup() })
                 }
             }
 
@@ -171,6 +175,53 @@ private fun PersonalTrackerSummaryCard(monthSpend: Long, onClick: () -> Unit) {
                     color = Color.White
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun StartTrackingCard(onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("\uD83D\uDCDD", fontSize = 20.sp)
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Personal Tracker",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "Track your personal expenses",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Text(
+                "Start",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
         }
     }
 }
