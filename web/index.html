@@ -1247,11 +1247,17 @@
 </div>
 
 <!-- QR Modal -->
-<div id="qr-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center" onclick="closeQrModal()">
-    <div style="background:var(--card);border-radius:24px;padding:32px 28px;max-width:320px;width:90%;text-align:center;box-shadow:var(--shadow-lg)" onclick="event.stopPropagation()">
-        <img id="qr-modal-img" style="width:200px;height:200px;border-radius:16px;border:1px solid var(--border)">
-        <p style="color:var(--text-secondary);margin-top:16px;font-size:14px;font-weight:500">Scan this QR code to join the group</p>
-        <button class="btn btn-o" style="margin-top:16px" onclick="closeQrModal()">Close</button>
+<div id="qr-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);align-items:center;justify-content:center" onclick="closeQrModal()">
+    <div style="background:var(--card);border-radius:24px;padding:32px;max-width:320px;width:85%;text-align:center;box-shadow:var(--shadow-lg);margin:auto" onclick="event.stopPropagation()">
+        <div style="font-size:18px;font-weight:800;margin-bottom:16px;letter-spacing:-0.3px" id="qr-modal-title">Join Group</div>
+        <div style="display:flex;justify-content:center">
+            <img id="qr-modal-img" style="width:200px;height:200px;border-radius:16px;border:2px solid var(--border)">
+        </div>
+        <p style="color:var(--text-secondary);margin-top:16px;font-size:13px;font-weight:500;line-height:1.5">Scan this QR code to join the group</p>
+        <div style="display:flex;gap:8px;margin-top:16px">
+            <button class="btn btn-o" style="flex:1;font-size:13px" id="qr-share-btn">&#x1F4E4; Share QR</button>
+            <button class="btn btn-p" style="flex:1;font-size:13px" onclick="closeQrModal()">Done</button>
+        </div>
     </div>
 </div>
 
@@ -1607,13 +1613,34 @@ function generateQrDataUrl(text){
     const qr=qrcode(0,'M');qr.addData(text);qr.make();
     return qr.createDataURL(4,0);
 }
-function showQrModal(link){
-    const img=document.getElementById('qr-modal-img');
-    img.src=generateQrDataUrl(link);
-    const m=document.getElementById('qr-modal');
-    m.style.display='flex';
+let qrModalLink='',qrModalGroupName='';
+function showQrModal(link,groupName){
+    qrModalLink=link;qrModalGroupName=groupName||'SplitBlind Group';
+    document.getElementById('qr-modal-img').src=generateQrDataUrl(link);
+    document.getElementById('qr-modal-title').textContent=qrModalGroupName;
+    document.getElementById('qr-modal').style.display='flex';
+    document.getElementById('qr-share-btn').onclick=()=>shareQrImage();
 }
 function closeQrModal(){document.getElementById('qr-modal').style.display='none'}
+async function shareQrImage(){
+    const img=document.getElementById('qr-modal-img');
+    // Try sharing the QR image as a file
+    try{
+        const resp=await fetch(img.src);const blob=await resp.blob();
+        const file=new File([blob],qrModalGroupName.replace(/\s+/g,'-')+'-qr.png',{type:'image/png'});
+        if(navigator.canShare&&navigator.canShare({files:[file]})){
+            await navigator.share({title:'Join "'+qrModalGroupName+'" on SplitBlind',text:'Scan this QR code or use the link to join my SplitBlind group "'+qrModalGroupName+'":\n'+qrModalLink,files:[file]});
+        }else{
+            // Fallback: share text only
+            if(navigator.share){await navigator.share({title:'Join "'+qrModalGroupName+'" on SplitBlind',text:'Join my SplitBlind group "'+qrModalGroupName+'"!\n\nLink: '+qrModalLink+'\n\nOr scan the QR code in the app.'})}
+            else{navigator.clipboard.writeText('Join "'+qrModalGroupName+'" on SplitBlind:\n'+qrModalLink);toast('Link copied!')}
+        }
+    }catch(e){
+        // Fallback
+        if(navigator.share){navigator.share({title:'Join "'+qrModalGroupName+'"',text:'Join my SplitBlind group "'+qrModalGroupName+'":\n'+qrModalLink}).catch(()=>{})}
+        else{navigator.clipboard.writeText(qrModalLink);toast('Link copied!')}
+    }
+}
 
 let qrScanner=null;
 function openQrScanner(){
@@ -2781,7 +2808,7 @@ async function renderMembers(){
     h+=mems.map(m=>{const col=getColor(m.memberId);return`<div class="card member-card"><div class="member-avatar" style="background:${col}">${getInitial(m.displayName)}</div><div><div class="card-t">${esc(m.displayName)}${m.memberId===myId?' <span class="pill" style="background:var(--primary-bg);color:var(--primary)">you</span>':''}</div><div class="card-s">Joined ${new Date(m.joinedAt).toLocaleDateString()}</div></div></div>`}).join('');
     h+='<div style="margin-top:24px"><button class="btn btn-o" id="invite-btn">&#x1F4E8; Invite Friends</button></div>';
     el.innerHTML=h;
-    document.getElementById('invite-btn').addEventListener('click',async()=>{const link=await makeShortLink(curGroup,curGroupKey,g.name);document.getElementById('inv-display2').textContent=link;document.getElementById('inv-qr-img').src=generateQrDataUrl(link);document.getElementById('share-btn2').onclick=()=>shareLink(link,g.name);document.getElementById('qr-btn-inv').onclick=()=>showQrModal(link);show('invite')});
+    document.getElementById('invite-btn').addEventListener('click',async()=>{const link=await makeShortLink(curGroup,curGroupKey,g.name);document.getElementById('inv-display2').textContent=link;document.getElementById('inv-qr-img').src=generateQrDataUrl(link);document.getElementById('share-btn2').onclick=()=>shareLink(link,g.name);document.getElementById('qr-btn-inv').onclick=()=>showQrModal(link,g.name);show('invite')});
 }
 
 let groupAnalyticsViewMode='group';
@@ -3273,7 +3300,7 @@ function wireEvents(){
     document.getElementById('fab-cg').addEventListener('click',()=>{document.getElementById('cg-form').style.display='';document.getElementById('cg-done').style.display='none';document.getElementById('cg-name').value='';document.getElementById('cg-btn').disabled=true;show('cg')});
     document.getElementById('cg-name').addEventListener('input',e=>{document.getElementById('cg-btn').disabled=!e.target.value.trim()});
     let newGid='';
-    document.getElementById('cg-btn').addEventListener('click',async()=>{const name=document.getElementById('cg-name').value.trim(),gid=uid(),now=Date.now(),key=await genKey();await iP('groups',{groupId:gid,name,createdBy:myId,createdAt:now,inviteToken:uid(),groupKeyBase64:key,hlcTimestamp:now,hlcNodeId:myId});await iP('members',{_key:gid+'_'+myId,groupId:gid,memberId:myId,displayName:myName,joinedAt:now,isDeleted:false,hlcTimestamp:now});await pushOp(gid,key,{id:uid(),type:'member_join',data:{memberId:myId,displayName:myName,joinedAt:now},hlc:now,author:myId});newGid=gid;const link=await makeShortLink(gid,key,name);document.getElementById('inv-display').textContent=link;document.getElementById('cg-form').style.display='none';document.getElementById('cg-done').style.display='';document.getElementById('share-btn').onclick=()=>shareLink(link,name);document.getElementById('qr-btn-cg').onclick=()=>showQrModal(link);document.getElementById('goto-btn').onclick=async()=>{openGroup(newGid)};autoBackup().catch(()=>{})});
+    document.getElementById('cg-btn').addEventListener('click',async()=>{const name=document.getElementById('cg-name').value.trim(),gid=uid(),now=Date.now(),key=await genKey();await iP('groups',{groupId:gid,name,createdBy:myId,createdAt:now,inviteToken:uid(),groupKeyBase64:key,hlcTimestamp:now,hlcNodeId:myId});await iP('members',{_key:gid+'_'+myId,groupId:gid,memberId:myId,displayName:myName,joinedAt:now,isDeleted:false,hlcTimestamp:now});await pushOp(gid,key,{id:uid(),type:'member_join',data:{memberId:myId,displayName:myName,joinedAt:now},hlc:now,author:myId});newGid=gid;const link=await makeShortLink(gid,key,name);document.getElementById('inv-display').textContent=link;document.getElementById('cg-form').style.display='none';document.getElementById('cg-done').style.display='';document.getElementById('share-btn').onclick=()=>shareLink(link,name);document.getElementById('qr-btn-cg').onclick=()=>showQrModal(link,name);document.getElementById('goto-btn').onclick=async()=>{openGroup(newGid)};autoBackup().catch(()=>{})});
     document.getElementById('fab-ae').addEventListener('click',()=>{show('ae');renderAddExpense()});
     document.getElementById('ae-desc').addEventListener('input',updAe);
     document.getElementById('ae-amt').addEventListener('input',updAe);

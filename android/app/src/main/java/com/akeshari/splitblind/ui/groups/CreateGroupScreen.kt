@@ -52,6 +52,7 @@ fun CreateGroupScreen(
     if (showQrDialog && state.inviteLink != null) {
         QrCodeDialog(
             inviteLink = state.inviteLink!!,
+            groupName = state.groupName,
             onDismiss = { showQrDialog = false }
         )
     }

@@ -957,6 +957,7 @@ private fun MembersTab(
     if (showQrDialog && inviteLink != null) {
         QrCodeDialog(
             inviteLink = inviteLink,
+            groupName = groupName,
             onDismiss = { showQrDialog = false }
         )
     }
