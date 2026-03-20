@@ -61,6 +61,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.akeshari.splitblind.data.database.entity.ExpenseEntity
 import com.akeshari.splitblind.data.database.entity.HistoryEntity
@@ -90,7 +91,7 @@ fun GroupDetailScreen(
     val state by viewModel.state.collectAsState()
     val isPersonal = state.group?.groupType == "personal"
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = if (isPersonal) listOf("Expenses", "Balances", "Analytics") else listOf("Expenses", "Balances", "Members", "Analytics")
+    val tabs = if (isPersonal) listOf("Spends", "Balance", "Stats") else listOf("Spends", "Balance", "People", "Stats")
 
     Scaffold(
         topBar = {
@@ -145,7 +146,7 @@ fun GroupDetailScreen(
                     Tab(
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
-                        text = { Text(title) }
+                        text = { Text(title, maxLines = 1, fontSize = 13.sp) }
                     )
                 }
             }
