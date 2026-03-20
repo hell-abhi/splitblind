@@ -114,7 +114,7 @@ fun GroupListScreen(
             if (iouGroups.isNotEmpty()) {
                 item {
                     Text(
-                        "Quick Debts",
+                        "My Reminders",
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp)
@@ -192,7 +192,7 @@ private fun GroupCard(group: GroupEntity, balance: Long, onClick: () -> Unit) {
                                 .padding(horizontal = 6.dp, vertical = 1.dp)
                         ) {
                             Text(
-                                "IOU",
+                                "Personal",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer

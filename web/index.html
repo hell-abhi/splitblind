@@ -542,7 +542,7 @@
         .dash-group-card .dgc-balance.bn { color:var(--negative); }
         .dash-group-card .dgc-balance.settled { color:var(--text-secondary); }
 
-        /* Quick Debts section */
+        /* My Reminders section */
         .quick-debts { margin-bottom:18px; }
         .quick-debt-card {
             display:flex; align-items:center; gap:12px; padding:14px 16px;
@@ -557,7 +557,7 @@
         .quick-debt-card .qd-info { flex:1; }
         .quick-debt-card .qd-amount { font-size:16px; font-weight:800; flex-shrink:0; }
 
-        /* Log Debt button */
+        /* Add Reminder button */
         .log-debt-btn {
             display:flex; align-items:center; justify-content:center; gap:8px;
             background:var(--primary-bg); color:var(--primary);
@@ -904,9 +904,9 @@
         <div class="content" id="analytics-content"></div>
     </div>
 
-    <!-- Log Debt -->
+    <!-- Add Reminder -->
     <div class="screen" id="s-log-debt">
-        <div class="topbar"><button class="back" id="ld-back">&#x2190;</button><h1>Log Quick Debt</h1></div>
+        <div class="topbar"><button class="back" id="ld-back">&#x2190;</button><h1>Add Reminder</h1></div>
         <div class="content">
             <div class="ae-section">
                 <div class="ae-section-title"><span class="sec-emoji">&#x1F464;</span> Between</div>
@@ -930,7 +930,7 @@
                     <input type="text" id="ld-desc" placeholder="What's it for?">
                 </div>
             </div>
-            <button class="btn btn-p" id="ld-btn" disabled>Log Debt</button>
+            <button class="btn btn-p" id="ld-btn" disabled>Add Reminder</button>
         </div>
     </div>
 
@@ -1662,7 +1662,7 @@ async function renderGroups(){
     }
     const net=totalOwed-totalOwe;
 
-    // Collect IOUs (1-on-1 debts across all groups)
+    // Collect personal reminders (1-on-1 debts across all groups)
     let allDebts=[];
     for(const g of groups){
         const gExps=allExps.filter(e=>e.groupId===g.groupId);
@@ -1690,13 +1690,13 @@ async function renderGroups(){
         </div>
     </div>`;
 
-    // Analytics & Log Debt buttons
+    // Analytics & Add Reminder buttons
     html+=`<button class="analytics-btn" id="dash-analytics-btn">&#x1F4CA; Spending Analytics</button>`;
-    html+=`<button class="log-debt-btn" id="dash-log-debt-btn">&#x1F4B8; Log Quick Debt</button>`;
+    html+=`<button class="log-debt-btn" id="dash-log-debt-btn">&#x1F4B8; Add Reminder</button>`;
 
-    // Quick Debts section
+    // My Reminders section
     if(allDebts.length){
-        html+=`<div class="quick-debts"><div class="dash-activity-header"><h3>Quick Debts</h3></div>`;
+        html+=`<div class="quick-debts"><div class="dash-activity-header"><h3>My Reminders</h3></div>`;
         allDebts.forEach(d=>{
             const otherId=d.from===myId?d.to:d.from;
             const otherName=d.nm[otherId]||otherId.slice(0,8);
@@ -1776,10 +1776,10 @@ async function renderHome(){
         </div>
     </div>`;
 
-    // Log Debt quick action
-    html+=`<button class="log-debt-btn" id="home-log-debt-btn">&#x1F4B8; Log Quick Debt</button>`;
+    // Add Reminder quick action
+    html+=`<button class="log-debt-btn" id="home-log-debt-btn">&#x1F4B8; Add Reminder</button>`;
 
-    // Quick Debts section
+    // My Reminders section
     let allDebts=[];
     for(const g of groups){
         const gExps=allExps.filter(e=>e.groupId===g.groupId);
@@ -1795,7 +1795,7 @@ async function renderHome(){
         });
     }
     if(allDebts.length){
-        html+=`<div class="quick-debts"><div class="dash-activity-header"><h3>Quick Debts</h3></div>`;
+        html+=`<div class="quick-debts"><div class="dash-activity-header"><h3>My Reminders</h3></div>`;
         allDebts.forEach(d=>{
             const otherId=d.from===myId?d.to:d.from;
             const otherName=d.nm[otherId]||otherId.slice(0,8);
@@ -1849,7 +1849,7 @@ async function renderGroupsTab(){
         groupBalances[g.groupId]=bal[myId]||0;
     }
 
-    // Split into regular groups and IOU groups
+    // Split into regular groups and personal reminders
     const regularGroups=groups.filter(g=>!g.isIOU);
     const iouGroups=groups.filter(g=>g.isIOU);
 
@@ -1869,7 +1869,7 @@ async function renderGroupsTab(){
     }
 
     if(iouGroups.length){
-        html+=`<div class="sec-t">IOUs</div>`;
+        html+=`<div class="sec-t">Personal Notes</div>`;
         html+=iouGroups.map((g,i)=>{
             const c=allM.filter(m=>m.groupId===g.groupId&&!m.isDeleted).length;
             const myBal=groupBalances[g.groupId]||0;
@@ -2544,7 +2544,7 @@ function wireEvents(){
     document.getElementById('analytics-back').onclick=goBack;
     document.getElementById('ld-back').onclick=goBack;
 
-    // Log Debt wiring
+    // Add Reminder wiring
     document.querySelectorAll('#ld-direction .seg-btn').forEach(b=>{
         b.addEventListener('click',()=>{
             ldDirection=b.dataset.dir;
@@ -2556,7 +2556,7 @@ function wireEvents(){
     document.getElementById('ld-btn').addEventListener('click',async()=>{
         const friendName=document.getElementById('ld-friend').value.trim();
         const amtC=Math.round((parseFloat(document.getElementById('ld-amount').value)||0)*100);
-        const desc=document.getElementById('ld-desc').value.trim()||'Quick debt';
+        const desc=document.getElementById('ld-desc').value.trim()||'Reminder';
         if(!friendName||amtC<=0)return;
         // Create or find a 2-person IOU group
         const allGroups=await iA('groups');
@@ -2575,7 +2575,7 @@ function wireEvents(){
         }else{
             // Create new IOU group
             gid=uid();key=await genKey();
-            await iP('groups',{groupId:gid,name:'IOU: '+myName+' & '+friendName,createdBy:myId,createdAt:now,inviteToken:uid(),groupKeyBase64:key,hlcTimestamp:now,hlcNodeId:myId,isIOU:true});
+            await iP('groups',{groupId:gid,name:friendName,createdBy:myId,createdAt:now,inviteToken:uid(),groupKeyBase64:key,hlcTimestamp:now,hlcNodeId:myId,isIOU:true});
             await iP('members',{_key:gid+'_'+myId,groupId:gid,memberId:myId,displayName:myName,joinedAt:now,isDeleted:false,hlcTimestamp:now});
             await pushOp(gid,key,{id:uid(),type:'member_join',data:{memberId:myId,displayName:myName,joinedAt:now},hlc:now,author:myId});
             // Add friend as a virtual member
@@ -2855,7 +2855,7 @@ async function renderAnalytics(){
     el.innerHTML=html;
 }
 
-// Log Debt
+// Add Reminder
 let ldDirection='they-owe';
 function initLogDebt(){
     ldDirection='they-owe';

@@ -112,7 +112,7 @@ class HomeViewModel @Inject constructor(
             val expense = ExpenseEntity(
                 expenseId = expenseId,
                 groupId = groupId,
-                description = description.ifBlank { "IOU" },
+                description = description.ifBlank { "Reminder" },
                 amountCents = amountCents,
                 currency = "INR",
                 paidBy = paidBy,

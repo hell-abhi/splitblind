@@ -276,7 +276,7 @@ private fun LogDebtDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Log Quick Debt") },
+        title = { Text("Add Reminder") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
