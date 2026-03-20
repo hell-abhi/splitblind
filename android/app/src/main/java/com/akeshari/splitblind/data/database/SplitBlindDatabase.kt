@@ -27,7 +27,7 @@ import com.akeshari.splitblind.data.database.entity.SettlementEntity
         ProcessedOpEntity::class,
         HistoryEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -64,6 +64,13 @@ abstract class SplitBlindDatabase : RoomDatabase() {
                         changedAt INTEGER NOT NULL
                     )
                 """.trimIndent())
+            }
+        }
+
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE expenses ADD COLUMN notes TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE `groups` ADD COLUMN groupType TEXT DEFAULT NULL")
             }
         }
     }

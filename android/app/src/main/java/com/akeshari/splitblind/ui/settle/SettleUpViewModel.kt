@@ -25,8 +25,11 @@ data class SettleUpState(
     val fromName: String = "",
     val toName: String = "",
     val amountCents: Long = 0,
+    val fullAmountCents: Long = 0,
+    val editedAmount: String = "",
     val isSettling: Boolean = false,
-    val settled: Boolean = false
+    val settled: Boolean = false,
+    val error: String? = null
 )
 
 @HiltViewModel
@@ -44,7 +47,11 @@ class SettleUpViewModel @Inject constructor(
     private val toId: String = savedStateHandle["to"] ?: ""
     private val amountCents: Long = savedStateHandle["amountCents"] ?: 0L
 
-    private val _state = MutableStateFlow(SettleUpState(amountCents = amountCents))
+    private val _state = MutableStateFlow(SettleUpState(
+        amountCents = amountCents,
+        fullAmountCents = amountCents,
+        editedAmount = String.format("%.2f", amountCents / 100.0)
+    ))
     val state: StateFlow<SettleUpState> = _state
 
     init {
@@ -56,8 +63,29 @@ class SettleUpViewModel @Inject constructor(
         }
     }
 
+    fun setEditedAmount(amount: String) {
+        if (amount.isEmpty() || amount.matches(Regex("^\\d*\\.?\\d{0,2}$"))) {
+            val cents = ((amount.toDoubleOrNull() ?: 0.0) * 100).toLong()
+            _state.value = _state.value.copy(
+                editedAmount = amount,
+                amountCents = cents,
+                error = if (cents > amountCents) "Cannot exceed full amount" else null
+            )
+        }
+    }
+
     fun settle() {
-        _state.value = _state.value.copy(isSettling = true)
+        val settleAmount = _state.value.amountCents
+        if (settleAmount <= 0) {
+            _state.value = _state.value.copy(error = "Enter a valid amount")
+            return
+        }
+        if (settleAmount > _state.value.fullAmountCents) {
+            _state.value = _state.value.copy(error = "Cannot exceed full amount")
+            return
+        }
+
+        _state.value = _state.value.copy(isSettling = true, error = null)
 
         viewModelScope.launch {
             val settlementId = UUID.randomUUID().toString().take(16)
@@ -69,7 +97,7 @@ class SettleUpViewModel @Inject constructor(
                     groupId = groupId,
                     fromMember = fromId,
                     toMember = toId,
-                    amountCents = amountCents,
+                    amountCents = settleAmount,
                     createdAt = now,
                     hlcTimestamp = now
                 )
@@ -88,7 +116,7 @@ class SettleUpViewModel @Inject constructor(
                             groupId = groupId,
                             fromMember = fromId,
                             toMember = toId,
-                            amountCents = amountCents,
+                            amountCents = settleAmount,
                             createdAt = now
                         ),
                         hlc = now,
@@ -103,7 +131,7 @@ class SettleUpViewModel @Inject constructor(
                     mapOf(
                         "fromMember" to fromId,
                         "toMember" to toId,
-                        "amountCents" to amountCents.toString()
+                        "amountCents" to settleAmount.toString()
                     )
                 )
                 val historyEntry = HistoryEntity(

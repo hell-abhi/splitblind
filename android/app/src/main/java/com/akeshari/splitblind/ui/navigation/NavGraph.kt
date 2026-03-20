@@ -6,6 +6,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.akeshari.splitblind.ui.analytics.AnalyticsScreen
 import com.akeshari.splitblind.ui.expenses.AddExpenseScreen
 import com.akeshari.splitblind.ui.expenses.GroupDetailScreen
 import com.akeshari.splitblind.ui.groups.CreateGroupScreen
@@ -29,6 +30,7 @@ object Routes {
     const val RECOVER = "recover"
     const val SYNC_GENERATE = "sync_generate"
     const val SYNC_RESTORE = "sync_restore"
+    const val ANALYTICS = "analytics"
 
     fun groupDetail(groupId: String) = "group_detail/$groupId"
     fun addExpense(groupId: String) = "add_expense/$groupId"
@@ -77,6 +79,9 @@ fun NavGraph(
                 },
                 onSyncClick = {
                     navController.navigate(Routes.SYNC_GENERATE)
+                },
+                onAnalyticsClick = {
+                    navController.navigate(Routes.ANALYTICS)
                 },
                 joinGroupId = joinGroupId,
                 joinGroupKey = joinGroupKey,
@@ -191,6 +196,12 @@ fun NavGraph(
                         popUpTo(0) { inclusive = true }
                     }
                 }
+            )
+        }
+
+        composable(Routes.ANALYTICS) {
+            AnalyticsScreen(
+                onBack = { navController.popBackStack() }
             )
         }
     }

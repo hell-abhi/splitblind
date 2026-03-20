@@ -171,6 +171,31 @@ fun AddExpenseScreen(
                 }
             }
 
+            // ---- Card: Notes ----
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        "\uD83D\uDCDD Notes",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = state.notes,
+                        onValueChange = viewModel::setNotes,
+                        label = { Text("Notes (optional)") },
+                        placeholder = { Text("Add any extra details...") },
+                        maxLines = 3,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
             // ---- Card: Category ----
             Card(
                 modifier = Modifier.fillMaxWidth(),

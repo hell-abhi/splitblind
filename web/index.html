@@ -491,6 +491,216 @@
         .deleted-badge { display:inline-block; padding:2px 8px; border-radius:8px; font-size:10px; font-weight:700; background:rgba(255,107,107,0.12); color:var(--negative); text-transform:uppercase; letter-spacing:0.3px; margin-left:6px; }
         .restore-btn { background:var(--primary-bg); border:none; color:var(--primary); font-size:11px; font-weight:700; padding:5px 12px; border-radius:8px; cursor:pointer; font-family:'Inter',sans-serif; margin-top:6px; transition:all .2s; }
         .restore-btn:active { transform:scale(.95); }
+
+        /* Dashboard summary card */
+        .dash-summary {
+            background:linear-gradient(135deg, var(--primary), var(--primary-soft));
+            border-radius:var(--r); padding:24px; margin-bottom:18px;
+            color:#fff; box-shadow:0 8px 32px rgba(124,111,224,0.25);
+        }
+        .dash-summary h2 { font-size:14px; font-weight:700; opacity:0.85; text-transform:uppercase; letter-spacing:1px; margin-bottom:16px; }
+        .dash-summary-row { display:flex; justify-content:space-between; gap:12px; }
+        .dash-summary-item { flex:1; text-align:center; }
+        .dash-summary-item .ds-amount { font-size:22px; font-weight:800; letter-spacing:-0.5px; }
+        .dash-summary-item .ds-label { font-size:11px; font-weight:600; opacity:0.8; margin-top:4px; }
+        .dash-summary-item.ds-owed .ds-amount { color:#B5FFB5; }
+        .dash-summary-item.ds-owe .ds-amount { color:#FFB5B5; }
+        .dash-summary-item.ds-net .ds-amount { color:#fff; }
+        .dash-divider { width:1px; background:rgba(255,255,255,0.2); }
+
+        /* Dashboard activity feed */
+        .dash-activity { margin-bottom:18px; }
+        .dash-activity-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+        .dash-activity-header h3 { font-size:14px; font-weight:800; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1px; }
+        .dash-activity-item {
+            display:flex; align-items:center; gap:12px; padding:12px 16px;
+            background:var(--card); border-radius:14px; margin-bottom:8px;
+            border:1px solid var(--border); box-shadow:var(--shadow);
+        }
+        .dash-activity-item .dai-icon {
+            width:36px; height:36px; border-radius:12px;
+            display:flex; align-items:center; justify-content:center;
+            font-size:16px; flex-shrink:0;
+        }
+        .dash-activity-item .dai-info { flex:1; min-width:0; }
+        .dash-activity-item .dai-desc { font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .dash-activity-item .dai-meta { font-size:11px; color:var(--text-secondary); font-weight:500; margin-top:2px; }
+        .dash-activity-item .dai-amount { font-size:15px; font-weight:800; letter-spacing:-0.3px; flex-shrink:0; }
+
+        /* Dashboard group cards */
+        .dash-group-card {
+            background:var(--card); border-radius:var(--r);
+            padding:16px 18px; margin-bottom:10px;
+            box-shadow:var(--shadow); cursor:pointer;
+            transition:all .2s; border:1px solid var(--border);
+            display:flex; align-items:center; gap:14px;
+        }
+        .dash-group-card:hover { box-shadow:var(--shadow-lg); transform:translateY(-1px); }
+        .dash-group-card:active { transform:scale(.98); }
+        .dash-group-card .dgc-balance { font-size:12px; font-weight:700; margin-top:4px; }
+        .dash-group-card .dgc-balance.bp { color:var(--positive); }
+        .dash-group-card .dgc-balance.bn { color:var(--negative); }
+        .dash-group-card .dgc-balance.settled { color:var(--text-secondary); }
+
+        /* Quick Debts section */
+        .quick-debts { margin-bottom:18px; }
+        .quick-debt-card {
+            display:flex; align-items:center; gap:12px; padding:14px 16px;
+            background:var(--card); border-radius:14px; margin-bottom:8px;
+            border:1px solid var(--border); box-shadow:var(--shadow);
+        }
+        .quick-debt-card .qd-avatar {
+            width:36px; height:36px; border-radius:12px;
+            display:flex; align-items:center; justify-content:center;
+            font-size:14px; font-weight:800; color:#fff; flex-shrink:0;
+        }
+        .quick-debt-card .qd-info { flex:1; }
+        .quick-debt-card .qd-amount { font-size:16px; font-weight:800; flex-shrink:0; }
+
+        /* Log Debt button */
+        .log-debt-btn {
+            display:flex; align-items:center; justify-content:center; gap:8px;
+            background:var(--primary-bg); color:var(--primary);
+            border:2px dashed var(--primary-soft); border-radius:14px;
+            padding:12px; font-size:14px; font-weight:700;
+            cursor:pointer; transition:all .2s; font-family:'Inter',sans-serif;
+            margin-bottom:18px; width:100%;
+        }
+        .log-debt-btn:active { transform:scale(.97); }
+
+        /* Analytics button on dashboard */
+        .analytics-btn {
+            display:flex; align-items:center; justify-content:center; gap:8px;
+            background:linear-gradient(135deg, var(--accent-sky), var(--primary));
+            color:#fff; border:none; border-radius:14px;
+            padding:14px; font-size:14px; font-weight:700;
+            cursor:pointer; transition:all .2s; font-family:'Inter',sans-serif;
+            margin-bottom:18px; width:100%; box-shadow:0 4px 16px rgba(124,111,224,0.2);
+        }
+        .analytics-btn:active { transform:scale(.97); }
+
+        /* Search & Filter bar */
+        .search-bar {
+            position:relative; margin-bottom:12px;
+        }
+        .search-bar input {
+            width:100%; padding:12px 16px 12px 40px;
+            border:2px solid var(--border); border-radius:14px;
+            font-size:14px; font-weight:500; background:var(--card); color:var(--text);
+            outline:none; transition:all .2s; font-family:'Inter',sans-serif;
+        }
+        .search-bar input:focus { border-color:var(--primary); box-shadow:0 0 0 4px var(--primary-bg); }
+        .search-bar .search-icon {
+            position:absolute; left:14px; top:50%; transform:translateY(-50%);
+            font-size:16px; color:var(--text-secondary); pointer-events:none;
+        }
+
+        /* Filter pills */
+        .filter-bar { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+        .filter-pill {
+            display:inline-flex; align-items:center; gap:4px; padding:6px 12px;
+            border-radius:20px; font-size:11px; font-weight:700;
+            border:2px solid transparent; cursor:pointer;
+            transition:all .2s; font-family:'Inter',sans-serif;
+            text-transform:uppercase; letter-spacing:0.3px;
+        }
+        .filter-pill:active { transform:scale(.95); }
+        .filter-pill.active {
+            border-color:var(--primary); box-shadow:0 0 0 2px var(--primary-bg);
+        }
+        .date-filter {
+            padding:8px 12px; border:2px solid var(--border); border-radius:12px;
+            font-size:12px; font-weight:600; background:var(--card); color:var(--text);
+            font-family:'Inter',sans-serif; cursor:pointer; outline:none;
+            margin-bottom:10px;
+        }
+        .date-filter:focus { border-color:var(--primary); }
+
+        /* Notes on expense cards */
+        .exp-note-indicator {
+            display:inline-flex; align-items:center; gap:4px;
+            font-size:11px; font-weight:600; color:var(--text-secondary);
+            cursor:pointer; padding:4px 8px; border-radius:8px;
+            background:var(--surface); margin-top:6px; transition:all .2s;
+        }
+        .exp-note-indicator:hover { background:var(--primary-bg); color:var(--primary); }
+        .exp-note-text {
+            font-size:13px; color:var(--text-secondary); font-weight:500;
+            padding:10px 14px; background:var(--surface); border-radius:12px;
+            margin-top:8px; line-height:1.5; border-left:3px solid var(--primary-soft);
+        }
+        .fg textarea {
+            width:100%; padding:14px 16px;
+            border:2px solid var(--border); border-radius:var(--rs);
+            font-size:14px; font-weight:500; background:var(--card); color:var(--text);
+            outline:none; transition:all .2s; font-family:'Inter',sans-serif;
+            resize:vertical; min-height:60px;
+        }
+        .fg textarea:focus { border-color:var(--primary); box-shadow:0 0 0 4px var(--primary-bg); }
+        .fg textarea::placeholder { color:var(--text-secondary); }
+
+        /* Partial settlement */
+        .stl-amount-input {
+            font-size:36px; font-weight:800; color:var(--primary);
+            text-align:center; border:2px solid var(--border);
+            border-radius:16px; padding:12px; background:var(--card);
+            width:200px; margin:8px auto 4px; display:block;
+            font-family:'Inter',sans-serif; outline:none;
+            letter-spacing:-1px;
+        }
+        .stl-amount-input:focus { border-color:var(--primary); box-shadow:0 0 0 4px var(--primary-bg); }
+        .stl-partial-hint {
+            font-size:13px; color:var(--text-secondary); font-weight:600;
+            text-align:center; margin-bottom:16px;
+        }
+
+        /* Analytics */
+        .analytics-card {
+            background:var(--card); border-radius:var(--r);
+            padding:20px; margin-bottom:16px;
+            box-shadow:var(--shadow); border:1px solid var(--border);
+        }
+        .analytics-card h3 {
+            font-size:13px; font-weight:800; color:var(--text-secondary);
+            text-transform:uppercase; letter-spacing:1px; margin-bottom:16px;
+            display:flex; align-items:center; gap:8px;
+        }
+        .chart-bar-row {
+            display:flex; align-items:center; gap:10px; margin-bottom:10px;
+        }
+        .chart-bar-label {
+            font-size:12px; font-weight:600; width:80px; flex-shrink:0;
+            white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+        }
+        .chart-bar-track {
+            flex:1; height:24px; background:var(--surface);
+            border-radius:8px; overflow:hidden; position:relative;
+        }
+        .chart-bar-fill {
+            height:100%; border-radius:8px; transition:width .5s ease;
+            display:flex; align-items:center; padding:0 8px; min-width:fit-content;
+        }
+        .chart-bar-fill span {
+            font-size:10px; font-weight:700; color:#fff;
+            white-space:nowrap;
+        }
+        .chart-bar-value {
+            font-size:13px; font-weight:700; width:80px; text-align:right; flex-shrink:0;
+        }
+        .chart-month-bar {
+            display:flex; flex-direction:column; align-items:center; flex:1;
+        }
+        .chart-month-col {
+            width:100%; display:flex; align-items:flex-end; justify-content:center;
+            height:120px; padding:0 4px;
+        }
+        .chart-month-fill {
+            width:100%; border-radius:8px 8px 0 0; transition:height .5s ease;
+            min-height:4px; max-width:40px;
+        }
+        .chart-month-label { font-size:10px; font-weight:700; color:var(--text-secondary); margin-top:6px; }
+        .chart-month-amount { font-size:10px; font-weight:700; margin-top:2px; }
+        .chart-months-row { display:flex; gap:4px; }
     </style>
 </head>
 <body>
@@ -563,7 +773,7 @@
         </div>
     </div>
 
-    <!-- Group List -->
+    <!-- Dashboard / Group List -->
     <div class="screen" id="s-groups">
         <div class="topbar">
             <h1>SplitBlind</h1>
@@ -573,6 +783,42 @@
         </div>
         <div class="content" id="grp-list"></div>
         <button class="fab" id="fab-cg">+</button>
+    </div>
+
+    <!-- Analytics -->
+    <div class="screen" id="s-analytics">
+        <div class="topbar"><button class="back" id="analytics-back">&#x2190;</button><h1>Spending Analytics</h1></div>
+        <div class="content" id="analytics-content"></div>
+    </div>
+
+    <!-- Log Debt -->
+    <div class="screen" id="s-log-debt">
+        <div class="topbar"><button class="back" id="ld-back">&#x2190;</button><h1>Log Quick Debt</h1></div>
+        <div class="content">
+            <div class="ae-section">
+                <div class="ae-section-title"><span class="sec-emoji">&#x1F464;</span> Between</div>
+                <div class="fg" style="margin-bottom:14px">
+                    <label>Friend's Name</label>
+                    <input type="text" id="ld-friend" placeholder="Who is this with?">
+                </div>
+                <div class="seg-control" id="ld-direction">
+                    <button class="seg-btn active" data-dir="they-owe">They owe me</button>
+                    <button class="seg-btn" data-dir="i-owe">I owe them</button>
+                </div>
+            </div>
+            <div class="ae-section">
+                <div class="ae-section-title"><span class="sec-emoji">&#x1F4B0;</span> Details</div>
+                <div class="fg" style="margin-bottom:14px">
+                    <label>Amount</label>
+                    <input type="number" id="ld-amount" placeholder="0.00" step="0.01" min="0" inputmode="decimal" style="font-size:24px;font-weight:800">
+                </div>
+                <div class="fg" style="margin-bottom:0">
+                    <label>Description</label>
+                    <input type="text" id="ld-desc" placeholder="What's it for?">
+                </div>
+            </div>
+            <button class="btn btn-p" id="ld-btn" disabled>Log Debt</button>
+        </div>
     </div>
 
     <!-- Create Group -->
@@ -658,6 +904,14 @@
                 <div id="ae-split-validation" class="split-validation" style="display:none"></div>
             </div>
 
+            <!-- Notes -->
+            <div class="ae-section">
+                <div class="ae-section-title"><span class="sec-emoji">&#x1F4DD;</span> Notes (optional)</div>
+                <div class="fg" style="margin-bottom:0">
+                    <textarea id="ae-notes" placeholder="Add any notes about this expense..." rows="2"></textarea>
+                </div>
+            </div>
+
             <button class="btn btn-p" id="ae-btn" disabled>Add Expense</button>
         </div>
     </div>
@@ -669,7 +923,8 @@
             <div class="stl-ctr">
                 <div class="ic">&#x1F91D;</div>
                 <h2 id="stl-who"></h2>
-                <div class="amt" id="stl-amt"></div>
+                <input type="number" class="stl-amount-input" id="stl-input" step="0.01" min="0.01" inputmode="decimal">
+                <div class="stl-partial-hint" id="stl-partial-hint"></div>
                 <p class="hint">Record this payment to settle the debt.<br>Pay via UPI, cash, or however you like.</p>
                 <button class="btn btn-p" id="stl-btn">Mark as Settled</button>
             </div>
@@ -819,6 +1074,7 @@ function computeChanges(prev,next){
     if(prev.paidBy!==next.paidBy)changes.push({field:'Paid by',from:prev.paidBy,to:next.paidBy});
     if(JSON.stringify(prev.splitAmong||[])!==JSON.stringify(next.splitAmong||[]))changes.push({field:'Split among',from:'changed',to:'updated'});
     if((prev.splitMode||'equal')!==(next.splitMode||'equal'))changes.push({field:'Split mode',from:prev.splitMode||'equal',to:next.splitMode||'equal'});
+    if((prev.notes||'')!==(next.notes||''))changes.push({field:'Notes',from:prev.notes||'(none)',to:next.notes||'(none)'});
     return changes;
 }
 
@@ -1088,6 +1344,7 @@ function showExpenseActions(expense,nm){
     let paidStr;
     if(expense.paidByMap){const names=Object.keys(expense.paidByMap).map(id=>esc(nm[id]||id.slice(0,8)));paidStr='Paid by '+names.join(', ')}
     else{paidStr='Paid by '+esc(nm[expense.paidBy]||expense.paidBy.slice(0,8))}
+    const noteHtml=expense.notes?`<div class="exp-note-text" style="margin-bottom:14px">${esc(expense.notes)}</div>`:'';
     openModal(`
         <div class="modal-summary">
             <div class="exp-icon" style="background:${st.bg}">${st.icon}</div>
@@ -1097,6 +1354,7 @@ function showExpenseActions(expense,nm){
             </div>
             <div class="modal-amt">${fmt(expense.amountCents)}</div>
         </div>
+        ${noteHtml}
         <button class="modal-btn modal-btn-edit" onclick="editExpense('${expense.expenseId}')">&#x270F;&#xFE0F; Edit Expense</button>
         <button class="modal-btn modal-btn-delete" onclick="confirmDeleteExpense('${expense.expenseId}')">&#x1F5D1;&#xFE0F; Delete Expense</button>
         <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Cancel</button>
@@ -1139,6 +1397,7 @@ function editExpense(eid){
 function prefillExpense(expense){
     document.getElementById('ae-desc').value=expense.description;
     document.getElementById('ae-amt').value=(expense.amountCents/100).toFixed(2);
+    document.getElementById('ae-notes').value=expense.notes||'';
     // Tag
     if(expense.tag){
         document.querySelectorAll('#ae-tags .tag-pill').forEach(t=>{t.classList.toggle('active',t.dataset.tag===expense.tag)});
@@ -1237,11 +1496,104 @@ async function renderGroups(){
     const el=document.getElementById('grp-list');
     if(!groups.length){el.innerHTML='<div class="empty"><div class="ic">&#x1F465;</div><h3>No groups yet</h3><p>Tap + to create your first split group</p></div>';return}
     const allM=await iA('members');
-    el.innerHTML=groups.map((g,i)=>{
+    const allExps=(await iA('expenses')).filter(e=>!e.isDeleted);
+    const allSets=(await iA('settlements')).filter(s=>!s.isDeleted);
+
+    // Compute overall balances across all groups
+    let totalOwed=0,totalOwe=0;
+    const groupBalances={};
+    for(const g of groups){
+        const gExps=allExps.filter(e=>e.groupId===g.groupId);
+        const gSets=allSets.filter(s=>s.groupId===g.groupId);
+        const bal=calcBal(gExps,gSets);
+        const myBal=bal[myId]||0;
+        groupBalances[g.groupId]=myBal;
+        if(myBal>0)totalOwed+=myBal;
+        else if(myBal<0)totalOwe+=Math.abs(myBal);
+    }
+    const net=totalOwed-totalOwe;
+
+    // Collect IOUs (1-on-1 debts across all groups)
+    let allDebts=[];
+    for(const g of groups){
+        const gExps=allExps.filter(e=>e.groupId===g.groupId);
+        const gSets=allSets.filter(s=>s.groupId===g.groupId);
+        const bal=calcBal(gExps,gSets);
+        const debts=simplify(bal);
+        const gMems=(await iA('members')).filter(m=>m.groupId===g.groupId);
+        const nm={};gMems.forEach(m=>nm[m.memberId]=m.displayName);
+        debts.forEach(d=>{
+            if(d.from===myId||d.to===myId){
+                allDebts.push({...d,groupName:g.name,groupId:g.groupId,nm});
+            }
+        });
+    }
+
+    // Summary card
+    let html=`<div class="dash-summary">
+        <h2>Your Overview</h2>
+        <div class="dash-summary-row">
+            <div class="dash-summary-item ds-owed"><div class="ds-amount">${fmt(totalOwed)}</div><div class="ds-label">You are owed</div></div>
+            <div class="dash-divider"></div>
+            <div class="dash-summary-item ds-owe"><div class="ds-amount">${fmt(totalOwe)}</div><div class="ds-label">You owe</div></div>
+            <div class="dash-divider"></div>
+            <div class="dash-summary-item ds-net"><div class="ds-amount">${net>=0?'+':''}${fmt(net)}</div><div class="ds-label">Net</div></div>
+        </div>
+    </div>`;
+
+    // Analytics & Log Debt buttons
+    html+=`<button class="analytics-btn" id="dash-analytics-btn">&#x1F4CA; Spending Analytics</button>`;
+    html+=`<button class="log-debt-btn" id="dash-log-debt-btn">&#x1F4B8; Log Quick Debt</button>`;
+
+    // Quick Debts section
+    if(allDebts.length){
+        html+=`<div class="quick-debts"><div class="dash-activity-header"><h3>Quick Debts</h3></div>`;
+        allDebts.forEach(d=>{
+            const otherId=d.from===myId?d.to:d.from;
+            const otherName=d.nm[otherId]||otherId.slice(0,8);
+            const col=getColor(otherId);
+            const isIOwe=d.from===myId;
+            html+=`<div class="quick-debt-card"><div class="qd-avatar" style="background:${col}">${getInitial(otherName)}</div><div class="qd-info"><div style="font-weight:600;font-size:14px">${esc(otherName)}</div><div style="font-size:11px;color:var(--text-secondary);font-weight:500">${esc(d.groupName)}</div></div><div class="qd-amount ${isIOwe?'bn':'bp'}">${isIOwe?'You owe ':'Owes you '}${fmt(d.amountCents)}</div></div>`;
+        });
+        html+=`</div>`;
+    }
+
+    // Recent activity feed (last 5 expenses across all groups)
+    const recentExps=allExps.sort((a,b)=>b.createdAt-a.createdAt).slice(0,5);
+    if(recentExps.length){
+        // Build name map for all members
+        const allMembersArr=await iA('members');
+        const globalNm={};allMembersArr.forEach(m=>globalNm[m.memberId]=m.displayName);
+        const groupNameMap={};groups.forEach(g=>groupNameMap[g.groupId]=g.name);
+
+        html+=`<div class="dash-activity"><div class="dash-activity-header"><h3>Recent Activity</h3></div>`;
+        recentExps.forEach(e=>{
+            const ts=getTagStyle(e.tag);const st=ts?{icon:ts.icon,bg:ts.bg}:getExpStyle(e.description);
+            const gName=groupNameMap[e.groupId]||'';
+            const payer=globalNm[e.paidBy]||e.paidBy.slice(0,8);
+            html+=`<div class="dash-activity-item" data-g="${e.groupId}"><div class="dai-icon" style="background:${st.bg}">${st.icon}</div><div class="dai-info"><div class="dai-desc">${esc(e.description)}</div><div class="dai-meta">${esc(payer)} &middot; ${esc(gName)} &middot; ${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div><div class="dai-amount">${fmt(e.amountCents)}</div></div>`;
+        });
+        html+=`</div>`;
+    }
+
+    // Group cards
+    html+=`<div class="dash-activity-header"><h3>Your Groups</h3></div>`;
+    html+=groups.map((g,i)=>{
         const c=allM.filter(m=>m.groupId===g.groupId&&!m.isDeleted).length;
-        return`<div class="card group-card" data-g="${g.groupId}"><div class="group-icon gi-${(i%5)+1}">&#x1F46B;</div><div><div class="card-t">${esc(g.name)}</div><div class="card-s">${c} member${c!==1?'s':''} &middot; ${new Date(g.createdAt).toLocaleDateString()}</div></div></div>`
+        const myBal=groupBalances[g.groupId]||0;
+        let balText,balClass;
+        if(myBal>0){balText='You are owed '+fmt(myBal);balClass='bp'}
+        else if(myBal<0){balText='You owe '+fmt(Math.abs(myBal));balClass='bn'}
+        else{balText='Settled up';balClass='settled'}
+        return`<div class="dash-group-card" data-g="${g.groupId}"><div class="group-icon gi-${(i%5)+1}">&#x1F46B;</div><div style="flex:1"><div class="card-t">${esc(g.name)}</div><div class="card-s">${c} member${c!==1?'s':''} &middot; ${new Date(g.createdAt).toLocaleDateString()}</div><div class="dgc-balance ${balClass}">${balText}</div></div></div>`
     }).join('');
-    el.querySelectorAll('.card').forEach(c=>c.addEventListener('click',()=>openGroup(c.dataset.g)));
+
+    el.innerHTML=html;
+    el.querySelectorAll('[data-g]').forEach(c=>c.addEventListener('click',()=>openGroup(c.dataset.g)));
+    const analyticsBtn=document.getElementById('dash-analytics-btn');
+    if(analyticsBtn)analyticsBtn.addEventListener('click',()=>{show('analytics');renderAnalytics()});
+    const logDebtBtn=document.getElementById('dash-log-debt-btn');
+    if(logDebtBtn)logDebtBtn.addEventListener('click',()=>{show('log-debt');initLogDebt()});
 }
 
 async function openGroup(gid){curGroup=gid;const g=await iG('groups',gid);if(!g)return;curGroupKey=g.groupKeyBase64;document.getElementById('gd-title').textContent=g.name;show('gd');startSync(gid,curGroupKey);switchTab('exp')}
@@ -1290,6 +1642,7 @@ function renderHistoryHtml(entries,nm){
     html+='</div>';
     return html;
 }
+let expSearchQuery='',expTagFilter=null,expDateFilter='all';
 async function renderExpenses(){
     const allExps=(await iA('expenses')).filter(e=>e.groupId===curGroup);
     const allSets=(await iA('settlements')).filter(s=>s.groupId===curGroup);
@@ -1311,15 +1664,61 @@ async function renderExpenses(){
     expenseLookup={};exps.forEach(e=>expenseLookup[e.expenseId]=e);
     settlementLookup={};sets.forEach(s=>settlementLookup[s.settlementId]=s);
     // Merge expenses and settlements into one timeline
-    const items=[];
+    let items=[];
     exps.forEach(e=>items.push({type:'expense',data:e,ts:e.createdAt,deleted:false}));
     sets.forEach(s=>items.push({type:'settlement',data:s,ts:s.createdAt,deleted:false}));
     deletedExps.forEach(e=>items.push({type:'expense',data:e,ts:e.createdAt,deleted:true}));
     deletedSets.forEach(s=>items.push({type:'settlement',data:s,ts:s.createdAt,deleted:true}));
+
+    // Apply search filter
+    if(expSearchQuery){
+        const q=expSearchQuery.toLowerCase();
+        items=items.filter(item=>{
+            if(item.type==='expense')return item.data.description.toLowerCase().includes(q);
+            if(item.type==='settlement'){
+                const fn=nm[item.data.fromMember]||'';const tn=nm[item.data.toMember]||'';
+                return fn.toLowerCase().includes(q)||tn.toLowerCase().includes(q)||'settlement'.includes(q);
+            }
+            return true;
+        });
+    }
+    // Apply tag filter
+    if(expTagFilter){
+        items=items.filter(item=>{
+            if(item.type==='expense')return item.data.tag===expTagFilter;
+            return true; // keep settlements
+        });
+    }
+    // Apply date filter
+    if(expDateFilter!=='all'){
+        const now=new Date();let startDate;
+        if(expDateFilter==='this-month'){startDate=new Date(now.getFullYear(),now.getMonth(),1)}
+        else if(expDateFilter==='last-month'){startDate=new Date(now.getFullYear(),now.getMonth()-1,1);const endDate=new Date(now.getFullYear(),now.getMonth(),0);items=items.filter(i=>i.ts>=startDate.getTime()&&i.ts<=endDate.getTime()+86400000)}
+        if(expDateFilter==='this-month')items=items.filter(i=>i.ts>=startDate.getTime());
+    }
+
     items.sort((a,b)=>b.ts-a.ts);
     const el=document.getElementById('t-exp');
-    if(!items.length){el.innerHTML='<div class="empty"><div class="ic">&#x1F9FE;</div><h3>No activity yet</h3><p>Tap + to add your first expense</p></div>';return}
-    el.innerHTML=items.map(item=>{
+
+    // Build search/filter bar
+    let filterHtml=`<div class="search-bar"><span class="search-icon">&#x1F50D;</span><input type="text" id="exp-search" placeholder="Search expenses..." value="${esc(expSearchQuery)}"></div>`;
+    // Tag filter pills
+    const usedTags={};exps.forEach(e=>{if(e.tag)usedTags[e.tag]=true});
+    if(Object.keys(usedTags).length){
+        filterHtml+=`<div class="filter-bar">`;
+        for(const[k,v] of Object.entries(TAGS)){
+            if(!usedTags[k])continue;
+            filterHtml+=`<button class="filter-pill${expTagFilter===k?' active':''}" data-tag="${k}" style="background:${v.color}">${v.icon} ${v.label}</button>`;
+        }
+        filterHtml+=`</div>`;
+    }
+    // Date filter
+    filterHtml+=`<select class="date-filter" id="exp-date-filter"><option value="all"${expDateFilter==='all'?' selected':''}>All time</option><option value="this-month"${expDateFilter==='this-month'?' selected':''}>This month</option><option value="last-month"${expDateFilter==='last-month'?' selected':''}>Last month</option></select>`;
+
+    if(!items.length&&!expSearchQuery&&!expTagFilter&&expDateFilter==='all'){el.innerHTML=filterHtml+'<div class="empty"><div class="ic">&#x1F9FE;</div><h3>No activity yet</h3><p>Tap + to add your first expense</p></div>';wireExpFilters();return}
+    if(!items.length){el.innerHTML=filterHtml+'<div class="empty"><div class="ic">&#x1F50D;</div><h3>No results</h3><p>Try a different search or filter</p></div>';wireExpFilters();return}
+
+    el.innerHTML=filterHtml+items.map(item=>{
         const isDeleted=item.deleted;
         const delClass=isDeleted?' deleted-card':'';
         const delBadge=isDeleted?'<span class="deleted-badge">Deleted</span>':'';
@@ -1332,8 +1731,13 @@ async function renderExpenses(){
             else{paidStr='Paid by '+esc(nm[e.paidBy]||e.paidBy.slice(0,8))}
             const tagHtml=ts?`<div class="tag-pill-sm" style="background:${ts.bg};color:var(--text)">${ts.icon} ${ts.label}</div>`:'';
             const splitHtml=e.splitMode&&e.splitMode!=='equal'?`<div class="exp-split-info">${e.splitMode==='amount'?'By amount':e.splitMode==='percentage'?'By %':'By ratio'}</div>`:'';
+            // Notes indicator
+            let noteHtml='';
+            if(e.notes){
+                noteHtml=`<div class="exp-note-indicator" data-note-target="note-${e.expenseId}">\u{1F4DD} Note</div><div id="note-${e.expenseId}" class="exp-note-text" style="display:none">${esc(e.notes)}</div>`;
+            }
             const histToggle=hist.length?`<div class="history-toggle" data-hist-target="hist-${e.expenseId}">\u{1F4CB} History (${hist.length})</div><div id="hist-${e.expenseId}" style="display:none">${renderHistoryHtml(hist,nm)}${isDeleted?`<button class="restore-btn" data-restore-eid="${e.expenseId}">\u21A9 Restore</button>`:''}</div>`:(isDeleted?`<button class="restore-btn" data-restore-eid="${e.expenseId}">\u21A9 Restore</button>`:'');
-            return`<div class="card${delClass}" data-eid="${e.expenseId}"><div class="exp-c"><div class="exp-left"><div class="exp-icon" style="background:${st.bg}">${st.icon}</div><div><div class="card-t">${esc(e.description)}${delBadge}</div><div class="card-s">${paidStr}</div>${tagHtml}${splitHtml}</div></div><div><div class="exp-a">${fmt(e.amountCents)}</div><div class="exp-d">${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div>${histToggle}</div>`;
+            return`<div class="card${delClass}" data-eid="${e.expenseId}"><div class="exp-c"><div class="exp-left"><div class="exp-icon" style="background:${st.bg}">${st.icon}</div><div><div class="card-t">${esc(e.description)}${delBadge}</div><div class="card-s">${paidStr}</div>${tagHtml}${splitHtml}</div></div><div><div class="exp-a">${fmt(e.amountCents)}</div><div class="exp-d">${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div>${noteHtml}${histToggle}</div>`;
         }else{
             const s=item.data;
             const hist=histBySettlement[s.settlementId]||[];
@@ -1343,6 +1747,9 @@ async function renderExpenses(){
             return`<div class="card${delClass}" data-sid="${s.settlementId}" style="border-left:3px solid var(--positive)"><div class="exp-c"><div class="exp-left"><div class="exp-icon" style="background:rgba(107,203,119,0.12)">&#x1F91D;</div><div><div class="card-t">Settlement${delBadge}</div><div class="card-s">${fromName} paid ${toName}</div></div></div><div><div class="exp-a" style="color:var(--positive)">${fmt(s.amountCents)}</div><div class="exp-d">${new Date(s.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div>${histToggle}</div>`;
         }
     }).join('');
+
+    wireExpFilters();
+
     // Attach click handlers for non-deleted expense/settlement cards (click on the exp-c row)
     el.querySelectorAll('[data-eid]:not(.deleted-card)').forEach(c=>{
         const expC=c.querySelector('.exp-c');
@@ -1351,6 +1758,14 @@ async function renderExpenses(){
     el.querySelectorAll('[data-sid]:not(.deleted-card)').forEach(c=>{
         const expC=c.querySelector('.exp-c');
         if(expC)expC.addEventListener('click',()=>{const s=settlementLookup[c.dataset.sid];if(s)showSettlementActions(s,nm)});
+    });
+    // Note toggle handlers
+    el.querySelectorAll('.exp-note-indicator').forEach(t=>{
+        t.addEventListener('click',ev=>{
+            ev.stopPropagation();
+            const target=document.getElementById(t.dataset.noteTarget);
+            if(target)target.style.display=target.style.display==='none'?'':'none';
+        });
     });
     // History toggle handlers
     el.querySelectorAll('.history-toggle').forEach(t=>{
@@ -1367,6 +1782,15 @@ async function renderExpenses(){
     el.querySelectorAll('[data-restore-sid]').forEach(b=>{
         b.addEventListener('click',ev=>{ev.stopPropagation();restoreSettlement(b.dataset.restoreSid)});
     });
+}
+function wireExpFilters(){
+    const searchEl=document.getElementById('exp-search');
+    if(searchEl)searchEl.addEventListener('input',e=>{expSearchQuery=e.target.value;renderExpenses()});
+    document.querySelectorAll('.filter-pill[data-tag]').forEach(p=>{
+        p.addEventListener('click',()=>{expTagFilter=expTagFilter===p.dataset.tag?null:p.dataset.tag;renderExpenses()});
+    });
+    const dateEl=document.getElementById('exp-date-filter');
+    if(dateEl)dateEl.addEventListener('change',e=>{expDateFilter=e.target.value;renderExpenses()});
 }
 
 async function renderBalances(){
@@ -1395,7 +1819,7 @@ async function renderMembers(){
     document.getElementById('invite-btn').addEventListener('click',async()=>{const link=await makeShortLink(curGroup,curGroupKey,g.name);document.getElementById('inv-display2').textContent=link;document.getElementById('share-btn2').onclick=()=>shareLink(link,g.name);show('invite')});
 }
 
-function switchTab(tab){document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));document.getElementById('t-exp').style.display=tab==='exp'?'':'none';document.getElementById('t-bal').style.display=tab==='bal'?'':'none';document.getElementById('t-mem').style.display=tab==='members'?'':'none';document.getElementById('fab-ae').style.display=tab==='exp'?'':'none';if(tab==='exp')renderExpenses();else if(tab==='bal')renderBalances();else renderMembers()}
+function switchTab(tab){expSearchQuery='';expTagFilter=null;expDateFilter='all';document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));document.getElementById('t-exp').style.display=tab==='exp'?'':'none';document.getElementById('t-bal').style.display=tab==='bal'?'':'none';document.getElementById('t-mem').style.display=tab==='members'?'':'none';document.getElementById('fab-ae').style.display=tab==='exp'?'':'none';if(tab==='exp')renderExpenses();else if(tab==='bal')renderBalances();else renderMembers()}
 
 let aePayerMode='single',aeSplitMode='equal',aeMembers=[];
 async function renderAddExpense(){
@@ -1421,7 +1845,7 @@ async function renderAddExpense(){
     document.getElementById('ae-split-detail').style.display='none';
     document.getElementById('ae-split-detail').innerHTML='';
     document.getElementById('ae-split-validation').style.display='none';
-    document.getElementById('ae-desc').value='';document.getElementById('ae-amt').value='';updAe();
+    document.getElementById('ae-desc').value='';document.getElementById('ae-amt').value='';document.getElementById('ae-notes').value='';updAe();
 }
 function renderMultiPayer(){
     if(aePayerMode!=='multi')return;
@@ -1506,7 +1930,33 @@ function updAe(){
 }
 
 let settleData={};
-async function openSettle(from,to,amt){settleData={from,to,amountCents:amt};const mems=(await iA('members')).filter(m=>m.groupId===curGroup);const nm={};mems.forEach(m=>nm[m.memberId]=m.displayName);document.getElementById('stl-who').textContent=`${nm[from]||from.slice(0,8)} pays ${nm[to]||to.slice(0,8)}`;document.getElementById('stl-amt').textContent=fmt(amt);show('settle')}
+async function openSettle(from,to,amt){
+    settleData={from,to,amountCents:amt};
+    const mems=(await iA('members')).filter(m=>m.groupId===curGroup);
+    const nm={};mems.forEach(m=>nm[m.memberId]=m.displayName);
+    document.getElementById('stl-who').textContent=`${nm[from]||from.slice(0,8)} pays ${nm[to]||to.slice(0,8)}`;
+    const input=document.getElementById('stl-input');
+    input.value=(amt/100).toFixed(2);
+    input.max=(amt/100).toFixed(2);
+    updateSettleHint(amt);
+    show('settle');
+}
+function updateSettleHint(totalCents){
+    const input=document.getElementById('stl-input');
+    const val=Math.round((parseFloat(input.value)||0)*100);
+    const hint=document.getElementById('stl-partial-hint');
+    if(val<totalCents&&val>0){
+        hint.textContent='Settling '+fmt(val)+' of '+fmt(totalCents)+' total';
+        hint.style.display='';
+    }else if(val===totalCents){
+        hint.textContent='Full settlement';
+        hint.style.display='';
+    }else{
+        hint.textContent='';
+        hint.style.display='none';
+    }
+    document.getElementById('stl-btn').disabled=val<=0||val>totalCents;
+}
 
 // Join
 async function handleJoin(){
@@ -1548,6 +1998,69 @@ function wireEvents(){
     document.getElementById('sec-back').onclick=goBack;
     document.getElementById('inv-done').onclick=goBack;
     document.getElementById('btn-security').onclick=()=>show('security');
+    document.getElementById('analytics-back').onclick=goBack;
+    document.getElementById('ld-back').onclick=goBack;
+
+    // Log Debt wiring
+    document.querySelectorAll('#ld-direction .seg-btn').forEach(b=>{
+        b.addEventListener('click',()=>{
+            ldDirection=b.dataset.dir;
+            document.querySelectorAll('#ld-direction .seg-btn').forEach(x=>x.classList.toggle('active',x===b));
+        });
+    });
+    document.getElementById('ld-friend').addEventListener('input',updLd);
+    document.getElementById('ld-amount').addEventListener('input',updLd);
+    document.getElementById('ld-btn').addEventListener('click',async()=>{
+        const friendName=document.getElementById('ld-friend').value.trim();
+        const amtC=Math.round((parseFloat(document.getElementById('ld-amount').value)||0)*100);
+        const desc=document.getElementById('ld-desc').value.trim()||'Quick debt';
+        if(!friendName||amtC<=0)return;
+        // Create or find a 2-person IOU group
+        const allGroups=await iA('groups');
+        let iouGroup=null;
+        for(const g of allGroups){
+            if(g.isIOU){
+                const gMems=(await iA('members')).filter(m=>m.groupId===g.groupId&&!m.isDeleted);
+                const names=gMems.map(m=>m.displayName.toLowerCase());
+                if(names.includes(friendName.toLowerCase())&&gMems.some(m=>m.memberId===myId)){iouGroup=g;break}
+            }
+        }
+        const now=Date.now();
+        let gid,key;
+        if(iouGroup){
+            gid=iouGroup.groupId;key=iouGroup.groupKeyBase64;
+        }else{
+            // Create new IOU group
+            gid=uid();key=await genKey();
+            await iP('groups',{groupId:gid,name:'IOU: '+myName+' & '+friendName,createdBy:myId,createdAt:now,inviteToken:uid(),groupKeyBase64:key,hlcTimestamp:now,hlcNodeId:myId,isIOU:true});
+            await iP('members',{_key:gid+'_'+myId,groupId:gid,memberId:myId,displayName:myName,joinedAt:now,isDeleted:false,hlcTimestamp:now});
+            await pushOp(gid,key,{id:uid(),type:'member_join',data:{memberId:myId,displayName:myName,joinedAt:now},hlc:now,author:myId});
+            // Add friend as a virtual member
+            const friendId='iou_'+shortId();
+            await iP('members',{_key:gid+'_'+friendId,groupId:gid,memberId:friendId,displayName:friendName,joinedAt:now,isDeleted:false,hlcTimestamp:now});
+            await pushOp(gid,key,{id:uid(),type:'member_join',data:{memberId:friendId,displayName:friendName,joinedAt:now},hlc:now,author:myId});
+        }
+        // Get friend's member id
+        const gMems=(await iA('members')).filter(m=>m.groupId===gid&&!m.isDeleted);
+        const friendMem=gMems.find(m=>m.memberId!==myId);
+        if(!friendMem){toast('Error creating debt');return}
+        // Create expense
+        const eid=uid();
+        const paidBy=ldDirection==='they-owe'?myId:friendMem.memberId;
+        const splitAmong=[myId,friendMem.memberId];
+        const splitDetails={};
+        // The person who didn't pay owes the full amount
+        if(ldDirection==='they-owe'){
+            splitDetails[friendMem.memberId]=amtC;splitDetails[myId]=0;
+        }else{
+            splitDetails[myId]=amtC;splitDetails[friendMem.memberId]=0;
+        }
+        const data={expenseId:eid,groupId:gid,description:desc,amountCents:amtC,currency:'INR',paidBy,splitAmong,createdAt:now,isDeleted:false,tag:'other',paidByMap:null,splitMode:'amount',splitDetails,notes:null};
+        await iP('expenses',{...data,hlcTimestamp:now});
+        await pushOp(gid,key,{id:uid(),type:'expense',data,hlc:now,author:myId});
+        goBack();renderGroups();toast('Debt logged!');
+        autoBackup().catch(()=>{});
+    });
 
     // Theme toggle
     function applyTheme(){
@@ -1697,7 +2210,8 @@ function wireEvents(){
         const isEdit=!!editingExpense;
         const finalEid=isEdit?editingExpense.expenseId:eid;
         const createdAt=isEdit?editingExpense.createdAt:now;
-        const data={expenseId:finalEid,groupId:curGroup,description:desc,amountCents:amtC,currency:'INR',paidBy,splitAmong:split,createdAt,isDeleted:false,tag,paidByMap,splitMode,splitDetails};
+        const notes=document.getElementById('ae-notes').value.trim()||null;
+        const data={expenseId:finalEid,groupId:curGroup,description:desc,amountCents:amtC,currency:'INR',paidBy,splitAmong:split,createdAt,isDeleted:false,tag,paidByMap,splitMode,splitDetails,notes};
         // Save history
         if(isEdit){
             const prevData={...editingExpense};delete prevData.hlcTimestamp;
@@ -1709,7 +2223,121 @@ function wireEvents(){
         editingExpense=null;
         goBack();switchTab('exp');toast(isEdit?'Expense updated!':'Expense added!')
     });
-    document.getElementById('stl-btn').addEventListener('click',async()=>{const now=Date.now(),sid=uid(),data={settlementId:sid,groupId:curGroup,fromMember:settleData.from,toMember:settleData.to,amountCents:settleData.amountCents,createdAt:now,isDeleted:false};await saveHistory(makeHistoryEntry({settlementId:sid,entityType:'settlement',action:'created',previousData:null,newData:data}));await iP('settlements',{...data,hlcTimestamp:now});await pushOp(curGroup,curGroupKey,{id:uid(),type:'settlement',data,hlc:now,author:myId});goBack();switchTab('bal');toast('Settled!')});
+    document.getElementById('stl-input').addEventListener('input',()=>updateSettleHint(settleData.amountCents));
+    document.getElementById('stl-btn').addEventListener('click',async()=>{const settleAmt=Math.round((parseFloat(document.getElementById('stl-input').value)||0)*100);if(settleAmt<=0||settleAmt>settleData.amountCents)return;const now=Date.now(),sid=uid(),data={settlementId:sid,groupId:curGroup,fromMember:settleData.from,toMember:settleData.to,amountCents:settleAmt,createdAt:now,isDeleted:false};await saveHistory(makeHistoryEntry({settlementId:sid,entityType:'settlement',action:'created',previousData:null,newData:data}));await iP('settlements',{...data,hlcTimestamp:now});await pushOp(curGroup,curGroupKey,{id:uid(),type:'settlement',data,hlc:now,author:myId});goBack();switchTab('bal');toast(settleAmt<settleData.amountCents?'Partially settled!':'Settled!')});
+}
+
+// Analytics
+async function renderAnalytics(){
+    const allExps=(await iA('expenses')).filter(e=>!e.isDeleted);
+    const allSets=(await iA('settlements')).filter(s=>!s.isDeleted);
+    const allMems=await iA('members');
+    const globalNm={};allMems.forEach(m=>globalNm[m.memberId]=m.displayName);
+    const el=document.getElementById('analytics-content');
+
+    if(!allExps.length){el.innerHTML='<div class="empty"><div class="ic">&#x1F4CA;</div><h3>No data yet</h3><p>Add expenses to see analytics</p></div>';return}
+
+    let html='';
+
+    // By Category
+    const tagTotals={};
+    allExps.forEach(e=>{const t=e.tag||'other';tagTotals[t]=(tagTotals[t]||0)+e.amountCents});
+    const totalSpend=Object.values(tagTotals).reduce((a,b)=>a+b,0);
+    const tagSorted=Object.entries(tagTotals).sort((a,b)=>b[1]-a[1]);
+    const tagColors={'food':'#7C6FE0','transport':'#89C4F4','shopping':'#F2A0C4','entertainment':'#F8C4A4',
+        'travel':'#BB8FCE','bills':'#F7DC6F','groceries':'#8DDCC5','health':'#F1948A','rent':'#F8C4A4','other':'#BDC3C7'};
+
+    html+=`<div class="analytics-card"><h3>&#x1F3F7; By Category</h3>`;
+    tagSorted.forEach(([tag,amt])=>{
+        const pct=totalSpend>0?(amt/totalSpend*100):0;
+        const t=TAGS[tag]||TAGS.other;
+        const color=tagColors[tag]||'#BDC3C7';
+        html+=`<div class="chart-bar-row"><div class="chart-bar-label">${t.icon} ${t.label}</div><div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,5)}%;background:${color}"><span>${pct.toFixed(0)}%</span></div></div><div class="chart-bar-value">${fmt(amt)}</div></div>`;
+    });
+    html+=`</div>`;
+
+    // By Month (last 6 months)
+    const monthTotals={};
+    const now=new Date();
+    for(let i=5;i>=0;i--){
+        const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+        const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+        monthTotals[key]=0;
+    }
+    allExps.forEach(e=>{
+        const d=new Date(e.createdAt);
+        const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+        if(key in monthTotals)monthTotals[key]+=e.amountCents;
+    });
+    const monthMax=Math.max(...Object.values(monthTotals),1);
+    const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    html+=`<div class="analytics-card"><h3>&#x1F4C5; By Month</h3><div class="chart-months-row">`;
+    Object.entries(monthTotals).forEach(([key,amt])=>{
+        const pct=monthMax>0?(amt/monthMax*100):0;
+        const m=parseInt(key.split('-')[1])-1;
+        html+=`<div class="chart-month-bar"><div class="chart-month-col"><div class="chart-month-fill" style="height:${Math.max(pct,3)}%;background:linear-gradient(to top,var(--primary),var(--primary-soft))"></div></div><div class="chart-month-label">${monthNames[m]}</div><div class="chart-month-amount">${fmt(amt)}</div></div>`;
+    });
+    html+=`</div></div>`;
+
+    // By Member
+    const memberPaid={},memberOwes={};
+    allExps.forEach(e=>{
+        if(e.paidByMap){for(const[id,a] of Object.entries(e.paidByMap))memberPaid[id]=(memberPaid[id]||0)+a}
+        else{memberPaid[e.paidBy]=(memberPaid[e.paidBy]||0)+e.amountCents}
+    });
+    // Compute who owes most from balances across all groups
+    const groups=await iA('groups');
+    for(const g of groups){
+        const gExps=allExps.filter(e=>e.groupId===g.groupId);
+        const gSets=allSets.filter(s=>s.groupId===g.groupId);
+        const bal=calcBal(gExps,gSets);
+        for(const[id,b] of Object.entries(bal)){
+            if(b<0)memberOwes[id]=(memberOwes[id]||0)+Math.abs(b);
+        }
+    }
+    const paidSorted=Object.entries(memberPaid).sort((a,b)=>b[1]-a[1]);
+    const paidMax=paidSorted.length?paidSorted[0][1]:1;
+    const owesSorted=Object.entries(memberOwes).sort((a,b)=>b[1]-a[1]);
+    const owesMax=owesSorted.length?owesSorted[0][1]:1;
+
+    html+=`<div class="analytics-card"><h3>&#x1F4B3; Who Paid Most</h3>`;
+    paidSorted.forEach(([id,amt])=>{
+        const pct=paidMax>0?(amt/paidMax*100):0;
+        const col=getColor(id);
+        html+=`<div class="chart-bar-row"><div class="chart-bar-label">${esc(globalNm[id]||id.slice(0,8))}</div><div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,5)}%;background:${col}"><span>${fmt(amt)}</span></div></div><div class="chart-bar-value">${fmt(amt)}</div></div>`;
+    });
+    html+=`</div>`;
+
+    if(owesSorted.length){
+        html+=`<div class="analytics-card"><h3>&#x1F4B8; Who Owes Most</h3>`;
+        owesSorted.forEach(([id,amt])=>{
+            const pct=owesMax>0?(amt/owesMax*100):0;
+            const col=getColor(id);
+            html+=`<div class="chart-bar-row"><div class="chart-bar-label">${esc(globalNm[id]||id.slice(0,8))}</div><div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,5)}%;background:${col}"><span>${fmt(amt)}</span></div></div><div class="chart-bar-value">${fmt(amt)}</div></div>`;
+        });
+        html+=`</div>`;
+    }
+
+    el.innerHTML=html;
+}
+
+// Log Debt
+let ldDirection='they-owe';
+function initLogDebt(){
+    ldDirection='they-owe';
+    document.getElementById('ld-friend').value='';
+    document.getElementById('ld-amount').value='';
+    document.getElementById('ld-desc').value='';
+    document.getElementById('ld-btn').disabled=true;
+    document.querySelectorAll('#ld-direction .seg-btn').forEach(b=>{
+        b.classList.toggle('active',b.dataset.dir==='they-owe');
+    });
+}
+function updLd(){
+    const friend=document.getElementById('ld-friend').value.trim();
+    const amount=parseFloat(document.getElementById('ld-amount').value)||0;
+    document.getElementById('ld-btn').disabled=!friend||amount<=0;
 }
 
 // Init

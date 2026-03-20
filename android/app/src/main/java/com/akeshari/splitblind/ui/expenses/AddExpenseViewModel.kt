@@ -71,6 +71,8 @@ data class AddExpenseState(
     val splitAmounts: Map<String, String> = emptyMap(),
     val splitPercentages: Map<String, String> = emptyMap(),
     val splitRatios: Map<String, String> = emptyMap(),
+    // Notes
+    val notes: String = "",
     // Edit mode
     val isEditing: Boolean = false
 )
@@ -122,6 +124,7 @@ class AddExpenseViewModel @Inject constructor(
                         splitDetails.mapValues { (_, v) -> String.format("%.2f", v / 100.0) } else emptyMap(),
                     splitPercentages = emptyMap(), // Can't reverse percentages from cents
                     splitRatios = emptyMap(), // Can't reverse ratios from cents
+                    notes = expense.notes ?: "",
                     isEditing = true
                 )
             }
@@ -151,6 +154,10 @@ class AddExpenseViewModel @Inject constructor(
     fun selectAllMembers() {
         val allIds = members.value.map { it.memberId }.toSet()
         _state.value = _state.value.copy(splitAmong = allIds)
+    }
+
+    fun setNotes(notes: String) {
+        _state.value = _state.value.copy(notes = notes)
     }
 
     fun setTag(tag: String?) {
@@ -319,6 +326,8 @@ class AddExpenseViewModel @Inject constructor(
             val splitDetailsJson = splitDetailsCents?.let { Json.encodeToString(it) }
             val splitModeStr = if (s.splitMode != SplitMode.EQUAL) s.splitMode.slug else null
 
+            val notesValue = s.notes.trim().ifEmpty { null }
+
             val expense = ExpenseEntity(
                 expenseId = expenseId,
                 groupId = groupId,
@@ -332,7 +341,8 @@ class AddExpenseViewModel @Inject constructor(
                 tag = s.selectedTag,
                 paidByMap = paidByMapJson,
                 splitMode = splitModeStr,
-                splitDetails = splitDetailsJson
+                splitDetails = splitDetailsJson,
+                notes = notesValue
             )
 
             expenseDao.insertExpense(expense)
@@ -358,7 +368,8 @@ class AddExpenseViewModel @Inject constructor(
                             tag = s.selectedTag,
                             paidByMap = paidByMapCents,
                             splitMode = splitModeStr,
-                            splitDetails = splitDetailsCents
+                            splitDetails = splitDetailsCents,
+                            notes = notesValue
                         ),
                         hlc = now,
                         author = identity.memberId

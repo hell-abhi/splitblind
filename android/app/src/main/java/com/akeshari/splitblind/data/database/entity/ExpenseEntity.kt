@@ -18,5 +18,6 @@ data class ExpenseEntity(
     val tag: String? = null,
     val paidByMap: String? = null,       // JSON: {"memberId": cents}
     val splitMode: String? = null,       // "equal", "amount", "percentage", "ratio"
-    val splitDetails: String? = null     // JSON: {"memberId": cents}
+    val splitDetails: String? = null,    // JSON: {"memberId": cents}
+    val notes: String? = null
 )

@@ -1,8 +1,10 @@
 package com.akeshari.splitblind.ui.expenses
 
 import android.content.Intent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,20 +18,28 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
@@ -52,7 +62,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.compose.foundation.shape.RoundedCornerShape
 import com.akeshari.splitblind.data.database.entity.ExpenseEntity
 import com.akeshari.splitblind.data.database.entity.HistoryEntity
 import com.akeshari.splitblind.data.database.entity.SettlementEntity
@@ -60,6 +69,7 @@ import com.akeshari.splitblind.data.database.entity.MemberEntity
 import com.akeshari.splitblind.util.Debt
 import kotlinx.serialization.json.Json
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -182,14 +192,20 @@ private fun ExpensesTab(
     onUndoSettlement: (SettlementEntity) -> Unit,
     onRestoreExpense: (ExpenseEntity) -> Unit
 ) {
+    // Search and filter state
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedTagFilter by remember { mutableStateOf<String?>(null) }
+    var dateFilter by remember { mutableStateOf("All") }
+    var showDateMenu by remember { mutableStateOf(false) }
+
     // Dialog state
     var showExpenseDialog by remember { mutableStateOf(false) }
     var selectedExpense by remember { mutableStateOf<ExpenseEntity?>(null) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showSettlementDialog by remember { mutableStateOf(false) }
     var selectedSettlement by remember { mutableStateOf<SettlementEntity?>(null) }
-    // Track which items have expanded history
     var expandedHistoryIds by remember { mutableStateOf(setOf<String>()) }
+    var expandedNotesIds by remember { mutableStateOf(setOf<String>()) }
 
     // Expense actions dialog (only for non-deleted)
     if (showExpenseDialog && selectedExpense != null && !selectedExpense!!.isDeleted) {
@@ -309,60 +325,360 @@ private fun ExpensesTab(
         }
     }
 
+    // Build timeline
     data class TimelineItem(val type: String, val ts: Long, val expense: ExpenseEntity? = null, val settlement: SettlementEntity? = null)
-    val items = mutableListOf<TimelineItem>()
-    expenses.forEach { items.add(TimelineItem("expense", it.createdAt, expense = it)) }
-    settlements.forEach { items.add(TimelineItem("settlement", it.createdAt, settlement = it)) }
-    items.sortByDescending { it.ts }
+    val allItems = mutableListOf<TimelineItem>()
+    expenses.forEach { allItems.add(TimelineItem("expense", it.createdAt, expense = it)) }
+    settlements.forEach { allItems.add(TimelineItem("settlement", it.createdAt, settlement = it)) }
+    allItems.sortByDescending { it.ts }
 
-    if (items.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No activity yet", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    // Apply filters
+    val now = Calendar.getInstance()
+    val thisMonthStart = Calendar.getInstance().apply {
+        set(Calendar.DAY_OF_MONTH, 1)
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+    val lastMonthStart = Calendar.getInstance().apply {
+        add(Calendar.MONTH, -1)
+        set(Calendar.DAY_OF_MONTH, 1)
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+
+    val items = allItems.filter { item ->
+        // Search filter (only expenses)
+        val matchesSearch = if (searchQuery.isBlank()) true
+        else if (item.type == "expense") item.expense?.description?.contains(searchQuery, ignoreCase = true) == true
+        else true
+
+        // Tag filter
+        val matchesTag = if (selectedTagFilter == null) true
+        else if (item.type == "expense") item.expense?.tag == selectedTagFilter
+        else true
+
+        // Date filter
+        val matchesDate = when (dateFilter) {
+            "This Month" -> item.ts >= thisMonthStart
+            "Last Month" -> item.ts >= lastMonthStart && item.ts < thisMonthStart
+            else -> true
         }
-    } else {
-        val dateFormat = SimpleDateFormat("MMM d", Locale.getDefault())
-        val dateTimeFormat = SimpleDateFormat("MMM d, h:mm a", Locale.getDefault())
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(items.size) { index ->
-                val item = items[index]
-                if (item.type == "expense" && item.expense != null) {
-                    val expense = item.expense
-                    val isDeleted = expense.isDeleted
-                    // Check if user is involved (payer or in split)
-                    val splitMembers: List<String> = try { Json.decodeFromString(expense.splitAmong) } catch (_: Exception) { emptyList() }
-                    val paidByMap: Map<String, Long>? = expense.paidByMap?.let { try { Json.decodeFromString(it) } catch (_: Exception) { null } }
-                    val isInvolved = expense.paidBy == myId || splitMembers.contains(myId) || paidByMap?.containsKey(myId) == true
-                    val itemAlpha = if (isDeleted) 0.5f else 1f
 
-                    val history = historyMap[expense.expenseId] ?: emptyList()
-                    val isHistoryExpanded = expense.expenseId in expandedHistoryIds
+        matchesSearch && matchesTag && matchesDate
+    }
 
-                    Column(modifier = Modifier.fillMaxWidth()) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Search bar
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            placeholder = { Text("Search expenses...") },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
+            trailingIcon = {
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { searchQuery = "" }) {
+                        Icon(Icons.Default.Close, contentDescription = "Clear", modifier = Modifier.size(18.dp))
+                    }
+                }
+            },
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            shape = RoundedCornerShape(12.dp)
+        )
+
+        // Tag filter chips + date filter
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                // "All" chip
+                val allSelected = selectedTagFilter == null
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(
+                            if (allSelected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.surfaceVariant
+                        )
+                        .clickable { selectedTagFilter = null }
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                ) {
+                    Text(
+                        "All",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (allSelected) MaterialTheme.colorScheme.onPrimary
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                ExpenseTag.ALL.forEach { tag ->
+                    val isSelected = selectedTagFilter == tag.slug
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(
+                                if (isSelected) Color(tag.color)
+                                else Color(tag.color).copy(alpha = 0.3f)
+                            )
+                            .clickable {
+                                selectedTagFilter = if (isSelected) null else tag.slug
+                            }
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                    ) {
+                        Text(
+                            "${tag.emoji} ${tag.label}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.Black
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Date filter dropdown
+            Box {
+                TextButton(onClick = { showDateMenu = true }) {
+                    Text(dateFilter, style = MaterialTheme.typography.labelSmall)
+                }
+                DropdownMenu(expanded = showDateMenu, onDismissRequest = { showDateMenu = false }) {
+                    listOf("All", "This Month", "Last Month").forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(option) },
+                            onClick = { dateFilter = option; showDateMenu = false }
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        if (items.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    if (searchQuery.isNotBlank() || selectedTagFilter != null || dateFilter != "All")
+                        "No matching activity"
+                    else "No activity yet",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            val dateFormat = SimpleDateFormat("MMM d", Locale.getDefault())
+            val dateTimeFormat = SimpleDateFormat("MMM d, h:mm a", Locale.getDefault())
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(items.size) { index ->
+                    val item = items[index]
+                    if (item.type == "expense" && item.expense != null) {
+                        val expense = item.expense
+                        val isDeleted = expense.isDeleted
+                        val splitMembers: List<String> = try { Json.decodeFromString(expense.splitAmong) } catch (_: Exception) { emptyList() }
+                        val paidByMap: Map<String, Long>? = expense.paidByMap?.let { try { Json.decodeFromString(it) } catch (_: Exception) { null } }
+                        val isInvolved = expense.paidBy == myId || splitMembers.contains(myId) || paidByMap?.containsKey(myId) == true
+                        val itemAlpha = if (isDeleted) 0.5f else 1f
+
+                        val history = historyMap[expense.expenseId] ?: emptyList()
+                        val isHistoryExpanded = expense.expenseId in expandedHistoryIds
+                        val isNotesExpanded = expense.expenseId in expandedNotesIds
+                        val hasNotes = !expense.notes.isNullOrBlank()
+
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        selectedExpense = expense
+                                        showExpenseDialog = true
+                                    },
+                                colors = if (isDeleted) {
+                                    CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f))
+                                } else if (isInvolved) {
+                                    CardDefaults.cardColors()
+                                } else {
+                                    CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                                }
+                            ) {
+                                Column(modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                Text(
+                                                    expense.description,
+                                                    style = MaterialTheme.typography.titleSmall,
+                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = itemAlpha)
+                                                )
+                                                if (isDeleted) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .background(MaterialTheme.colorScheme.error.copy(alpha = 0.8f), RoundedCornerShape(8.dp))
+                                                            .padding(horizontal = 6.dp, vertical = 1.dp)
+                                                    ) {
+                                                        Text("Deleted", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
+                                                    }
+                                                }
+                                                val tag = ExpenseTag.fromSlug(expense.tag)
+                                                if (tag != null && !isDeleted) {
+                                                    Box(modifier = Modifier.background(Color(tag.color), RoundedCornerShape(12.dp)).padding(horizontal = 8.dp, vertical = 2.dp)) {
+                                                        Text("${tag.emoji} ${tag.label}", style = MaterialTheme.typography.labelSmall, color = Color.Black)
+                                                    }
+                                                }
+                                                // Notes indicator
+                                                if (hasNotes && !isDeleted) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .clip(RoundedCornerShape(8.dp))
+                                                            .background(MaterialTheme.colorScheme.tertiaryContainer)
+                                                            .clickable {
+                                                                expandedNotesIds = if (isNotesExpanded) expandedNotesIds - expense.expenseId
+                                                                else expandedNotesIds + expense.expenseId
+                                                            }
+                                                            .padding(horizontal = 6.dp, vertical = 1.dp)
+                                                    ) {
+                                                        Text("\uD83D\uDCDD", style = MaterialTheme.typography.labelSmall)
+                                                    }
+                                                }
+                                            }
+                                            val paidByText = if (paidByMap != null && paidByMap.size > 1) {
+                                                paidByMap.keys.joinToString(" + ") { id -> if (id == myId) "You" else (memberNames[id] ?: id.take(6)) } + " paid"
+                                            } else {
+                                                if (expense.paidBy == myId) "Paid by You" else "Paid by ${memberNames[expense.paidBy] ?: expense.paidBy}"
+                                            }
+                                            Text(paidByText, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = itemAlpha))
+                                            if (!isInvolved && !isDeleted) {
+                                                Text("Not involved", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                                            }
+                                            Text(dateFormat.format(Date(expense.createdAt)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = itemAlpha))
+                                        }
+                                        Text(
+                                            formatAmount(expense.amountCents),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isDeleted) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                            else if (isInvolved) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+
+                                    // Expandable notes
+                                    AnimatedVisibility(visible = isNotesExpanded && hasNotes) {
+                                        Card(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = 8.dp),
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f)
+                                            )
+                                        ) {
+                                            Text(
+                                                expense.notes ?: "",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                modifier = Modifier.padding(8.dp)
+                                            )
+                                        }
+                                    }
+
+                                    // History button
+                                    if (history.isNotEmpty()) {
+                                        TextButton(
+                                            onClick = {
+                                                expandedHistoryIds = if (isHistoryExpanded) {
+                                                    expandedHistoryIds - expense.expenseId
+                                                } else {
+                                                    expandedHistoryIds + expense.expenseId
+                                                }
+                                            },
+                                            modifier = Modifier.padding(top = 4.dp)
+                                        ) {
+                                            Text(
+                                                if (isHistoryExpanded) "Hide History" else "History (${history.size})",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+
+                                        if (isHistoryExpanded) {
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(start = 8.dp, top = 4.dp),
+                                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                history.forEach { h ->
+                                                    HistoryEntryRow(h, dateTimeFormat)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else if (item.type == "settlement" && item.settlement != null) {
+                        val s = item.settlement
+                        val isDeleted = s.isDeleted
+                        val isMySettlement = s.fromMember == myId || s.toMember == myId
+                        val fromName = if (s.fromMember == myId) "You" else (memberNames[s.fromMember] ?: s.fromMember.take(8))
+                        val toName = if (s.toMember == myId) "You" else (memberNames[s.toMember] ?: s.toMember.take(8))
+                        val itemAlpha = if (isDeleted) 0.5f else 1f
+
+                        val history = historyMap[s.settlementId] ?: emptyList()
+                        val isHistoryExpanded = s.settlementId in expandedHistoryIds
+
+                        val bgColor = if (isDeleted) {
+                            MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)
+                        } else if (isMySettlement) {
+                            Color(0x266BCB77)
+                        } else {
+                            Color(0x1A6BCB77)
+                        }
+
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    selectedExpense = expense
-                                    showExpenseDialog = true
+                                    selectedSettlement = s
+                                    showSettlementDialog = true
                                 },
-                            colors = if (isDeleted) {
-                                androidx.compose.material3.CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f))
-                            } else if (isInvolved) {
-                                androidx.compose.material3.CardDefaults.cardColors()
-                            } else {
-                                androidx.compose.material3.CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-                            }
+                            colors = CardDefaults.cardColors(containerColor = bgColor)
                         ) {
-                            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                            Column(modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                             Text(
-                                                expense.description,
+                                                "\uD83E\uDD1D Settlement",
                                                 style = MaterialTheme.typography.titleSmall,
                                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = itemAlpha)
                                             )
@@ -374,33 +690,20 @@ private fun ExpensesTab(
                                                 ) {
                                                     Text("Deleted", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
                                                 }
-                                            }
-                                            val tag = ExpenseTag.fromSlug(expense.tag)
-                                            if (tag != null && !isDeleted) {
-                                                Box(modifier = Modifier.background(Color(tag.color), RoundedCornerShape(12.dp)).padding(horizontal = 8.dp, vertical = 2.dp)) {
-                                                    Text("${tag.emoji} ${tag.label}", style = MaterialTheme.typography.labelSmall, color = Color.Black)
+                                            } else if (isMySettlement) {
+                                                Box(modifier = Modifier.background(Color(0xFF6BCB77), RoundedCornerShape(8.dp)).padding(horizontal = 6.dp, vertical = 1.dp)) {
+                                                    Text("YOU", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
                                                 }
                                             }
                                         }
-                                        // Paid by with "you" label
-                                        val paidByText = if (paidByMap != null && paidByMap.size > 1) {
-                                            paidByMap.keys.joinToString(" + ") { id -> if (id == myId) "You" else (memberNames[id] ?: id.take(6)) } + " paid"
-                                        } else {
-                                            if (expense.paidBy == myId) "Paid by You" else "Paid by ${memberNames[expense.paidBy] ?: expense.paidBy}"
-                                        }
-                                        Text(paidByText, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = itemAlpha))
-                                        if (!isInvolved && !isDeleted) {
-                                            Text("Not involved", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
-                                        }
-                                        Text(dateFormat.format(Date(expense.createdAt)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = itemAlpha))
+                                        Text("$fromName paid $toName", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = itemAlpha))
+                                        Text(dateFormat.format(Date(s.createdAt)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = itemAlpha))
                                     }
                                     Text(
-                                        formatAmount(expense.amountCents),
+                                        formatAmount(s.amountCents),
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (isDeleted) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                                        else if (isInvolved) MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = if (isDeleted) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f) else Color(0xFF6BCB77)
                                     )
                                 }
 
@@ -409,9 +712,9 @@ private fun ExpensesTab(
                                     TextButton(
                                         onClick = {
                                             expandedHistoryIds = if (isHistoryExpanded) {
-                                                expandedHistoryIds - expense.expenseId
+                                                expandedHistoryIds - s.settlementId
                                             } else {
-                                                expandedHistoryIds + expense.expenseId
+                                                expandedHistoryIds + s.settlementId
                                             }
                                         },
                                         modifier = Modifier.padding(top = 4.dp)
@@ -439,104 +742,6 @@ private fun ExpensesTab(
                             }
                         }
                     }
-                } else if (item.type == "settlement" && item.settlement != null) {
-                    val s = item.settlement
-                    val isDeleted = s.isDeleted
-                    val isMySettlement = s.fromMember == myId || s.toMember == myId
-                    val fromName = if (s.fromMember == myId) "You" else (memberNames[s.fromMember] ?: s.fromMember.take(8))
-                    val toName = if (s.toMember == myId) "You" else (memberNames[s.toMember] ?: s.toMember.take(8))
-                    val itemAlpha = if (isDeleted) 0.5f else 1f
-
-                    val history = historyMap[s.settlementId] ?: emptyList()
-                    val isHistoryExpanded = s.settlementId in expandedHistoryIds
-
-                    val bgColor = if (isDeleted) {
-                        MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)
-                    } else if (isMySettlement) {
-                        Color(0x266BCB77)
-                    } else {
-                        Color(0x1A6BCB77)
-                    }
-
-                    Card(
-                        modifier = Modifier.fillMaxWidth().clickable {
-                            selectedSettlement = s
-                            showSettlementDialog = true
-                        },
-                        colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = bgColor)
-                    ) {
-                        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        Text(
-                                            "\uD83E\uDD1D Settlement",
-                                            style = MaterialTheme.typography.titleSmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = itemAlpha)
-                                        )
-                                        if (isDeleted) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .background(MaterialTheme.colorScheme.error.copy(alpha = 0.8f), RoundedCornerShape(8.dp))
-                                                    .padding(horizontal = 6.dp, vertical = 1.dp)
-                                            ) {
-                                                Text("Deleted", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
-                                            }
-                                        } else if (isMySettlement) {
-                                            Box(modifier = Modifier.background(Color(0xFF6BCB77), RoundedCornerShape(8.dp)).padding(horizontal = 6.dp, vertical = 1.dp)) {
-                                                Text("YOU", style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
-                                            }
-                                        }
-                                    }
-                                    Text("$fromName paid $toName", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = itemAlpha))
-                                    Text(dateFormat.format(Date(s.createdAt)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = itemAlpha))
-                                }
-                                Text(
-                                    formatAmount(s.amountCents),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isDeleted) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f) else Color(0xFF6BCB77)
-                                )
-                            }
-
-                            // History button
-                            if (history.isNotEmpty()) {
-                                TextButton(
-                                    onClick = {
-                                        expandedHistoryIds = if (isHistoryExpanded) {
-                                            expandedHistoryIds - s.settlementId
-                                        } else {
-                                            expandedHistoryIds + s.settlementId
-                                        }
-                                    },
-                                    modifier = Modifier.padding(top = 4.dp)
-                                ) {
-                                    Text(
-                                        if (isHistoryExpanded) "Hide History" else "History (${history.size})",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-
-                                if (isHistoryExpanded) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(start = 8.dp, top = 4.dp),
-                                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        history.forEach { h ->
-                                            HistoryEntryRow(h, dateTimeFormat)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -546,10 +751,10 @@ private fun ExpensesTab(
 @Composable
 private fun HistoryEntryRow(history: HistoryEntity, dateFormat: SimpleDateFormat) {
     val icon = when (history.action) {
-        "created" -> "\uD83D\uDCDD"  // memo
-        "edited" -> "\u270F\uFE0F"    // pencil
-        "deleted" -> "\uD83D\uDDD1\uFE0F"  // wastebasket
-        "restored" -> "\u267B\uFE0F"  // recycling
+        "created" -> "\uD83D\uDCDD"
+        "edited" -> "\u270F\uFE0F"
+        "deleted" -> "\uD83D\uDDD1\uFE0F"
+        "restored" -> "\u267B\uFE0F"
         else -> "\u2022"
     }
     val actionText = when (history.action) {
@@ -561,7 +766,9 @@ private fun HistoryEntryRow(history: HistoryEntity, dateFormat: SimpleDateFormat
     }
 
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
@@ -584,7 +791,6 @@ private fun HistoryEntryRow(history: HistoryEntity, dateFormat: SimpleDateFormat
         )
     }
 
-    // Show what changed for edits
     if (history.action == "edited" && history.previousData != null && history.newData != null) {
         val changesSummary = remember(history.historyId) {
             try {
@@ -623,7 +829,9 @@ private fun BalancesTab(
     onSettle: (String, String, String, Long) -> Unit
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         if (netBalances.isNotEmpty()) {
@@ -634,10 +842,12 @@ private fun BalancesTab(
                 val isMe = memberId == myId
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = if (isMe) androidx.compose.material3.CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
-                    else androidx.compose.material3.CardDefaults.cardColors()
+                    colors = if (isMe) CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
+                    else CardDefaults.cardColors()
                 ) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Row(modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(if (isMe) "You" else (memberNames[memberId] ?: memberId), fontWeight = if (isMe) FontWeight.Bold else FontWeight.Normal)
                             if (isMe) {
@@ -667,10 +877,12 @@ private fun BalancesTab(
                 val toName = if (debt.to == myId) "You" else (memberNames[debt.to] ?: debt.to)
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = if (isMyDebt) androidx.compose.material3.CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
-                    else androidx.compose.material3.CardDefaults.cardColors()
+                    colors = if (isMyDebt) CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
+                    else CardDefaults.cardColors()
                 ) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Row(modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Column(modifier = Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text("$fromName owes $toName", style = MaterialTheme.typography.bodyMedium)
@@ -725,11 +937,13 @@ private fun MembersTab(
             val isMe = member.memberId == myId
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = if (isMe) androidx.compose.material3.CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
-                else androidx.compose.material3.CardDefaults.cardColors()
+                colors = if (isMe) CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
+                else CardDefaults.cardColors()
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {

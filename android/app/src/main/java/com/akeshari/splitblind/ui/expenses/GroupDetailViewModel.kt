@@ -161,7 +161,8 @@ class GroupDetailViewModel @Inject constructor(
                         tag = expense.tag,
                         paidByMap = paidByMap,
                         splitMode = expense.splitMode,
-                        splitDetails = splitDetails
+                        splitDetails = splitDetails,
+                        notes = expense.notes
                     ),
                     hlc = now,
                     author = identity.memberId
@@ -322,7 +323,8 @@ class GroupDetailViewModel @Inject constructor(
                         tag = expense.tag,
                         paidByMap = paidByMap,
                         splitMode = expense.splitMode,
-                        splitDetails = splitDetails
+                        splitDetails = splitDetails,
+                        notes = expense.notes
                     ),
                     hlc = now,
                     author = identity.memberId

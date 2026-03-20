@@ -23,4 +23,10 @@ interface SettlementDao {
 
     @Query("SELECT * FROM settlements WHERE groupId = :groupId ORDER BY createdAt DESC")
     fun getAllSettlementsIncludingDeleted(groupId: String): Flow<List<SettlementEntity>>
+
+    @Query("SELECT * FROM settlements WHERE isDeleted = 0 ORDER BY createdAt DESC")
+    fun getAllActiveSettlements(): Flow<List<SettlementEntity>>
+
+    @Query("SELECT * FROM settlements WHERE isDeleted = 0")
+    suspend fun getAllActiveSettlementsList(): List<SettlementEntity>
 }

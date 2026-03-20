@@ -72,7 +72,9 @@ data class OpData(
     val newDataJson: String? = null,
     val changedBy: String? = null,
     val changedByName: String? = null,
-    val changedAt: Long? = null
+    val changedAt: Long? = null,
+    // notes
+    val notes: String? = null
 )
 
 private val json = Json { ignoreUnknownKeys = true }
@@ -222,7 +224,8 @@ class SyncEngine @Inject constructor(
                             tag = d.tag,
                             paidByMap = d.paidByMap?.let { json.encodeToString(it) },
                             splitMode = d.splitMode,
-                            splitDetails = d.splitDetails?.let { json.encodeToString(it) }
+                            splitDetails = d.splitDetails?.let { json.encodeToString(it) },
+                            notes = d.notes
                         )
                     )
                 }

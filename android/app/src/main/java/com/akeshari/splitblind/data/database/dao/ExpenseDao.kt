@@ -23,4 +23,13 @@ interface ExpenseDao {
 
     @Query("SELECT * FROM expenses WHERE groupId = :groupId ORDER BY createdAt DESC")
     fun getAllExpensesIncludingDeleted(groupId: String): Flow<List<ExpenseEntity>>
+
+    @Query("SELECT * FROM expenses WHERE isDeleted = 0 ORDER BY createdAt DESC")
+    fun getAllActiveExpenses(): Flow<List<ExpenseEntity>>
+
+    @Query("SELECT * FROM expenses WHERE isDeleted = 0 ORDER BY createdAt DESC")
+    suspend fun getAllActiveExpensesList(): List<ExpenseEntity>
+
+    @Query("SELECT * FROM expenses WHERE isDeleted = 0 ORDER BY createdAt DESC LIMIT :limit")
+    fun getRecentExpenses(limit: Int): Flow<List<ExpenseEntity>>
 }
