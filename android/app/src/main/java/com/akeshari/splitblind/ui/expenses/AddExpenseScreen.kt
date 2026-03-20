@@ -116,7 +116,7 @@ fun AddExpenseScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add Expense") },
+                title = { Text(if (state.isEditing) "Edit Expense" else "Add Expense") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -477,7 +477,7 @@ fun AddExpenseScreen(
                 enabled = !state.isSaving,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(if (state.isSaving) "Saving..." else "Add Expense")
+                Text(if (state.isSaving) "Saving..." else if (state.isEditing) "Save Changes" else "Add Expense")
             }
 
             Spacer(modifier = Modifier.height(16.dp))

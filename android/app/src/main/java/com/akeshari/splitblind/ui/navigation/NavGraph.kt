@@ -22,7 +22,7 @@ object Routes {
     const val GROUPS = "groups"
     const val CREATE_GROUP = "create_group"
     const val GROUP_DETAIL = "group_detail/{groupId}"
-    const val ADD_EXPENSE = "add_expense/{groupId}"
+    const val ADD_EXPENSE = "add_expense/{groupId}?editExpenseId={editExpenseId}"
     const val SETTLE = "settle/{groupId}/{from}/{to}/{amountCents}"
     const val SECURITY = "security"
     const val SETUP_PASSPHRASE = "setup_passphrase"
@@ -32,6 +32,7 @@ object Routes {
 
     fun groupDetail(groupId: String) = "group_detail/$groupId"
     fun addExpense(groupId: String) = "add_expense/$groupId"
+    fun editExpense(groupId: String, expenseId: String) = "add_expense/$groupId?editExpenseId=$expenseId"
     fun settle(groupId: String, from: String, to: String, amountCents: Long) =
         "settle/$groupId/$from/$to/$amountCents"
 }
@@ -103,6 +104,9 @@ fun NavGraph(
                 onAddExpense = { groupId ->
                     navController.navigate(Routes.addExpense(groupId))
                 },
+                onEditExpense = { groupId, expenseId ->
+                    navController.navigate(Routes.editExpense(groupId, expenseId))
+                },
                 onSettle = { groupId, from, to, amountCents ->
                     navController.navigate(Routes.settle(groupId, from, to, amountCents))
                 }
@@ -111,7 +115,14 @@ fun NavGraph(
 
         composable(
             Routes.ADD_EXPENSE,
-            arguments = listOf(navArgument("groupId") { type = NavType.StringType })
+            arguments = listOf(
+                navArgument("groupId") { type = NavType.StringType },
+                navArgument("editExpenseId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
         ) {
             AddExpenseScreen(
                 onBack = { navController.popBackStack() }

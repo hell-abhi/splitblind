@@ -68,7 +68,9 @@ data class AddExpenseState(
     val splitMode: SplitMode = SplitMode.EQUAL,
     val splitAmounts: Map<String, String> = emptyMap(),
     val splitPercentages: Map<String, String> = emptyMap(),
-    val splitRatios: Map<String, String> = emptyMap()
+    val splitRatios: Map<String, String> = emptyMap(),
+    // Edit mode
+    val isEditing: Boolean = false
 )
 
 @HiltViewModel
@@ -81,12 +83,47 @@ class AddExpenseViewModel @Inject constructor(
 ) : ViewModel() {
 
     val groupId: String = savedStateHandle["groupId"] ?: ""
+    private val editExpenseId: String? = savedStateHandle["editExpenseId"]
 
     val members: StateFlow<List<MemberEntity>> = groupDao.getMembers(groupId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _state = MutableStateFlow(AddExpenseState(paidBy = identity.memberId))
     val state: StateFlow<AddExpenseState> = _state
+
+    init {
+        if (editExpenseId != null) {
+            viewModelScope.launch {
+                val expense = expenseDao.getExpense(editExpenseId) ?: return@launch
+                val splitMembers: Set<String> = try {
+                    Json.decodeFromString<List<String>>(expense.splitAmong).toSet()
+                } catch (_: Exception) { emptySet() }
+                val paidByMap: Map<String, Long>? = expense.paidByMap?.let {
+                    try { Json.decodeFromString(it) } catch (_: Exception) { null }
+                }
+                val splitDetails: Map<String, Long>? = expense.splitDetails?.let {
+                    try { Json.decodeFromString(it) } catch (_: Exception) { null }
+                }
+                val splitMode = SplitMode.entries.find { it.slug == expense.splitMode } ?: SplitMode.EQUAL
+
+                _state.value = AddExpenseState(
+                    description = expense.description,
+                    amount = String.format("%.2f", expense.amountCents / 100.0),
+                    paidBy = expense.paidBy,
+                    splitAmong = splitMembers,
+                    selectedTag = expense.tag ?: "other",
+                    isMultiPayer = paidByMap != null && paidByMap.size > 1,
+                    payerAmounts = paidByMap?.mapValues { (_, v) -> String.format("%.2f", v / 100.0) } ?: emptyMap(),
+                    splitMode = splitMode,
+                    splitAmounts = if (splitMode == SplitMode.AMOUNT && splitDetails != null)
+                        splitDetails.mapValues { (_, v) -> String.format("%.2f", v / 100.0) } else emptyMap(),
+                    splitPercentages = emptyMap(), // Can't reverse percentages from cents
+                    splitRatios = emptyMap(), // Can't reverse ratios from cents
+                    isEditing = true
+                )
+            }
+        }
+    }
 
     fun setDescription(desc: String) {
         _state.value = _state.value.copy(description = desc)
@@ -263,7 +300,7 @@ class AddExpenseViewModel @Inject constructor(
         _state.value = s.copy(isSaving = true, error = null)
 
         viewModelScope.launch {
-            val expenseId = UUID.randomUUID().toString().take(16)
+            val expenseId = editExpenseId ?: UUID.randomUUID().toString().take(16)
             val now = System.currentTimeMillis()
             val splitList = splitMembers
 

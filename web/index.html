@@ -111,8 +111,7 @@
         .gi-1{background:#EDE9FC;} .gi-2{background:#FCE4EC;} .gi-3{background:#E0F2F1;} .gi-4{background:#FFF3E0;} .gi-5{background:#E8EAF6;}
 
         /* Expense card */
-        .exp-c { display:flex; justify-content:space-between; align-items:center; cursor:default; }
-        .exp-c:hover { transform:none; }
+        .exp-c { display:flex; justify-content:space-between; align-items:center; cursor:pointer; }
         .exp-left { display:flex; align-items:center; gap:14px; }
         .exp-icon {
             width:42px; height:42px; border-radius:14px;
@@ -431,6 +430,56 @@
         .sync-btn .sync-icon { display:inline-block; transition:transform .5s; }
         .sync-btn.syncing .sync-icon { animation:spin .8s linear infinite; }
         @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+
+        /* Modal overlay */
+        .modal-overlay {
+            position:fixed; inset:0; z-index:200;
+            background:rgba(0,0,0,0.5); backdrop-filter:blur(4px);
+            display:flex; align-items:flex-end; justify-content:center;
+            animation:modalFadeIn .2s ease;
+        }
+        @keyframes modalFadeIn { from{opacity:0} to{opacity:1} }
+        @keyframes modalSlideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+        .modal-content {
+            background:var(--card); border-radius:24px 24px 0 0;
+            padding:24px 20px max(24px,env(safe-area-inset-bottom));
+            width:100%; max-width:480px;
+            box-shadow:0 -8px 32px rgba(0,0,0,0.15);
+            animation:modalSlideUp .3s cubic-bezier(.4,0,.2,1);
+        }
+        .modal-handle {
+            width:36px; height:4px; background:var(--border);
+            border-radius:2px; margin:0 auto 18px;
+        }
+        .modal-summary {
+            display:flex; align-items:center; gap:14px;
+            padding:14px 16px; background:var(--surface);
+            border-radius:16px; margin-bottom:20px;
+        }
+        .modal-summary .exp-icon { flex-shrink:0; }
+        .modal-summary .modal-amt {
+            font-size:18px; font-weight:800; letter-spacing:-0.5px;
+        }
+        .modal-btn {
+            width:100%; padding:16px; border:none; border-radius:14px;
+            font-size:15px; font-weight:700; cursor:pointer;
+            transition:all .2s; font-family:'Inter',sans-serif;
+            margin-bottom:10px; display:flex; align-items:center;
+            justify-content:center; gap:8px;
+        }
+        .modal-btn:active { transform:scale(.97); }
+        .modal-btn-edit {
+            background:var(--primary-bg); color:var(--primary);
+        }
+        .modal-btn-delete {
+            background:rgba(255,107,107,0.1); color:var(--negative);
+        }
+        .modal-btn-cancel {
+            background:var(--surface); color:var(--text-secondary);
+        }
+        .modal-btn-undo {
+            background:rgba(255,165,0,0.1); color:#E67E22;
+        }
     </style>
 </head>
 <body>
@@ -693,6 +742,13 @@
             <button class="btn btn-p" id="sr-btn" disabled>Restore</button>
             <p id="sr-error" style="color:var(--negative);text-align:center;margin-top:12px;font-size:14px;font-weight:600;display:none"></p>
         </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modal" style="display:none" onclick="if(event.target===this)closeModal()">
+    <div class="modal-content">
+        <div class="modal-handle"></div>
+        <div id="modal-body"></div>
     </div>
 </div>
 
@@ -973,6 +1029,153 @@ async function makeShortLink(gid,key,name){const code=shortId();await fbDb.ref('
 async function resolveShort(code){const s=await fbDb.ref('links/'+code).once('value');return s.val()}
 function shareLink(link,name){if(navigator.share){navigator.share({title:'Join "'+name+'" on SplitBlind',text:link}).catch(()=>{})}else{navigator.clipboard.writeText(link).then(()=>toast('Link copied!'))}}
 
+// Modal
+let expenseLookup={}, settlementLookup={}, editingExpense=null;
+function openModal(html){document.getElementById('modal-body').innerHTML=html;document.getElementById('modal').style.display=''}
+function closeModal(){document.getElementById('modal').style.display='none'}
+
+function showExpenseActions(expense,nm){
+    const ts=getTagStyle(expense.tag);const st=ts?{icon:ts.icon,bg:ts.bg}:getExpStyle(expense.description);
+    let paidStr;
+    if(expense.paidByMap){const names=Object.keys(expense.paidByMap).map(id=>esc(nm[id]||id.slice(0,8)));paidStr='Paid by '+names.join(', ')}
+    else{paidStr='Paid by '+esc(nm[expense.paidBy]||expense.paidBy.slice(0,8))}
+    openModal(`
+        <div class="modal-summary">
+            <div class="exp-icon" style="background:${st.bg}">${st.icon}</div>
+            <div style="flex:1">
+                <div style="font-weight:700;font-size:15px">${esc(expense.description)}</div>
+                <div style="font-size:13px;color:var(--text-secondary);margin-top:2px">${paidStr}</div>
+            </div>
+            <div class="modal-amt">${fmt(expense.amountCents)}</div>
+        </div>
+        <button class="modal-btn modal-btn-edit" onclick="editExpense('${expense.expenseId}')">&#x270F;&#xFE0F; Edit Expense</button>
+        <button class="modal-btn modal-btn-delete" onclick="confirmDeleteExpense('${expense.expenseId}')">&#x1F5D1;&#xFE0F; Delete Expense</button>
+        <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Cancel</button>
+    `);
+}
+
+function confirmDeleteExpense(eid){
+    openModal(`
+        <div style="text-align:center;padding:12px 0 8px">
+            <div style="font-size:40px;margin-bottom:12px">&#x1F5D1;&#xFE0F;</div>
+            <h3 style="font-size:17px;font-weight:800;letter-spacing:-0.3px">Delete this expense?</h3>
+            <p style="color:var(--text-secondary);font-size:14px;margin-top:8px;font-weight:500">Balances will be recalculated.</p>
+        </div>
+        <button class="modal-btn modal-btn-delete" onclick="deleteExpense('${eid}')">Delete Expense</button>
+        <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Cancel</button>
+    `);
+}
+
+async function deleteExpense(eid){
+    const expense=expenseLookup[eid];if(!expense)return;
+    const now=Date.now();
+    const data={...expense,isDeleted:true};
+    delete data.hlcTimestamp;
+    await iP('expenses',{...data,hlcTimestamp:now});
+    await pushOp(curGroup,curGroupKey,{id:uid(),type:'expense',data,hlc:now,author:myId});
+    closeModal();refreshTab();toast('Expense deleted');
+}
+
+function editExpense(eid){
+    const expense=expenseLookup[eid];if(!expense)return;
+    editingExpense=expense;
+    closeModal();
+    show('ae');
+    renderAddExpense().then(()=>prefillExpense(expense));
+}
+
+function prefillExpense(expense){
+    document.getElementById('ae-desc').value=expense.description;
+    document.getElementById('ae-amt').value=(expense.amountCents/100).toFixed(2);
+    // Tag
+    if(expense.tag){
+        document.querySelectorAll('#ae-tags .tag-pill').forEach(t=>{t.classList.toggle('active',t.dataset.tag===expense.tag)});
+    }
+    // Payer mode
+    if(expense.paidByMap){
+        aePayerMode='multi';
+        document.querySelectorAll('.payer-toggle .seg-btn').forEach(b=>{b.classList.toggle('active',b.dataset.mode==='multi')});
+        document.getElementById('ae-paidby').style.display='none';
+        document.getElementById('ae-paidby-multi').style.display='';
+        renderMultiPayer();
+        // Fill multi-payer amounts
+        for(const[mid,amt] of Object.entries(expense.paidByMap)){
+            const inp=document.querySelector(`.mp-amt[data-mid="${mid}"]`);
+            if(inp)inp.value=(amt/100).toFixed(2);
+        }
+        updateMultiPayerValidation();
+    }else{
+        // Single payer
+        const radio=document.querySelector(`input[name=pb][value="${expense.paidBy}"]`);
+        if(radio)radio.checked=true;
+    }
+    // Split among
+    document.querySelectorAll('.sc').forEach(cb=>{cb.checked=expense.splitAmong.includes(cb.value)});
+    // Split mode
+    if(expense.splitMode&&expense.splitMode!=='equal'){
+        aeSplitMode=expense.splitMode;
+        document.querySelectorAll('#ae-split-modes .seg-btn').forEach(b=>{b.classList.toggle('active',b.dataset.mode===expense.splitMode)});
+        renderSplitDetail();
+        // Fill split detail values
+        if(expense.splitDetails){
+            if(expense.splitMode==='amount'){
+                for(const[mid,amt] of Object.entries(expense.splitDetails)){
+                    const inp=document.querySelector(`.sd-val[data-mid="${mid}"]`);
+                    if(inp)inp.value=(amt/100).toFixed(2);
+                }
+            }else if(expense.splitMode==='percentage'){
+                // Reverse percentage: splitDetails are in cents, compute %
+                const total=expense.amountCents;
+                for(const[mid,amt] of Object.entries(expense.splitDetails)){
+                    const inp=document.querySelector(`.sd-val[data-mid="${mid}"]`);
+                    if(inp)inp.value=total>0?(amt/total*100).toFixed(1):'0';
+                }
+            }else if(expense.splitMode==='ratio'){
+                // Ratio: we stored cents, try to reconstruct ratios
+                // Find GCD of all values to simplify
+                const vals=Object.values(expense.splitDetails);
+                const gcd=(a,b)=>b?gcd(b,a%b):a;
+                const g=vals.reduce((a,b)=>gcd(a,b));
+                for(const[mid,amt] of Object.entries(expense.splitDetails)){
+                    const inp=document.querySelector(`.sd-val[data-mid="${mid}"]`);
+                    if(inp)inp.value=g>0?Math.round(amt/g):'1';
+                }
+            }
+        }
+        updateSplitValidation();
+    }
+    // Change button text
+    document.getElementById('ae-btn').textContent='Save Changes';
+    // Update title
+    document.querySelector('#s-ae .topbar h1').textContent='Edit Expense';
+    updAe();
+}
+
+function showSettlementActions(settlement,nm){
+    const fromName=esc(nm[settlement.fromMember]||settlement.fromMember.slice(0,8));
+    const toName=esc(nm[settlement.toMember]||settlement.toMember.slice(0,8));
+    openModal(`
+        <div style="text-align:center;padding:12px 0 8px">
+            <div style="font-size:40px;margin-bottom:12px">&#x1F91D;</div>
+            <h3 style="font-size:17px;font-weight:800;letter-spacing:-0.3px">Undo this settlement?</h3>
+            <p style="color:var(--text-secondary);font-size:14px;margin-top:8px;font-weight:500">${fromName} paid ${toName} &mdash; ${fmt(settlement.amountCents)}</p>
+            <p style="color:var(--text-secondary);font-size:13px;margin-top:4px;font-weight:500">The debt will reappear.</p>
+        </div>
+        <button class="modal-btn modal-btn-undo" onclick="undoSettlement('${settlement.settlementId}')">Undo Settlement</button>
+        <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Cancel</button>
+    `);
+}
+
+async function undoSettlement(sid){
+    const settlement=settlementLookup[sid];if(!settlement)return;
+    const now=Date.now();
+    const data={...settlement,isDeleted:true};
+    delete data.hlcTimestamp;
+    await iP('settlements',{...data,hlcTimestamp:now});
+    await pushOp(curGroup,curGroupKey,{id:uid(),type:'settlement',data,hlc:now,author:myId});
+    closeModal();refreshTab();toast('Settlement undone');
+}
+
 // Render
 async function renderGroups(){
     const groups=(await iA('groups')).sort((a,b)=>b.createdAt-a.createdAt);
@@ -992,6 +1195,9 @@ async function renderExpenses(){
     const exps=(await iA('expenses')).filter(e=>e.groupId===curGroup&&!e.isDeleted);
     const sets=(await iA('settlements')).filter(s=>s.groupId===curGroup&&!s.isDeleted);
     const mems=(await iA('members')).filter(m=>m.groupId===curGroup);const nm={};mems.forEach(m=>nm[m.memberId]=m.displayName);
+    // Build lookup maps
+    expenseLookup={};exps.forEach(e=>expenseLookup[e.expenseId]=e);
+    settlementLookup={};sets.forEach(s=>settlementLookup[s.settlementId]=s);
     // Merge expenses and settlements into one timeline
     const items=[];
     exps.forEach(e=>items.push({type:'expense',data:e,ts:e.createdAt}));
@@ -1008,14 +1214,17 @@ async function renderExpenses(){
             else{paidStr='Paid by '+esc(nm[e.paidBy]||e.paidBy.slice(0,8))}
             const tagHtml=ts?`<div class="tag-pill-sm" style="background:${ts.bg};color:var(--text)">${ts.icon} ${ts.label}</div>`:'';
             const splitHtml=e.splitMode&&e.splitMode!=='equal'?`<div class="exp-split-info">${e.splitMode==='amount'?'By amount':e.splitMode==='percentage'?'By %':'By ratio'}</div>`:'';
-            return`<div class="card exp-c"><div class="exp-left"><div class="exp-icon" style="background:${st.bg}">${st.icon}</div><div><div class="card-t">${esc(e.description)}</div><div class="card-s">${paidStr}</div>${tagHtml}${splitHtml}</div></div><div><div class="exp-a">${fmt(e.amountCents)}</div><div class="exp-d">${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div>`;
+            return`<div class="card exp-c" data-eid="${e.expenseId}"><div class="exp-left"><div class="exp-icon" style="background:${st.bg}">${st.icon}</div><div><div class="card-t">${esc(e.description)}</div><div class="card-s">${paidStr}</div>${tagHtml}${splitHtml}</div></div><div><div class="exp-a">${fmt(e.amountCents)}</div><div class="exp-d">${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div>`;
         }else{
             const s=item.data;
             const fromName=esc(nm[s.fromMember]||s.fromMember.slice(0,8));
             const toName=esc(nm[s.toMember]||s.toMember.slice(0,8));
-            return`<div class="card exp-c" style="border-left:3px solid var(--positive)"><div class="exp-left"><div class="exp-icon" style="background:rgba(107,203,119,0.12)">&#x1F91D;</div><div><div class="card-t">Settlement</div><div class="card-s">${fromName} paid ${toName}</div></div></div><div><div class="exp-a" style="color:var(--positive)">${fmt(s.amountCents)}</div><div class="exp-d">${new Date(s.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div>`;
+            return`<div class="card exp-c" data-sid="${s.settlementId}" style="border-left:3px solid var(--positive)"><div class="exp-left"><div class="exp-icon" style="background:rgba(107,203,119,0.12)">&#x1F91D;</div><div><div class="card-t">Settlement</div><div class="card-s">${fromName} paid ${toName}</div></div></div><div><div class="exp-a" style="color:var(--positive)">${fmt(s.amountCents)}</div><div class="exp-d">${new Date(s.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div>`;
         }
     }).join('');
+    // Attach click handlers
+    el.querySelectorAll('[data-eid]').forEach(c=>c.addEventListener('click',()=>{const e=expenseLookup[c.dataset.eid];if(e)showExpenseActions(e,nm)}));
+    el.querySelectorAll('[data-sid]').forEach(c=>c.addEventListener('click',()=>{const s=settlementLookup[c.dataset.sid];if(s)showSettlementActions(s,nm)}));
 }
 
 async function renderBalances(){
@@ -1048,7 +1257,10 @@ function switchTab(tab){document.querySelectorAll('.tab').forEach(t=>t.classList
 
 let aePayerMode='single',aeSplitMode='equal',aeMembers=[];
 async function renderAddExpense(){
+    editingExpense=null;
     aePayerMode='single';aeSplitMode='equal';
+    document.getElementById('ae-btn').textContent='Add Expense';
+    document.querySelector('#s-ae .topbar h1').textContent='Add Expense';
     aeMembers=(await iA('members')).filter(m=>m.groupId===curGroup&&!m.isDeleted);
     // Tags
     document.getElementById('ae-tags').innerHTML=Object.entries(TAGS).map(([k,v])=>`<button class="tag-pill${k==='other'?' active':''}" data-tag="${k}" style="background:${v.color}"><span class="tag-icon">${v.icon}</span>${v.label}</button>`).join('');
@@ -1188,7 +1400,7 @@ function wireEvents(){
     document.getElementById('cg-back').onclick=goBack;
     document.getElementById('gd-back').onclick=goHome;
     document.getElementById('btn-refresh').onclick=async()=>{if(curGroup&&curGroupKey){const btn=document.getElementById('btn-refresh');btn.classList.add('syncing');await fullSync(curGroup,curGroupKey);setTimeout(()=>btn.classList.remove('syncing'),600);toast('Synced!')}};
-    document.getElementById('ae-back').onclick=goBack;
+    document.getElementById('ae-back').onclick=()=>{editingExpense=null;goBack()};
     document.getElementById('stl-back').onclick=goBack;
     document.getElementById('inv-back').onclick=goBack;
     document.getElementById('sec-back').onclick=goBack;
@@ -1340,8 +1552,13 @@ function wireEvents(){
             let totalR=0;inputs.forEach(i=>totalR+=(parseFloat(i.value)||0));
             if(totalR>0){let allocated=0;inputs.forEach((i,idx)=>{const r=parseFloat(i.value)||0;let cents=Math.floor(amtC*r/totalR);if(idx===inputs.length-1)cents=amtC-allocated;splitDetails[i.dataset.mid]=cents;allocated+=cents})}
         }
-        const data={expenseId:eid,groupId:curGroup,description:desc,amountCents:amtC,currency:'INR',paidBy,splitAmong:split,createdAt:now,isDeleted:false,tag,paidByMap,splitMode,splitDetails};
-        await iP('expenses',{...data,hlcTimestamp:now});await pushOp(curGroup,curGroupKey,{id:uid(),type:'expense',data,hlc:now,author:myId});goBack();switchTab('exp');toast('Expense added!')
+        const isEdit=!!editingExpense;
+        const finalEid=isEdit?editingExpense.expenseId:eid;
+        const createdAt=isEdit?editingExpense.createdAt:now;
+        const data={expenseId:finalEid,groupId:curGroup,description:desc,amountCents:amtC,currency:'INR',paidBy,splitAmong:split,createdAt,isDeleted:false,tag,paidByMap,splitMode,splitDetails};
+        await iP('expenses',{...data,hlcTimestamp:now});await pushOp(curGroup,curGroupKey,{id:uid(),type:'expense',data,hlc:now,author:myId});
+        editingExpense=null;
+        goBack();switchTab('exp');toast(isEdit?'Expense updated!':'Expense added!')
     });
     document.getElementById('stl-btn').addEventListener('click',async()=>{const now=Date.now(),sid=uid(),data={settlementId:sid,groupId:curGroup,fromMember:settleData.from,toMember:settleData.to,amountCents:settleData.amountCents,createdAt:now,isDeleted:false};await iP('settlements',{...data,hlcTimestamp:now});await pushOp(curGroup,curGroupKey,{id:uid(),type:'settlement',data,hlc:now,author:myId});goBack();switchTab('bal');toast('Settled!')});
 }

@@ -2,6 +2,7 @@ package com.akeshari.splitblind.ui.expenses
 
 import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -39,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -69,6 +72,7 @@ private fun formatAmount(cents: Long): String {
 fun GroupDetailScreen(
     onBack: () -> Unit,
     onAddExpense: (String) -> Unit,
+    onEditExpense: (groupId: String, expenseId: String) -> Unit,
     onSettle: (groupId: String, from: String, to: String, amountCents: Long) -> Unit,
     viewModel: GroupDetailViewModel = hiltViewModel()
 ) {
@@ -139,7 +143,10 @@ fun GroupDetailScreen(
                     expenses = state.expenses,
                     settlements = state.settlements,
                     memberNames = state.memberNames,
-                    myId = state.myId
+                    myId = state.myId,
+                    onEditExpense = { expense -> onEditExpense(viewModel.groupId, expense.expenseId) },
+                    onDeleteExpense = { expense -> viewModel.deleteExpense(expense) },
+                    onUndoSettlement = { settlement -> viewModel.undoSettlement(settlement) }
                 )
                 1 -> BalancesTab(
                     debts = state.debts,
@@ -165,8 +172,99 @@ private fun ExpensesTab(
     expenses: List<ExpenseEntity>,
     settlements: List<SettlementEntity>,
     memberNames: Map<String, String>,
-    myId: String
+    myId: String,
+    onEditExpense: (ExpenseEntity) -> Unit,
+    onDeleteExpense: (ExpenseEntity) -> Unit,
+    onUndoSettlement: (SettlementEntity) -> Unit
 ) {
+    // Dialog state
+    var showExpenseDialog by remember { mutableStateOf(false) }
+    var selectedExpense by remember { mutableStateOf<ExpenseEntity?>(null) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showSettlementDialog by remember { mutableStateOf(false) }
+    var selectedSettlement by remember { mutableStateOf<SettlementEntity?>(null) }
+
+    // Expense actions dialog
+    if (showExpenseDialog && selectedExpense != null) {
+        AlertDialog(
+            onDismissRequest = { showExpenseDialog = false; selectedExpense = null },
+            title = { Text(selectedExpense!!.description) },
+            text = { Text(formatAmount(selectedExpense!!.amountCents)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    val exp = selectedExpense!!
+                    showExpenseDialog = false
+                    selectedExpense = null
+                    onEditExpense(exp)
+                }) {
+                    Text("Edit Expense")
+                }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = { showExpenseDialog = false; selectedExpense = null }) {
+                        Text("Cancel")
+                    }
+                    TextButton(onClick = {
+                        showExpenseDialog = false
+                        showDeleteConfirm = true
+                    }) {
+                        Text("Delete Expense", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+        )
+    }
+
+    // Delete confirmation dialog
+    if (showDeleteConfirm && selectedExpense != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false; selectedExpense = null },
+            title = { Text("Delete Expense") },
+            text = { Text("Delete this expense? Balances will be recalculated.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDeleteExpense(selectedExpense!!)
+                    showDeleteConfirm = false
+                    selectedExpense = null
+                }) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false; selectedExpense = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Settlement undo dialog
+    if (showSettlementDialog && selectedSettlement != null) {
+        val s = selectedSettlement!!
+        val fromName = if (s.fromMember == myId) "You" else (memberNames[s.fromMember] ?: s.fromMember.take(8))
+        val toName = if (s.toMember == myId) "You" else (memberNames[s.toMember] ?: s.toMember.take(8))
+        AlertDialog(
+            onDismissRequest = { showSettlementDialog = false; selectedSettlement = null },
+            title = { Text("Undo Settlement") },
+            text = { Text("Undo this settlement ($fromName paid $toName ${formatAmount(s.amountCents)})? The debt will reappear.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onUndoSettlement(selectedSettlement!!)
+                    showSettlementDialog = false
+                    selectedSettlement = null
+                }) {
+                    Text("Undo", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSettlementDialog = false; selectedSettlement = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     data class TimelineItem(val type: String, val ts: Long, val expense: ExpenseEntity? = null, val settlement: SettlementEntity? = null)
     val items = mutableListOf<TimelineItem>()
     expenses.forEach { items.add(TimelineItem("expense", it.createdAt, expense = it)) }
@@ -191,7 +289,10 @@ private fun ExpensesTab(
                     val cardAlpha = if (isInvolved) 1f else 0.55f
 
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            selectedExpense = expense
+                            showExpenseDialog = true
+                        },
                         colors = if (isInvolved) androidx.compose.material3.CardDefaults.cardColors()
                         else androidx.compose.material3.CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
                     ) {
@@ -229,7 +330,10 @@ private fun ExpensesTab(
                     val bgColor = if (isMySettlement) Color(0x266BCB77) else Color(0x1A6BCB77)
 
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            selectedSettlement = s
+                            showSettlementDialog = true
+                        },
                         colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = bgColor)
                     ) {
                         Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {

@@ -191,36 +191,48 @@ class SyncEngine @Inject constructor(
                 )
             }
             "expense" -> {
-                expenseDao.insertExpense(
-                    ExpenseEntity(
-                        expenseId = d.expenseId ?: op.id,
-                        groupId = groupId,
-                        description = d.description ?: "",
-                        amountCents = d.amountCents ?: 0,
-                        currency = d.currency ?: "INR",
-                        paidBy = d.paidBy ?: "",
-                        splitAmong = json.encodeToString(d.splitAmong ?: emptyList()),
-                        createdAt = d.createdAt ?: now,
-                        hlcTimestamp = op.hlc,
-                        tag = d.tag,
-                        paidByMap = d.paidByMap?.let { json.encodeToString(it) },
-                        splitMode = d.splitMode,
-                        splitDetails = d.splitDetails?.let { json.encodeToString(it) }
+                val expenseId = d.expenseId ?: op.id
+                val existing = expenseDao.getExpense(expenseId)
+                // LWW: only apply if this op is newer
+                if (existing == null || op.hlc >= existing.hlcTimestamp) {
+                    expenseDao.insertExpense(
+                        ExpenseEntity(
+                            expenseId = expenseId,
+                            groupId = groupId,
+                            description = d.description ?: "",
+                            amountCents = d.amountCents ?: 0,
+                            currency = d.currency ?: "INR",
+                            paidBy = d.paidBy ?: "",
+                            splitAmong = json.encodeToString(d.splitAmong ?: emptyList()),
+                            createdAt = d.createdAt ?: now,
+                            isDeleted = d.isDeleted,
+                            hlcTimestamp = op.hlc,
+                            tag = d.tag,
+                            paidByMap = d.paidByMap?.let { json.encodeToString(it) },
+                            splitMode = d.splitMode,
+                            splitDetails = d.splitDetails?.let { json.encodeToString(it) }
+                        )
                     )
-                )
+                }
             }
             "settlement" -> {
-                settlementDao.insertSettlement(
-                    SettlementEntity(
-                        settlementId = d.settlementId ?: op.id,
-                        groupId = groupId,
-                        fromMember = d.fromMember ?: "",
-                        toMember = d.toMember ?: "",
-                        amountCents = d.amountCents ?: 0,
-                        createdAt = d.createdAt ?: now,
-                        hlcTimestamp = op.hlc
+                val settlementId = d.settlementId ?: op.id
+                val existing = settlementDao.getSettlement(settlementId)
+                // LWW: only apply if this op is newer
+                if (existing == null || op.hlc >= existing.hlcTimestamp) {
+                    settlementDao.insertSettlement(
+                        SettlementEntity(
+                            settlementId = settlementId,
+                            groupId = groupId,
+                            fromMember = d.fromMember ?: "",
+                            toMember = d.toMember ?: "",
+                            amountCents = d.amountCents ?: 0,
+                            createdAt = d.createdAt ?: now,
+                            isDeleted = d.isDeleted,
+                            hlcTimestamp = op.hlc
+                        )
                     )
-                )
+                }
             }
         }
     }
