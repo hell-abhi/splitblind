@@ -1327,61 +1327,38 @@ private fun GroupAnalyticsTab(
                 ) {
                     Text("By Month (Last 6 Months)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     ChartToggle(
-                        options = listOf("chart" to "Chart", "table" to "Table"),
+                        options = listOf("chart" to "Bars", "table" to "Details"),
                         selected = monthMode,
                         onSelect = { monthMode = it }
                     )
                 }
             }
             item {
+                val showDetails = monthMode == "table"
+                val maxMonth = monthStats.maxOfOrNull { if (isYours) it.yours else it.total } ?: 1L
                 Card(modifier = Modifier.fillMaxWidth()) {
-                    if (monthMode == "chart") {
-                        val maxMonth = monthStats.maxOfOrNull { if (isYours) it.yours else it.total } ?: 1L
-                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            monthStats.forEach { month ->
-                                val amt = if (isYours) month.yours else month.total
-                                Column {
-                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                        Text(month.label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        monthStats.forEach { month ->
+                            val amt = if (isYours) month.yours else month.total
+                            Column {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(month.label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(formatAmount(amt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Box(modifier = Modifier.fillMaxWidth().height(14.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
-                                        val fraction = if (maxMonth > 0) (amt.toFloat() / maxMonth) else 0f
-                                        Box(modifier = Modifier.fillMaxWidth(fraction = fraction.coerceIn(0f, 1f)).height(14.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.primary))
+                                        if (showDetails) {
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                "(${month.count} expense${if (month.count != 1) "s" else ""})",
+                                                fontSize = 11.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                            )
+                                        }
                                     }
                                 }
-                            }
-                        }
-                    } else {
-                        // Table view
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                                    .padding(horizontal = 8.dp, vertical = 8.dp)
-                            ) {
-                                Text("Month", fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.2f))
-                                Text("#", fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.5f), textAlign = TextAlign.End)
-                                Text("Amount", fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1.3f), textAlign = TextAlign.End)
-                                Text("Avg", fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
-                            }
-                            monthStats.forEachIndexed { index, month ->
-                                val amt = if (isYours) month.yours else month.total
-                                val avg = if (month.count > 0) amt / month.count else 0L
-                                val bgColor = if (index % 2 == 0) MaterialTheme.colorScheme.surface
-                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(bgColor)
-                                        .padding(horizontal = 8.dp, vertical = 8.dp)
-                                ) {
-                                    Text(month.label, fontSize = 12.sp, modifier = Modifier.weight(1.2f))
-                                    Text("${month.count}", fontSize = 12.sp, modifier = Modifier.weight(0.5f), textAlign = TextAlign.End)
-                                    Text(fmtShort(amt), fontSize = 12.sp, modifier = Modifier.weight(1.3f), textAlign = TextAlign.End)
-                                    Text(fmtShort(avg), fontSize = 12.sp, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Box(modifier = Modifier.fillMaxWidth().height(14.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                                    val fraction = if (maxMonth > 0) (amt.toFloat() / maxMonth) else 0f
+                                    Box(modifier = Modifier.fillMaxWidth(fraction = fraction.coerceIn(0f, 1f)).height(14.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.primary))
                                 }
                             }
                         }
@@ -1479,6 +1456,34 @@ private fun GroupAnalyticsTab(
                                 centerText = "${sortedMembers.size}",
                                 centerSubText = "members"
                             )
+
+                            // Progress bars below donut
+                            Spacer(modifier = Modifier.height(16.dp))
+                            val maxPaid = sortedMembers.maxOfOrNull { it.value } ?: 1L
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                sortedMembers.forEachIndexed { index, (memberId, paid) ->
+                                    val barColor = Color(donutColors[index % donutColors.size])
+                                    Column {
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                            Text(
+                                                memberNames[memberId] ?: memberId.take(8),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                            Text(
+                                                formatAmount(paid),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Box(modifier = Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                                            val fraction = if (maxPaid > 0) (paid.toFloat() / maxPaid) else 0f
+                                            Box(modifier = Modifier.fillMaxWidth(fraction = fraction.coerceIn(0f, 1f)).height(10.dp).clip(RoundedCornerShape(5.dp)).background(barColor))
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }

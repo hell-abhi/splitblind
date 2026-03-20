@@ -2068,51 +2068,40 @@ function buildCategorySection(tagSorted,tagAmts,displayTotal,tagColors,prefix,ca
 function buildMonthSection(monthAmts,monthKeys,monthNames,monthExpCounts,prefix,monthView){
     const monthMax=Math.max(...Object.values(monthAmts),1);
     let h=`<div class="analytics-card"><h3>&#x1F4C5; By Month</h3>`;
-    h+=`<div class="chart-toggle"><button class="chart-toggle-btn${monthView==='chart'?' active':''}" data-monthview="chart" data-prefix="${prefix}">Chart</button><button class="chart-toggle-btn${monthView==='table'?' active':''}" data-monthview="table" data-prefix="${prefix}">Table</button></div>`;
-    if(monthView==='chart'){
-        const monthVals=monthKeys.map(k=>monthAmts[k]);
-        monthKeys.forEach((key,idx)=>{
-            const amt=monthAmts[key];
-            const pct=monthMax>0?(amt/monthMax*100):0;
-            const m=parseInt(key.split('-')[1])-1;
-            const yr=key.split('-')[0].slice(2);
-            let changeHtml='';
-            if(idx>0){
-                const prevAmt=monthVals[idx-1];
-                if(prevAmt>0){
-                    const chg=Math.round((amt-prevAmt)/prevAmt*100);
-                    if(chg>0) changeHtml=` <span class="trend-up" style="font-size:11px;font-weight:700">&uarr;${chg}%</span>`;
-                    else if(chg<0) changeHtml=` <span class="trend-down" style="font-size:11px;font-weight:700">&darr;${Math.abs(chg)}%</span>`;
-                }
+    h+=`<div class="chart-toggle"><button class="chart-toggle-btn${monthView==='chart'?' active':''}" data-monthview="chart" data-prefix="${prefix}">Bars</button><button class="chart-toggle-btn${monthView==='table'?' active':''}" data-monthview="table" data-prefix="${prefix}">Details</button></div>`;
+    const monthVals=monthKeys.map(k=>monthAmts[k]);
+    monthKeys.forEach((key,idx)=>{
+        const amt=monthAmts[key];
+        const pct=monthMax>0?(amt/monthMax*100):0;
+        const m=parseInt(key.split('-')[1])-1;
+        const yr=key.split('-')[0].slice(2);
+        let changeHtml='';
+        if(idx>0){
+            const prevAmt=monthVals[idx-1];
+            if(prevAmt>0){
+                const chg=Math.round((amt-prevAmt)/prevAmt*100);
+                if(chg>0) changeHtml=` <span class="trend-up" style="font-size:11px;font-weight:700">&uarr;${chg}%</span>`;
+                else if(chg<0) changeHtml=` <span class="trend-down" style="font-size:11px;font-weight:700">&darr;${Math.abs(chg)}%</span>`;
             }
-            h+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;font-weight:600">${monthNames[m]} '${yr}${changeHtml}</span><span style="font-size:12px;color:var(--text-secondary)">${fmt(amt)}</span></div>`;
-            h+=`<div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,3)}%;background:var(--primary)"><span></span></div></div>`;
-            h+=`</div>`;
-        });
-    } else {
-        // Table view
-        h+=`<table class="stats-table"><tr><th>Month</th><th>Expenses</th><th>Amount</th><th>Avg</th></tr>`;
-        monthKeys.forEach(key=>{
-            const amt=monthAmts[key];
-            const m=parseInt(key.split('-')[1])-1;
-            const yr=key.split('-')[0];
-            const cnt=monthExpCounts[key]||0;
-            const avg=cnt>0?Math.round(amt/cnt):0;
-            h+=`<tr><td>${monthNames[m]} ${yr}</td><td>${cnt}</td><td>${fmt(amt)}</td><td>${fmt(avg)}</td></tr>`;
-        });
-        h+=`</table>`;
-    }
+        }
+        const cnt=monthExpCounts[key]||0;
+        const detailText=monthView==='table'?`<span style="font-size:11px;color:var(--text-secondary);margin-left:6px">(${cnt} expense${cnt!==1?'s':''})</span>`:'';
+        h+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;font-weight:600">${monthNames[m]} '${yr}${changeHtml}</span><span style="font-size:12px;color:var(--text-secondary)">${fmt(amt)}${detailText}</span></div>`;
+        h+=`<div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,3)}%;background:var(--primary)"><span></span></div></div>`;
+        h+=`</div>`;
+    });
     h+=`</div>`;
     return h;
 }
 
-function buildMemberDonut(memberPaid,nameMap,prefix){
+function buildMemberSection(memberPaid,nameMap,prefix){
     const paidSorted=Object.entries(memberPaid).sort((a,b)=>b[1]-a[1]);
     const totalPaid=paidSorted.reduce((a,[,v])=>a+v,0)||1;
     const memberCount=paidSorted.length;
     const pctEntries=paidSorted.map(([id,amt])=>[id,amt/totalPaid*100]);
     const gradient=buildDonutGradient(pctEntries,id=>getColor(id));
     let h=`<div class="analytics-card"><h3>&#x1F4B3; By Member</h3>`;
+    // Donut chart
     h+=`<div class="donut-container"><div class="donut" style="background:${gradient}"><div class="donut-hole"><div style="font-size:22px;font-weight:800">${memberCount}</div><div style="font-size:10px;color:var(--text-secondary);font-weight:600">member${memberCount!==1?'s':''}</div></div></div>`;
     h+=`<div class="donut-legend">`;
     paidSorted.forEach(([id,amt])=>{
@@ -2120,7 +2109,18 @@ function buildMemberDonut(memberPaid,nameMap,prefix){
         const pct=Math.round(amt/totalPaid*100);
         h+=`<div class="donut-legend-item"><span class="donut-legend-dot" style="background:${col}"></span><span style="flex:1">${esc(nameMap[id]||id.slice(0,8))}</span><span style="font-weight:700">${fmt(amt)}</span><span style="color:var(--text-secondary)">${pct}%</span></div>`;
     });
-    h+=`</div></div></div>`;
+    h+=`</div></div>`;
+    // Progress bars below donut
+    const maxPaid=paidSorted.length>0?paidSorted[0][1]:1;
+    h+=`<div style="margin-top:16px">`;
+    paidSorted.forEach(([id,amt])=>{
+        const col=getColor(id);
+        const pct=maxPaid>0?(amt/maxPaid*100):0;
+        h+=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:13px;font-weight:600">${esc(nameMap[id]||id.slice(0,8))}</span><span style="font-size:12px;color:var(--text-secondary)">${fmt(amt)}</span></div>`;
+        h+=`<div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(pct,3)}%;background:${col}"><span></span></div></div>`;
+        h+=`</div>`;
+    });
+    h+=`</div></div>`;
     return h;
 }
 
@@ -2253,7 +2253,7 @@ async function renderAnalyticsTab(){
             else{memberPaid[e.paidBy]=(memberPaid[e.paidBy]||0)+e.amountCents}
         });
         if(Object.keys(memberPaid).length){
-            html+=buildMemberDonut(memberPaid,globalNm,'at');
+            html+=buildMemberSection(memberPaid,globalNm,'at');
         }
     }
 
@@ -2761,7 +2761,7 @@ async function renderGroupAnalytics(){
             else{memberPaid[e.paidBy]=(memberPaid[e.paidBy]||0)+e.amountCents}
         });
         if(Object.keys(memberPaid).length){
-            html+=buildMemberDonut(memberPaid,nm,'ga');
+            html+=buildMemberSection(memberPaid,nm,'ga');
         }
     }
 
@@ -3256,7 +3256,7 @@ async function renderAnalytics(){
         else{memberPaid[e.paidBy]=(memberPaid[e.paidBy]||0)+e.amountCents}
     });
     if(Object.keys(memberPaid).length){
-        html+=buildMemberDonut(memberPaid,globalNm,'la');
+        html+=buildMemberSection(memberPaid,globalNm,'la');
     }
 
     el.innerHTML=html;
