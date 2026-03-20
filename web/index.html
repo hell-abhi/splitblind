@@ -480,6 +480,17 @@
         .modal-btn-undo {
             background:rgba(255,165,0,0.1); color:#E67E22;
         }
+
+        /* History */
+        .history-toggle { font-size:12px; color:var(--primary); cursor:pointer; font-weight:600; margin-top:6px; user-select:none; }
+        .history-log { padding:8px 0 0; border-top:1px solid var(--border); margin-top:8px; }
+        .history-entry { font-size:12px; color:var(--text-secondary); padding:4px 0; display:flex; align-items:center; gap:6px; }
+        .history-detail { font-size:11px; color:var(--text-secondary); opacity:0.7; display:block; padding-left:20px; }
+        .deleted-card { opacity:0.5; }
+        .deleted-card .card-t, .deleted-card .exp-a { text-decoration:line-through; }
+        .deleted-badge { display:inline-block; padding:2px 8px; border-radius:8px; font-size:10px; font-weight:700; background:rgba(255,107,107,0.12); color:var(--negative); text-transform:uppercase; letter-spacing:0.3px; margin-left:6px; }
+        .restore-btn { background:var(--primary-bg); border:none; color:var(--primary); font-size:11px; font-weight:700; padding:5px 12px; border-radius:8px; cursor:pointer; font-family:'Inter',sans-serif; margin-top:6px; transition:all .2s; }
+        .restore-btn:active { transform:scale(.95); }
     </style>
 </head>
 <body>
@@ -770,11 +781,46 @@ function b64Buf(s){const d=atob(s),b=new Uint8Array(d.length);for(let i=0;i<d.le
 
 // IDB
 let db;
-function openDB(){return new Promise((res,rej)=>{const r=indexedDB.open('splitblind',3);r.onupgradeneeded=e=>{const d=e.target.result;['identity','processedOps','shortcodes'].forEach(n=>{if(!d.objectStoreNames.contains(n))d.createObjectStore(n)});[['groups','groupId'],['expenses','expenseId'],['settlements','settlementId']].forEach(([n,k])=>{if(!d.objectStoreNames.contains(n))d.createObjectStore(n,{keyPath:k})});if(!d.objectStoreNames.contains('members'))d.createObjectStore('members',{keyPath:'_key'})};r.onsuccess=()=>{db=r.result;res(db)};r.onerror=()=>rej(r.error)})}
+function openDB(){return new Promise((res,rej)=>{const r=indexedDB.open('splitblind',4);r.onupgradeneeded=e=>{const d=e.target.result;['identity','processedOps','shortcodes'].forEach(n=>{if(!d.objectStoreNames.contains(n))d.createObjectStore(n)});[['groups','groupId'],['expenses','expenseId'],['settlements','settlementId']].forEach(([n,k])=>{if(!d.objectStoreNames.contains(n))d.createObjectStore(n,{keyPath:k})});if(!d.objectStoreNames.contains('members'))d.createObjectStore('members',{keyPath:'_key'});if(!d.objectStoreNames.contains('history'))d.createObjectStore('history',{keyPath:'historyId'})};r.onsuccess=()=>{db=r.result;res(db)};r.onerror=()=>rej(r.error)})}
 function iP(s,d){return new Promise((r,j)=>{const t=db.transaction(s,'readwrite');t.objectStore(s).put(d);t.oncomplete=()=>r();t.onerror=()=>j(t.error)})}
 function iPK(s,k,v){return new Promise((r,j)=>{const t=db.transaction(s,'readwrite');t.objectStore(s).put(v,k);t.oncomplete=()=>r();t.onerror=()=>j(t.error)})}
 function iG(s,k){return new Promise((r,j)=>{const t=db.transaction(s,'readonly');const q=t.objectStore(s).get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error)})}
 function iA(s){return new Promise((r,j)=>{const t=db.transaction(s,'readonly');const q=t.objectStore(s).getAll();q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error)})}
+
+// History helpers
+async function saveHistory(entry){
+    await iP('history',entry);
+    // Push as Firebase op so it syncs across devices
+    if(curGroup&&curGroupKey){
+        await pushOp(curGroup,curGroupKey,{id:uid(),type:'history',data:entry,hlc:Date.now(),author:myId});
+    }
+}
+function makeHistoryEntry(opts){
+    return{
+        historyId:uid(),
+        expenseId:opts.expenseId||null,
+        settlementId:opts.settlementId||null,
+        entityType:opts.entityType,
+        action:opts.action,
+        previousData:opts.previousData||null,
+        newData:opts.newData||null,
+        changedBy:myId,
+        changedByName:myName,
+        changedAt:Date.now(),
+        groupId:curGroup
+    };
+}
+function computeChanges(prev,next){
+    if(!prev||!next)return[];
+    const changes=[];
+    if(prev.description!==next.description)changes.push({field:'Description',from:prev.description,to:next.description});
+    if(prev.amountCents!==next.amountCents)changes.push({field:'Amount',from:fmt(prev.amountCents),to:fmt(next.amountCents)});
+    if(prev.tag!==next.tag){const pt=prev.tag&&TAGS[prev.tag]?TAGS[prev.tag].label:(prev.tag||'None');const nt=next.tag&&TAGS[next.tag]?TAGS[next.tag].label:(next.tag||'None');changes.push({field:'Category',from:pt,to:nt})}
+    if(prev.paidBy!==next.paidBy)changes.push({field:'Paid by',from:prev.paidBy,to:next.paidBy});
+    if(JSON.stringify(prev.splitAmong||[])!==JSON.stringify(next.splitAmong||[]))changes.push({field:'Split among',from:'changed',to:'updated'});
+    if((prev.splitMode||'equal')!==(next.splitMode||'equal'))changes.push({field:'Split mode',from:prev.splitMode||'equal',to:next.splitMode||'equal'});
+    return changes;
+}
 
 // Identity
 let myId='',myName='';
@@ -829,7 +875,7 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
 // Firebase sync
 let syncRef=null;
 async function pushOp(gid,key,op){const e=await enc(key,op);e.t=firebase.database.ServerValue.TIMESTAMP;return fbDb.ref('groups/'+gid+'/ops').push(e)}
-async function processOp(op,gid){if(await iG('processedOps',op.id))return false;if(op.type==='member_join'){const k=gid+'_'+op.data.memberId;const ex=await iG('members',k);if(!ex||op.hlc>ex.hlcTimestamp)await iP('members',{_key:k,groupId:gid,memberId:op.data.memberId,displayName:op.data.displayName,joinedAt:op.data.joinedAt,isDeleted:false,hlcTimestamp:op.hlc})}else if(op.type==='expense'){const ex=await iG('expenses',op.data.expenseId);if(!ex||op.hlc>ex.hlcTimestamp)await iP('expenses',{...op.data,hlcTimestamp:op.hlc})}else if(op.type==='settlement'){const ex=await iG('settlements',op.data.settlementId);if(!ex||op.hlc>ex.hlcTimestamp)await iP('settlements',{...op.data,hlcTimestamp:op.hlc})}await iPK('processedOps',op.id,true);return true}
+async function processOp(op,gid){if(await iG('processedOps',op.id))return false;if(op.type==='member_join'){const k=gid+'_'+op.data.memberId;const ex=await iG('members',k);if(!ex||op.hlc>ex.hlcTimestamp)await iP('members',{_key:k,groupId:gid,memberId:op.data.memberId,displayName:op.data.displayName,joinedAt:op.data.joinedAt,isDeleted:false,hlcTimestamp:op.hlc})}else if(op.type==='expense'){const ex=await iG('expenses',op.data.expenseId);if(!ex||op.hlc>ex.hlcTimestamp)await iP('expenses',{...op.data,hlcTimestamp:op.hlc})}else if(op.type==='settlement'){const ex=await iG('settlements',op.data.settlementId);if(!ex||op.hlc>ex.hlcTimestamp)await iP('settlements',{...op.data,hlcTimestamp:op.hlc})}else if(op.type==='history'){const ex=await iG('history',op.data.historyId);if(!ex)await iP('history',op.data)}await iPK('processedOps',op.id,true);return true}
 async function fullSync(gid,key){
     // Pull ALL ops from Firebase and process them (ignoring processedOps cache)
     try{
@@ -851,6 +897,9 @@ async function fullSync(gid,key){
                 }else if(op.type==='settlement'){
                     const ex=await iG('settlements',op.data.settlementId);
                     if(!ex||op.hlc>ex.hlcTimestamp){await iP('settlements',{...op.data,hlcTimestamp:op.hlc});changed=true}
+                }else if(op.type==='history'){
+                    const ex=await iG('history',op.data.historyId);
+                    if(!ex){await iP('history',op.data);changed=true}
                 }
                 await iPK('processedOps',op.id,true);
             }catch(e){console.warn('Op decrypt failed:',e)}
@@ -1069,6 +1118,9 @@ function confirmDeleteExpense(eid){
 async function deleteExpense(eid){
     const expense=expenseLookup[eid];if(!expense)return;
     const now=Date.now();
+    // Save history before deleting
+    const prevData={...expense};delete prevData.hlcTimestamp;
+    await saveHistory(makeHistoryEntry({expenseId:eid,entityType:'expense',action:'deleted',previousData:prevData,newData:null}));
     const data={...expense,isDeleted:true};
     delete data.hlcTimestamp;
     await iP('expenses',{...data,hlcTimestamp:now});
@@ -1169,6 +1221,9 @@ function showSettlementActions(settlement,nm){
 async function undoSettlement(sid){
     const settlement=settlementLookup[sid];if(!settlement)return;
     const now=Date.now();
+    // Save history before undoing
+    const prevData={...settlement};delete prevData.hlcTimestamp;
+    await saveHistory(makeHistoryEntry({settlementId:sid,entityType:'settlement',action:'deleted',previousData:prevData,newData:null}));
     const data={...settlement,isDeleted:true};
     delete data.hlcTimestamp;
     await iP('settlements',{...data,hlcTimestamp:now});
@@ -1191,40 +1246,127 @@ async function renderGroups(){
 
 async function openGroup(gid){curGroup=gid;const g=await iG('groups',gid);if(!g)return;curGroupKey=g.groupKeyBase64;document.getElementById('gd-title').textContent=g.name;show('gd');startSync(gid,curGroupKey);switchTab('exp')}
 
+async function restoreExpense(eid){
+    const expense=await iG('expenses',eid);if(!expense)return;
+    const now=Date.now();
+    const data={...expense,isDeleted:false};delete data.hlcTimestamp;
+    await saveHistory(makeHistoryEntry({expenseId:eid,entityType:'expense',action:'created',previousData:null,newData:data}));
+    await iP('expenses',{...data,hlcTimestamp:now});
+    await pushOp(curGroup,curGroupKey,{id:uid(),type:'expense',data,hlc:now,author:myId});
+    refreshTab();toast('Expense restored');
+}
+async function restoreSettlement(sid){
+    const settlement=await iG('settlements',sid);if(!settlement)return;
+    const now=Date.now();
+    const data={...settlement,isDeleted:false};delete data.hlcTimestamp;
+    await saveHistory(makeHistoryEntry({settlementId:sid,entityType:'settlement',action:'created',previousData:null,newData:data}));
+    await iP('settlements',{...data,hlcTimestamp:now});
+    await pushOp(curGroup,curGroupKey,{id:uid(),type:'settlement',data,hlc:now,author:myId});
+    refreshTab();toast('Settlement restored');
+}
+function renderHistoryHtml(entries,nm){
+    if(!entries.length)return'';
+    const sorted=entries.sort((a,b)=>b.changedAt-a.changedAt);
+    const actionIcons={created:'\u{1F4DD}',edited:'\u270F\uFE0F',deleted:'\u{1F5D1}\uFE0F'};
+    const actionLabels={created:'Created',edited:'Edited',deleted:'Deleted'};
+    let html='<div class="history-log">';
+    sorted.forEach(h=>{
+        const icon=actionIcons[h.action]||'\u{1F4CB}';
+        const label=actionLabels[h.action]||h.action;
+        const byName=esc(h.changedByName||nm[h.changedBy]||h.changedBy.slice(0,8));
+        const dateStr=new Date(h.changedAt).toLocaleDateString('en',{month:'short',day:'numeric'});
+        html+=`<div class="history-entry">${icon} ${label} by ${byName} \u00B7 ${dateStr}</div>`;
+        if(h.action==='edited'&&h.previousData&&h.newData){
+            const changes=computeChanges(h.previousData,h.newData);
+            changes.forEach(c=>{
+                if(c.field==='Split among'||c.field==='Split mode'){
+                    html+=`<span class="history-detail">${esc(c.field)}: ${esc(c.to)}</span>`;
+                }else{
+                    html+=`<span class="history-detail">${esc(c.field)}: ${esc(c.from)} \u2192 ${esc(c.to)}</span>`;
+                }
+            });
+        }
+    });
+    html+='</div>';
+    return html;
+}
 async function renderExpenses(){
-    const exps=(await iA('expenses')).filter(e=>e.groupId===curGroup&&!e.isDeleted);
-    const sets=(await iA('settlements')).filter(s=>s.groupId===curGroup&&!s.isDeleted);
+    const allExps=(await iA('expenses')).filter(e=>e.groupId===curGroup);
+    const allSets=(await iA('settlements')).filter(s=>s.groupId===curGroup);
+    const allHistory=(await iA('history')).filter(h=>h.groupId===curGroup);
     const mems=(await iA('members')).filter(m=>m.groupId===curGroup);const nm={};mems.forEach(m=>nm[m.memberId]=m.displayName);
+    // Build history lookup by expenseId/settlementId
+    const histByExpense={},histBySettlement={};
+    allHistory.forEach(h=>{
+        if(h.expenseId){if(!histByExpense[h.expenseId])histByExpense[h.expenseId]=[];histByExpense[h.expenseId].push(h)}
+        if(h.settlementId){if(!histBySettlement[h.settlementId])histBySettlement[h.settlementId]=[];histBySettlement[h.settlementId].push(h)}
+    });
+    // Active items
+    const exps=allExps.filter(e=>!e.isDeleted);
+    const sets=allSets.filter(s=>!s.isDeleted);
+    // Deleted items that have history (so users can see what was deleted)
+    const deletedExps=allExps.filter(e=>e.isDeleted&&histByExpense[e.expenseId]);
+    const deletedSets=allSets.filter(s=>s.isDeleted&&histBySettlement[s.settlementId]);
     // Build lookup maps
     expenseLookup={};exps.forEach(e=>expenseLookup[e.expenseId]=e);
     settlementLookup={};sets.forEach(s=>settlementLookup[s.settlementId]=s);
     // Merge expenses and settlements into one timeline
     const items=[];
-    exps.forEach(e=>items.push({type:'expense',data:e,ts:e.createdAt}));
-    sets.forEach(s=>items.push({type:'settlement',data:s,ts:s.createdAt}));
+    exps.forEach(e=>items.push({type:'expense',data:e,ts:e.createdAt,deleted:false}));
+    sets.forEach(s=>items.push({type:'settlement',data:s,ts:s.createdAt,deleted:false}));
+    deletedExps.forEach(e=>items.push({type:'expense',data:e,ts:e.createdAt,deleted:true}));
+    deletedSets.forEach(s=>items.push({type:'settlement',data:s,ts:s.createdAt,deleted:true}));
     items.sort((a,b)=>b.ts-a.ts);
     const el=document.getElementById('t-exp');
     if(!items.length){el.innerHTML='<div class="empty"><div class="ic">&#x1F9FE;</div><h3>No activity yet</h3><p>Tap + to add your first expense</p></div>';return}
     el.innerHTML=items.map(item=>{
+        const isDeleted=item.deleted;
+        const delClass=isDeleted?' deleted-card':'';
+        const delBadge=isDeleted?'<span class="deleted-badge">Deleted</span>':'';
         if(item.type==='expense'){
             const e=item.data;
+            const hist=histByExpense[e.expenseId]||[];
             const ts=getTagStyle(e.tag);const st=ts?{icon:ts.icon,bg:ts.bg}:getExpStyle(e.description);
             let paidStr;
             if(e.paidByMap){const names=Object.keys(e.paidByMap).map(id=>esc(nm[id]||id.slice(0,8)));paidStr='Paid by '+names.join(', ')}
             else{paidStr='Paid by '+esc(nm[e.paidBy]||e.paidBy.slice(0,8))}
             const tagHtml=ts?`<div class="tag-pill-sm" style="background:${ts.bg};color:var(--text)">${ts.icon} ${ts.label}</div>`:'';
             const splitHtml=e.splitMode&&e.splitMode!=='equal'?`<div class="exp-split-info">${e.splitMode==='amount'?'By amount':e.splitMode==='percentage'?'By %':'By ratio'}</div>`:'';
-            return`<div class="card exp-c" data-eid="${e.expenseId}"><div class="exp-left"><div class="exp-icon" style="background:${st.bg}">${st.icon}</div><div><div class="card-t">${esc(e.description)}</div><div class="card-s">${paidStr}</div>${tagHtml}${splitHtml}</div></div><div><div class="exp-a">${fmt(e.amountCents)}</div><div class="exp-d">${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div>`;
+            const histToggle=hist.length?`<div class="history-toggle" data-hist-target="hist-${e.expenseId}">\u{1F4CB} History (${hist.length})</div><div id="hist-${e.expenseId}" style="display:none">${renderHistoryHtml(hist,nm)}${isDeleted?`<button class="restore-btn" data-restore-eid="${e.expenseId}">\u21A9 Restore</button>`:''}</div>`:(isDeleted?`<button class="restore-btn" data-restore-eid="${e.expenseId}">\u21A9 Restore</button>`:'');
+            return`<div class="card${delClass}" data-eid="${e.expenseId}"><div class="exp-c"><div class="exp-left"><div class="exp-icon" style="background:${st.bg}">${st.icon}</div><div><div class="card-t">${esc(e.description)}${delBadge}</div><div class="card-s">${paidStr}</div>${tagHtml}${splitHtml}</div></div><div><div class="exp-a">${fmt(e.amountCents)}</div><div class="exp-d">${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div>${histToggle}</div>`;
         }else{
             const s=item.data;
+            const hist=histBySettlement[s.settlementId]||[];
             const fromName=esc(nm[s.fromMember]||s.fromMember.slice(0,8));
             const toName=esc(nm[s.toMember]||s.toMember.slice(0,8));
-            return`<div class="card exp-c" data-sid="${s.settlementId}" style="border-left:3px solid var(--positive)"><div class="exp-left"><div class="exp-icon" style="background:rgba(107,203,119,0.12)">&#x1F91D;</div><div><div class="card-t">Settlement</div><div class="card-s">${fromName} paid ${toName}</div></div></div><div><div class="exp-a" style="color:var(--positive)">${fmt(s.amountCents)}</div><div class="exp-d">${new Date(s.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div>`;
+            const histToggle=hist.length?`<div class="history-toggle" data-hist-target="hist-${s.settlementId}">\u{1F4CB} History (${hist.length})</div><div id="hist-${s.settlementId}" style="display:none">${renderHistoryHtml(hist,nm)}${isDeleted?`<button class="restore-btn" data-restore-sid="${s.settlementId}">\u21A9 Restore</button>`:''}</div>`:(isDeleted?`<button class="restore-btn" data-restore-sid="${s.settlementId}">\u21A9 Restore</button>`:'');
+            return`<div class="card${delClass}" data-sid="${s.settlementId}" style="border-left:3px solid var(--positive)"><div class="exp-c"><div class="exp-left"><div class="exp-icon" style="background:rgba(107,203,119,0.12)">&#x1F91D;</div><div><div class="card-t">Settlement${delBadge}</div><div class="card-s">${fromName} paid ${toName}</div></div></div><div><div class="exp-a" style="color:var(--positive)">${fmt(s.amountCents)}</div><div class="exp-d">${new Date(s.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div>${histToggle}</div>`;
         }
     }).join('');
-    // Attach click handlers
-    el.querySelectorAll('[data-eid]').forEach(c=>c.addEventListener('click',()=>{const e=expenseLookup[c.dataset.eid];if(e)showExpenseActions(e,nm)}));
-    el.querySelectorAll('[data-sid]').forEach(c=>c.addEventListener('click',()=>{const s=settlementLookup[c.dataset.sid];if(s)showSettlementActions(s,nm)}));
+    // Attach click handlers for non-deleted expense/settlement cards (click on the exp-c row)
+    el.querySelectorAll('[data-eid]:not(.deleted-card)').forEach(c=>{
+        const expC=c.querySelector('.exp-c');
+        if(expC)expC.addEventListener('click',()=>{const e=expenseLookup[c.dataset.eid];if(e)showExpenseActions(e,nm)});
+    });
+    el.querySelectorAll('[data-sid]:not(.deleted-card)').forEach(c=>{
+        const expC=c.querySelector('.exp-c');
+        if(expC)expC.addEventListener('click',()=>{const s=settlementLookup[c.dataset.sid];if(s)showSettlementActions(s,nm)});
+    });
+    // History toggle handlers
+    el.querySelectorAll('.history-toggle').forEach(t=>{
+        t.addEventListener('click',ev=>{
+            ev.stopPropagation();
+            const target=document.getElementById(t.dataset.histTarget);
+            if(target){target.style.display=target.style.display==='none'?'':'none';t.textContent=target.style.display==='none'?t.textContent.replace('\u25B2','\u25BC'):t.textContent.replace('\u25BC','\u25B2')}
+        });
+    });
+    // Restore button handlers
+    el.querySelectorAll('[data-restore-eid]').forEach(b=>{
+        b.addEventListener('click',ev=>{ev.stopPropagation();restoreExpense(b.dataset.restoreEid)});
+    });
+    el.querySelectorAll('[data-restore-sid]').forEach(b=>{
+        b.addEventListener('click',ev=>{ev.stopPropagation();restoreSettlement(b.dataset.restoreSid)});
+    });
 }
 
 async function renderBalances(){
@@ -1556,11 +1698,18 @@ function wireEvents(){
         const finalEid=isEdit?editingExpense.expenseId:eid;
         const createdAt=isEdit?editingExpense.createdAt:now;
         const data={expenseId:finalEid,groupId:curGroup,description:desc,amountCents:amtC,currency:'INR',paidBy,splitAmong:split,createdAt,isDeleted:false,tag,paidByMap,splitMode,splitDetails};
+        // Save history
+        if(isEdit){
+            const prevData={...editingExpense};delete prevData.hlcTimestamp;
+            await saveHistory(makeHistoryEntry({expenseId:finalEid,entityType:'expense',action:'edited',previousData:prevData,newData:data}));
+        }else{
+            await saveHistory(makeHistoryEntry({expenseId:finalEid,entityType:'expense',action:'created',previousData:null,newData:data}));
+        }
         await iP('expenses',{...data,hlcTimestamp:now});await pushOp(curGroup,curGroupKey,{id:uid(),type:'expense',data,hlc:now,author:myId});
         editingExpense=null;
         goBack();switchTab('exp');toast(isEdit?'Expense updated!':'Expense added!')
     });
-    document.getElementById('stl-btn').addEventListener('click',async()=>{const now=Date.now(),sid=uid(),data={settlementId:sid,groupId:curGroup,fromMember:settleData.from,toMember:settleData.to,amountCents:settleData.amountCents,createdAt:now,isDeleted:false};await iP('settlements',{...data,hlcTimestamp:now});await pushOp(curGroup,curGroupKey,{id:uid(),type:'settlement',data,hlc:now,author:myId});goBack();switchTab('bal');toast('Settled!')});
+    document.getElementById('stl-btn').addEventListener('click',async()=>{const now=Date.now(),sid=uid(),data={settlementId:sid,groupId:curGroup,fromMember:settleData.from,toMember:settleData.to,amountCents:settleData.amountCents,createdAt:now,isDeleted:false};await saveHistory(makeHistoryEntry({settlementId:sid,entityType:'settlement',action:'created',previousData:null,newData:data}));await iP('settlements',{...data,hlcTimestamp:now});await pushOp(curGroup,curGroupKey,{id:uid(),type:'settlement',data,hlc:now,author:myId});goBack();switchTab('bal');toast('Settled!')});
 }
 
 // Init
