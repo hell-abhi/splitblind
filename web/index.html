@@ -1252,6 +1252,15 @@
             <p id="sr-error" style="color:var(--negative);text-align:center;margin-top:12px;font-size:14px;font-weight:600;display:none"></p>
         </div>
     </div>
+
+    <!-- Scan QR -->
+    <div class="screen" id="s-scan-qr">
+        <div class="topbar"><button class="back" id="scan-back">&#x2190;</button><h1>Scan QR Code</h1></div>
+        <div class="content" style="display:flex;flex-direction:column;align-items:center;padding-top:8px;overflow:hidden">
+            <p style="text-align:center;color:var(--text-secondary);padding:4px 0 8px;font-size:13px;font-weight:500">Point your camera at a SplitBlind QR code</p>
+            <div id="qr-reader" style="width:100%;max-width:min(400px,100%);aspect-ratio:1;border-radius:16px;overflow:hidden"></div>
+        </div>
+    </div>
 </div>
 
 <div class="modal-overlay" id="modal" style="display:none" onclick="if(event.target===this)closeModal()">
@@ -1267,15 +1276,6 @@
     <button class="nav-tab" data-tab="analytics-tab"><span class="nav-icon">&#x1F4CA;</span>Analytics</button>
     <button class="nav-tab" data-tab="profile"><span class="nav-icon">&#x1F464;</span>Profile</button>
 </nav>
-
-<!-- Scan QR -->
-<div class="screen" id="s-scan-qr">
-    <div class="topbar"><button class="back" id="scan-back">&#x2190;</button><h1>Scan QR Code</h1></div>
-    <div class="content" style="display:flex;flex-direction:column;align-items:center;padding-top:8px;overflow:hidden">
-        <p style="text-align:center;color:var(--text-secondary);padding:4px 0 8px;font-size:13px;font-weight:500">Point your camera at a SplitBlind QR code</p>
-        <div id="qr-reader" style="width:100%;max-width:min(400px,100%);aspect-ratio:1;border-radius:16px;overflow:hidden"></div>
-    </div>
-</div>
 
 <!-- QR Modal -->
 <div id="qr-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);align-items:center;justify-content:center" onclick="closeQrModal()">
