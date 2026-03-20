@@ -1259,6 +1259,21 @@
         <div class="content" style="display:flex;flex-direction:column;align-items:center;padding-top:8px;overflow:hidden">
             <p style="text-align:center;color:var(--text-secondary);padding:4px 0 8px;font-size:13px;font-weight:500">Point your camera at a SplitBlind QR code</p>
             <div id="qr-reader" style="width:100%;max-width:min(400px,100%);aspect-ratio:1;border-radius:16px;overflow:hidden"></div>
+            <div id="qr-reader-file" style="display:none"></div>
+            <div id="qr-upload-section" style="text-align:center;margin-top:12px">
+                <p style="color:var(--text-secondary);font-size:12px;margin-bottom:8px">or</p>
+                <label class="btn btn-o" style="font-size:13px;display:inline-block;cursor:pointer;padding:10px 20px;border-radius:12px">
+                    &#x1F4C1; Upload QR Image
+                    <input type="file" accept="image/*" id="qr-file-input" style="display:none">
+                </label>
+            </div>
+            <div id="qr-upload-primary" style="display:none;text-align:center;margin-top:24px">
+                <p style="color:var(--text-secondary);font-size:14px;margin-bottom:12px">Camera not available. Upload a QR image instead:</p>
+                <label class="btn btn-p" style="font-size:15px;display:inline-block;cursor:pointer;padding:14px 28px;border-radius:14px">
+                    &#x1F4C1; Upload QR Image
+                    <input type="file" accept="image/*" id="qr-file-input-primary" style="display:none">
+                </label>
+            </div>
         </div>
     </div>
 </div>
@@ -1673,11 +1688,39 @@ async function shareQrImage(){
 }
 
 let qrScanner=null;
+function setupQrFileInput(inputId){
+    const inp=document.getElementById(inputId);
+    if(!inp||inp._bound)return;
+    inp._bound=true;
+    inp.addEventListener('change',async(e)=>{
+        const file=e.target.files[0];
+        if(!file)return;
+        try{
+            const scanner=new Html5Qrcode('qr-reader-file');
+            const result=await scanner.scanFile(file,false);
+            stopQrScanner();
+            await handleScannedUrl(result);
+        }catch(err){
+            toast('No QR code found in image');
+        }
+        inp.value='';
+    });
+}
 function openQrScanner(){
     stopQrScanner();
     // Clear any leftover content from previous scans
     document.getElementById('qr-reader').innerHTML='';
+    // Reset upload sections
+    const uploadSec=document.getElementById('qr-upload-section');
+    const uploadPri=document.getElementById('qr-upload-primary');
+    if(uploadSec)uploadSec.style.display='';
+    if(uploadPri)uploadPri.style.display='none';
     show('scan-qr');
+    // Wire file inputs
+    setTimeout(()=>{
+        setupQrFileInput('qr-file-input');
+        setupQrFileInput('qr-file-input-primary');
+    },100);
     setTimeout(()=>{
         const readerEl=document.getElementById('qr-reader');
         const w=readerEl.clientWidth;
@@ -1692,7 +1735,11 @@ function openQrScanner(){
             },
             ()=>{}
         ).catch(err=>{
-            toast('Camera not available');console.error('QR scan error:',err);goBack();
+            console.error('QR scan error:',err);
+            // Camera failed — hide camera section, show upload as primary
+            if(uploadSec)uploadSec.style.display='none';
+            if(uploadPri)uploadPri.style.display='';
+            document.getElementById('qr-reader').style.display='none';
         });
     },500);
 }
@@ -1964,11 +2011,65 @@ async function renderGroups(){
 }
 
 // Home tab render
+let homeSearchQuery='';
 async function renderHome(){
     const groups=(await iA('groups')).sort((a,b)=>b.createdAt-a.createdAt);
     const allExps=(await iA('expenses')).filter(e=>!e.isDeleted);
     const allSets=(await iA('settlements')).filter(s=>!s.isDeleted);
     const el=document.getElementById('home-content');
+
+    const allMembersArr=await iA('members');
+    const globalNm={};allMembersArr.forEach(m=>globalNm[m.memberId]=m.displayName);
+    const groupNameMap={};groups.forEach(g=>groupNameMap[g.groupId]=g.name);
+    const allM=allMembersArr;
+
+    // Search bar always at top
+    let html=`<div class="fg" style="margin-bottom:12px">
+        <input type="text" id="home-search" placeholder="Search groups, expenses..." value="${esc(homeSearchQuery)}" style="width:100%;padding:12px 16px;border-radius:14px;border:1.5px solid var(--border);background:var(--card);font-size:14px;font-family:Inter,sans-serif;color:var(--text);outline:none;transition:border .2s">
+    </div>`;
+
+    // If searching, show search results instead of normal home content
+    if(homeSearchQuery.trim()){
+        const q=homeSearchQuery.trim().toLowerCase();
+        const matchedGroups=groups.filter(g=>g.groupType!=='personal'&&!g.isPersonal&&g.groupType!=='iou'&&!g.isIOU&&g.name.toLowerCase().includes(q));
+        const matchedExps=allExps.filter(e=>e.description.toLowerCase().includes(q));
+
+        if(matchedGroups.length){
+            html+=`<div class="sec-t" style="margin-top:8px">Groups</div>`;
+            matchedGroups.forEach((g,i)=>{
+                const mc=allM.filter(m=>m.groupId===g.groupId&&!m.isDeleted).length;
+                const gExps=allExps.filter(e=>e.groupId===g.groupId);
+                const gSets=allSets.filter(s=>s.groupId===g.groupId);
+                const bal=calcBal(gExps,gSets);
+                const myBal=bal[myId]||0;
+                const balText=myBal>0?'<span style="color:var(--positive)">+'+fmt(myBal)+'</span>':myBal<0?'<span style="color:var(--negative)">'+fmt(myBal)+'</span>':'<span style="color:var(--text-secondary)">Settled</span>';
+                html+=`<div class="card group-card" data-g="${g.groupId}" style="cursor:pointer"><div class="group-icon gi-${(i%5)+1}">&#x1F46B;</div><div style="flex:1"><div class="card-t">${esc(g.name)}</div><div class="card-s">${mc} member${mc!==1?'s':''}</div></div><div style="text-align:right;font-weight:700;font-size:14px">${balText}</div></div>`;
+            });
+        }
+
+        if(matchedExps.length){
+            html+=`<div class="sec-t" style="margin-top:16px">Transactions</div>`;
+            matchedExps.sort((a,b)=>b.createdAt-a.createdAt).slice(0,20).forEach(e=>{
+                const ts=getTagStyle(e.tag);const st=ts?{icon:ts.icon,bg:ts.bg}:getExpStyle(e.description);
+                const gName=groupNameMap[e.groupId]||'';
+                const payer=e.paidBy===myId?'You':(globalNm[e.paidBy]||e.paidBy.slice(0,8));
+                html+=`<div class="card exp-c" data-g="${e.groupId}" style="cursor:pointer"><div class="exp-left"><div class="exp-icon" style="background:${st.bg}">${st.icon}</div><div><div class="card-t">${esc(e.description)}</div><div class="card-s">${esc(payer)} &middot; ${esc(gName)} &middot; ${new Date(e.createdAt).toLocaleDateString('en',{month:'short',day:'numeric'})}</div></div></div><div><div class="exp-a">${fmt(e.amountCents)}</div></div></div>`;
+            });
+        }
+
+        if(!matchedGroups.length&&!matchedExps.length){
+            html+=`<div class="empty" style="margin-top:32px"><div class="ic">&#x1F50D;</div><h3>No results</h3><p>Nothing matched "${esc(homeSearchQuery)}"</p></div>`;
+        }
+
+        el.innerHTML=html;
+        el.querySelectorAll('[data-g]').forEach(c=>c.addEventListener('click',()=>openGroup(c.dataset.g)));
+        const searchInput=document.getElementById('home-search');
+        if(searchInput){
+            searchInput.addEventListener('input',(ev)=>{homeSearchQuery=ev.target.value;renderHome()});
+            searchInput.focus();searchInput.setSelectionRange(searchInput.value.length,searchInput.value.length);
+        }
+        return;
+    }
 
     // Compute overall balances
     let totalOwed=0,totalOwe=0;
@@ -1983,7 +2084,7 @@ async function renderHome(){
     const net=totalOwed-totalOwe;
 
     // Summary card
-    let html=`<div class="dash-summary">
+    html+=`<div class="dash-summary">
         <h2>Your Overview</h2>
         <div class="dash-summary-row">
             <div class="dash-summary-item ds-owed"><div class="ds-amount">${fmt(totalOwed)}</div><div class="ds-label">You are owed</div></div>
@@ -2004,11 +2105,6 @@ async function renderHome(){
     }else{
         html+=`<div class="personal-tracker-card pt-empty" id="home-personal-create"><div class="pt-header"><div class="pt-icon">&#x1F4DD;</div><div><div class="pt-title">Personal Tracker</div><div class="pt-subtitle">Track your personal expenses</div></div></div><button class="pt-create-btn" id="home-pt-create-btn">Start Tracking</button></div>`;
     }
-
-    const allMembersArr=await iA('members');
-    const globalNm={};allMembersArr.forEach(m=>globalNm[m.memberId]=m.displayName);
-    const groupNameMap={};groups.forEach(g=>groupNameMap[g.groupId]=g.name);
-    const allM=await iA('members');
 
     // Latest Groups (3 most recent non-personal, non-IOU)
     const recentGroups=groups.filter(g=>g.groupType!=='personal'&&!g.isPersonal&&g.groupType!=='iou'&&!g.isIOU).slice(0,3);
@@ -2045,6 +2141,8 @@ async function renderHome(){
     el.querySelectorAll('[data-g]').forEach(c=>c.addEventListener('click',()=>openGroup(c.dataset.g)));
     const homePtBtn=document.getElementById('home-pt-create-btn');
     if(homePtBtn)homePtBtn.addEventListener('click',async(e)=>{e.stopPropagation();await createPersonalGroup();renderHome()});
+    const homeSearchInput=document.getElementById('home-search');
+    if(homeSearchInput)homeSearchInput.addEventListener('input',(ev)=>{homeSearchQuery=ev.target.value;renderHome()});
 }
 
 // Groups tab render

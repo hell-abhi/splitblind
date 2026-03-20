@@ -2,6 +2,9 @@ package com.akeshari.splitblind.ui.qr
 
 import android.Manifest
 import android.util.Log
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
@@ -15,17 +18,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,14 +60,44 @@ fun ScanQrScreen(
 ) {
     var hasCameraPermission by remember { mutableStateOf(false) }
     var hasScanned by remember { mutableStateOf(false) }
+    var cameraFailed by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
+    // Image picker for QR upload
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null && !hasScanned) {
+            try {
+                val image = InputImage.fromFilePath(context, uri)
+                val scanner = BarcodeScanning.getClient()
+                scanner.process(image)
+                    .addOnSuccessListener { barcodes ->
+                        val url = barcodes.firstOrNull { it.valueType == Barcode.TYPE_URL || it.valueType == Barcode.TYPE_TEXT }?.rawValue
+                        if (url != null && !hasScanned) {
+                            hasScanned = true
+                            onScanned(url)
+                        } else {
+                            Toast.makeText(context, "No QR code found in image", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    .addOnFailureListener {
+                        Toast.makeText(context, "No QR code found in image", Toast.LENGTH_SHORT).show()
+                    }
+            } catch (e: Exception) {
+                Log.e("ScanQr", "Failed to read image", e)
+                Toast.makeText(context, "Failed to read image", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     // Check permission
-    val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
         hasCameraPermission = granted
+        if (!granted) cameraFailed = true
     }
 
     LaunchedEffect(Unit) {
@@ -92,7 +129,7 @@ fun ScanQrScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            if (hasCameraPermission) {
+            if (hasCameraPermission && !cameraFailed) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -156,6 +193,7 @@ fun ScanQrScreen(
                                     )
                                 } catch (e: Exception) {
                                     Log.e("ScanQr", "Camera bind failed", e)
+                                    cameraFailed = true
                                 }
                             }, ContextCompat.getMainExecutor(ctx))
                             previewView
@@ -164,7 +202,7 @@ fun ScanQrScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
                     "Point your camera at a SplitBlind QR code",
@@ -173,20 +211,79 @@ fun ScanQrScreen(
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 16.dp)
+                        .padding(horizontal = 16.dp)
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Secondary upload option
+                Text(
+                    "or",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedButton(
+                    onClick = { imagePickerLauncher.launch("image/*") },
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .padding(bottom = 16.dp),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Image,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                    Text("Upload QR Image")
+                }
             } else {
+                // No camera — show upload as primary action
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        "Camera permission is required to scan QR codes",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.padding(32.dp)
-                    )
+                    ) {
+                        Text(
+                            if (cameraFailed) "Camera not available" else "Camera permission is required to scan QR codes",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Text(
+                            "Upload a QR image instead:",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Button(
+                            onClick = { imagePickerLauncher.launch("image/*") },
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Icon(
+                                Icons.Default.Image,
+                                contentDescription = null,
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            Text("Upload QR Image")
+                        }
+                    }
                 }
             }
         }

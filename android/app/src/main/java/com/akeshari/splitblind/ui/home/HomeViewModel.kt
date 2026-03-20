@@ -10,11 +10,13 @@ import com.akeshari.splitblind.data.database.dao.SettlementDao
 import com.akeshari.splitblind.data.database.entity.ExpenseEntity
 import com.akeshari.splitblind.data.database.entity.GroupEntity
 import com.akeshari.splitblind.data.database.entity.MemberEntity
+import com.akeshari.splitblind.data.database.entity.SettlementEntity
 import com.akeshari.splitblind.sync.OpData
 import com.akeshari.splitblind.sync.OpPayload
 import com.akeshari.splitblind.sync.SyncEngine
 import com.akeshari.splitblind.util.BalanceCalculator
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -30,6 +32,11 @@ data class GroupPreview(
     val myBalance: Long
 )
 
+data class ExpenseWithGroupName(
+    val expense: ExpenseEntity,
+    val groupName: String
+)
+
 data class HomeDashboardState(
     val totalOwed: Long = 0,
     val totalOwe: Long = 0,
@@ -37,7 +44,10 @@ data class HomeDashboardState(
     val recentExpenses: List<ExpenseEntity> = emptyList(),
     val latestGroups: List<GroupPreview> = emptyList(),
     val personalGroupId: String? = null,
-    val personalMonthSpend: Long = 0
+    val personalMonthSpend: Long = 0,
+    val searchQuery: String = "",
+    val allGroups: List<GroupPreview> = emptyList(),
+    val allExpenses: List<ExpenseWithGroupName> = emptyList()
 )
 
 @HiltViewModel
@@ -49,20 +59,39 @@ class HomeViewModel @Inject constructor(
     private val identity: Identity
 ) : ViewModel() {
 
+    private val _searchQuery = MutableStateFlow("")
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
     val dashboardState: StateFlow<HomeDashboardState> = combine(
         groupDao.getAllGroups(),
         expenseDao.getAllActiveExpenses(),
         settlementDao.getAllActiveSettlements(),
-        expenseDao.getRecentExpenses(5)
-    ) { groups, allExpenses, allSettlements, recentExpenses ->
+        expenseDao.getRecentExpenses(5),
+        _searchQuery
+    ) { args ->
+        @Suppress("UNCHECKED_CAST")
+        val groups = args[0] as List<GroupEntity>
+        @Suppress("UNCHECKED_CAST")
+        val allExpenses = args[1] as List<ExpenseEntity>
+        @Suppress("UNCHECKED_CAST")
+        val allSettlements = args[2] as List<SettlementEntity>
+        @Suppress("UNCHECKED_CAST")
+        val recentExpenses = args[3] as List<ExpenseEntity>
+        val searchQuery = args[4] as String
+
         val myId = identity.memberId
         val allMembers = groupDao.getAllMembersList()
 
         var totalOwed = 0L
         var totalOwe = 0L
         val groupPreviews = mutableListOf<GroupPreview>()
+        val groupNameMap = mutableMapOf<String, String>()
 
         for (group in groups) {
+            groupNameMap[group.groupId] = group.name
             val gExpenses = allExpenses.filter { it.groupId == group.groupId }
             val gSettlements = allSettlements.filter { it.groupId == group.groupId }
             val netBalances = BalanceCalculator.computeNetBalances(gExpenses, gSettlements)
@@ -94,6 +123,11 @@ class HomeViewModel @Inject constructor(
                 .sumOf { it.amountCents }
         } else 0L
 
+        // All expenses with group names for search
+        val allExpensesWithGroupName = allExpenses.map { exp ->
+            ExpenseWithGroupName(exp, groupNameMap[exp.groupId] ?: "")
+        }
+
         HomeDashboardState(
             totalOwed = totalOwed,
             totalOwe = totalOwe,
@@ -101,7 +135,10 @@ class HomeViewModel @Inject constructor(
             recentExpenses = recentExpenses.take(3),
             latestGroups = latestGroups,
             personalGroupId = personalGroup?.groupId,
-            personalMonthSpend = personalMonthSpend
+            personalMonthSpend = personalMonthSpend,
+            searchQuery = searchQuery,
+            allGroups = groupPreviews.sortedByDescending { it.group.createdAt },
+            allExpenses = allExpensesWithGroupName.sortedByDescending { it.expense.createdAt }
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeDashboardState())
 

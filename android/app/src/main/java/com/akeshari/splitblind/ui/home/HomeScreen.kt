@@ -27,8 +27,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -111,6 +114,11 @@ fun HomeScreen(
             }
         }
     ) { paddingValues ->
+        val isSearching = dashboard.searchQuery.isNotBlank()
+        val query = dashboard.searchQuery.lowercase()
+        val searchedGroups = if (isSearching) dashboard.allGroups.filter { it.group.name.lowercase().contains(query) } else emptyList()
+        val searchedExpenses = if (isSearching) dashboard.allExpenses.filter { it.expense.description.lowercase().contains(query) } else emptyList()
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -120,88 +128,232 @@ fun HomeScreen(
         ) {
             item { Spacer(modifier = Modifier.height(4.dp)) }
 
+            // Search bar
             item {
-                SummaryCard(
-                    totalOwed = dashboard.totalOwed,
-                    totalOwe = dashboard.totalOwe,
-                    netBalance = dashboard.netBalance
+                OutlinedTextField(
+                    value = dashboard.searchQuery,
+                    onValueChange = { viewModel.setSearchQuery(it) },
+                    placeholder = { Text("Search groups, expenses...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                    trailingIcon = {
+                        if (dashboard.searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.setSearchQuery("") }) {
+                                Icon(Icons.Default.Clear, contentDescription = "Clear")
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
 
-            // Personal Tracker summary card
-            if (dashboard.personalGroupId != null) {
-                item {
-                    PersonalTrackerSummaryCard(
-                        monthSpend = dashboard.personalMonthSpend,
-                        onClick = {
-                            dashboard.personalGroupId?.let { onPersonalTrackerClick?.invoke(it) }
-                        }
-                    )
-                }
-            } else {
-                item {
-                    StartTrackingCard(onClick = { viewModel.createPersonalGroup() })
-                }
-            }
-
-            // Latest Groups (3)
-            if (dashboard.latestGroups.isNotEmpty()) {
-                item {
-                    Text(
-                        "Latest Groups",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
-                items(dashboard.latestGroups) { gp ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onPersonalTrackerClick?.invoke(gp.group.groupId) },
-                    ) {
-                        Row(
+            if (isSearching) {
+                // Search results: Groups
+                if (searchedGroups.isNotEmpty()) {
+                    item {
+                        Text(
+                            "Groups",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                    items(searchedGroups) { gp ->
+                        Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(14.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                                .clickable { onPersonalTrackerClick?.invoke(gp.group.groupId) },
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(gp.group.name, style = MaterialTheme.typography.titleSmall)
-                                Text(
-                                    "${gp.memberCount} member${if (gp.memberCount != 1) "s" else ""}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            if (gp.myBalance != 0L) {
-                                Text(
-                                    (if (gp.myBalance > 0) "+" else "") + formatAmount(gp.myBalance),
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (gp.myBalance > 0) Color(0xFF6BCB77) else Color(0xFFFF6B6B)
-                                )
-                            } else {
-                                Text("Settled", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(gp.group.name, style = MaterialTheme.typography.titleSmall)
+                                    Text(
+                                        "${gp.memberCount} member${if (gp.memberCount != 1) "s" else ""}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                if (gp.myBalance != 0L) {
+                                    Text(
+                                        (if (gp.myBalance > 0) "+" else "") + formatAmount(gp.myBalance),
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (gp.myBalance > 0) Color(0xFF6BCB77) else Color(0xFFFF6B6B)
+                                    )
+                                } else {
+                                    Text("Settled", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            // Latest Transactions (3)
-            if (dashboard.recentExpenses.isNotEmpty()) {
+                // Search results: Transactions
+                if (searchedExpenses.isNotEmpty()) {
+                    item {
+                        Text(
+                            "Transactions",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                    items(searchedExpenses.take(20)) { ewg ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onPersonalTrackerClick?.invoke(ewg.expense.groupId) },
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        ewg.expense.description,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        "${ewg.groupName} \u00B7 ${SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(ewg.expense.createdAt))}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Text(
+                                    formatAmount(ewg.expense.amountCents),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // No results
+                if (searchedGroups.isEmpty() && searchedExpenses.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("\uD83D\uDD0D", fontSize = 32.sp)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    "No results",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    "Nothing matched \"${dashboard.searchQuery}\"",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Normal home content
                 item {
-                    Text(
-                        "Latest Transactions",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp)
+                    SummaryCard(
+                        totalOwed = dashboard.totalOwed,
+                        totalOwe = dashboard.totalOwe,
+                        netBalance = dashboard.netBalance
                     )
                 }
-                items(dashboard.recentExpenses) { expense ->
-                    RecentExpenseCard(expense = expense)
+
+                // Personal Tracker summary card
+                if (dashboard.personalGroupId != null) {
+                    item {
+                        PersonalTrackerSummaryCard(
+                            monthSpend = dashboard.personalMonthSpend,
+                            onClick = {
+                                dashboard.personalGroupId?.let { onPersonalTrackerClick?.invoke(it) }
+                            }
+                        )
+                    }
+                } else {
+                    item {
+                        StartTrackingCard(onClick = { viewModel.createPersonalGroup() })
+                    }
+                }
+
+                // Latest Groups (3)
+                if (dashboard.latestGroups.isNotEmpty()) {
+                    item {
+                        Text(
+                            "Latest Groups",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                    items(dashboard.latestGroups) { gp ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onPersonalTrackerClick?.invoke(gp.group.groupId) },
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(gp.group.name, style = MaterialTheme.typography.titleSmall)
+                                    Text(
+                                        "${gp.memberCount} member${if (gp.memberCount != 1) "s" else ""}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                if (gp.myBalance != 0L) {
+                                    Text(
+                                        (if (gp.myBalance > 0) "+" else "") + formatAmount(gp.myBalance),
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (gp.myBalance > 0) Color(0xFF6BCB77) else Color(0xFFFF6B6B)
+                                    )
+                                } else {
+                                    Text("Settled", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Latest Transactions (3)
+                if (dashboard.recentExpenses.isNotEmpty()) {
+                    item {
+                        Text(
+                            "Latest Transactions",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                    items(dashboard.recentExpenses) { expense ->
+                        RecentExpenseCard(expense = expense)
+                    }
                 }
             }
 
