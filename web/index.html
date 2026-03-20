@@ -163,36 +163,41 @@
             box-shadow:0 4px 12px rgba(124,111,224,0.3);
         }
 
-        /* FAB */
+        /* FAB — standalone (used in groups tab etc) */
         .fab {
-            position:fixed; bottom:max(28px,env(safe-area-inset-bottom));
+            position:fixed; bottom:max(80px,calc(70px + env(safe-area-inset-bottom)));
             right:calc(50% - 212px);
-            width:60px; height:60px;
+            width:52px; height:52px;
             background:linear-gradient(135deg, var(--primary), var(--primary-soft));
-            color:#fff; border:none; border-radius:20px;
-            font-size:30px; font-weight:300; cursor:pointer;
+            color:#fff; border:none; border-radius:18px;
+            font-size:26px; font-weight:300; cursor:pointer;
             box-shadow:0 8px 24px rgba(124,111,224,0.35);
             display:flex; align-items:center; justify-content:center;
-            transition:all .2s;
+            transition:all .2s; z-index:20;
         }
         .fab:active { transform:scale(.88) rotate(90deg); }
+        @media(max-width:480px){ .fab{right:20px;} }
+
+        /* FAB stack — two buttons on home */
         .fab-stack {
-            position:fixed; bottom:max(100px,calc(80px + env(safe-area-inset-bottom)));
+            position:fixed; bottom:max(80px,calc(70px + env(safe-area-inset-bottom)));
             right:calc(50% - 212px);
             display:flex; flex-direction:column; align-items:center; gap:10px; z-index:20;
         }
         @media(max-width:480px){ .fab-stack{right:20px;} }
+        .fab-stack .fab {
+            position:static; /* override fixed positioning when inside stack */
+        }
         .fab-small {
-            width:48px; height:48px;
+            width:52px; height:52px;
             background:var(--primary-bg); color:var(--primary);
-            border:none; border-radius:16px;
-            font-size:20px; cursor:pointer;
+            border:none; border-radius:18px;
+            font-size:22px; cursor:pointer;
             box-shadow:0 4px 16px rgba(124,111,224,0.25);
             display:flex; align-items:center; justify-content:center;
             transition:all .2s;
         }
         .fab-small:active { transform:scale(.88); }
-        @media(max-width:480px){ .fab{right:24px;} }
 
         /* Forms */
         .fg { margin-bottom:22px; }
@@ -1260,9 +1265,9 @@
 <!-- Scan QR -->
 <div class="screen" id="s-scan-qr">
     <div class="topbar"><button class="back" id="scan-back">&#x2190;</button><h1>Scan QR Code</h1></div>
-    <div class="content" style="padding-top:0">
-        <p style="text-align:center;color:var(--text-secondary);padding:12px 0 8px;font-size:13px;font-weight:500">Point your camera at a SplitBlind QR code</p>
-        <div id="qr-reader" style="width:100%;max-width:400px;margin:0 auto;border-radius:16px;overflow:hidden"></div>
+    <div style="flex:1;display:flex;flex-direction:column;padding:8px 16px">
+        <p style="text-align:center;color:var(--text-secondary);padding:8px 0;font-size:13px;font-weight:500">Point your camera at a SplitBlind QR code</p>
+        <div id="qr-reader" style="flex:1;width:100%;max-height:70vh;border-radius:16px;overflow:hidden"></div>
     </div>
 </div>
 
