@@ -160,6 +160,9 @@ fun MainScreen(
                     },
                     onSecurityClick = {
                         navController.navigate(Routes.SECURITY)
+                    },
+                    onSetupPassphrase = {
+                        navController.navigate(Routes.SETUP_PASSPHRASE)
                     }
                 )
             }

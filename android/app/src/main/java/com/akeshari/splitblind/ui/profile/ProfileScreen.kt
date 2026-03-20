@@ -2,7 +2,10 @@ package com.akeshari.splitblind.ui.profile
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -54,7 +57,8 @@ import com.akeshari.splitblind.ui.theme.ThemeMode
 fun ProfileScreen(
     identity: Identity,
     onSyncClick: () -> Unit,
-    onSecurityClick: () -> Unit
+    onSecurityClick: () -> Unit,
+    onSetupPassphrase: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var showEditNameDialog by remember { mutableStateOf(false) }
@@ -132,32 +136,91 @@ fun ProfileScreen(
                 }
             }
 
-            // Recovery passphrase status
+            // Recovery passphrase
+            val hasPassphrase = identity.recoveryPassphrase != null
+            var showPassphraseDialog by remember { mutableStateOf(false) }
+
+            if (showPassphraseDialog && hasPassphrase) {
+                AlertDialog(
+                    onDismissRequest = { showPassphraseDialog = false },
+                    title = { Text("Your Recovery Passphrase") },
+                    text = {
+                        Column {
+                            Text(
+                                identity.recoveryPassphrase ?: "",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(14.dp))
+                                    .padding(16.dp)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                "Keep this safe. It's the only way to recover your data.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        Row {
+                            TextButton(onClick = {
+                                com.akeshari.splitblind.crypto.RecoveryManager.downloadPassphrase(context, identity.recoveryPassphrase ?: "")
+                                showPassphraseDialog = false
+                            }) { Text("Download") }
+                            TextButton(onClick = {
+                                com.akeshari.splitblind.crypto.RecoveryManager.sharePassphrase(context, identity.recoveryPassphrase ?: "")
+                                showPassphraseDialog = false
+                            }) { Text("Share") }
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showPassphraseDialog = false }) { Text("Close") }
+                    }
+                )
+            }
+
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        if (hasPassphrase) {
+                            showPassphraseDialog = true
+                        } else {
+                            onSetupPassphrase()
+                        }
+                    },
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             ) {
-                Column(
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Column {
+                        Text(
+                            "Recovery Passphrase",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            if (hasPassphrase) "✅ Set up" else "⚠️ Not set up",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (hasPassphrase) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                        )
+                    }
                     Text(
-                        "Recovery Passphrase",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    val hasPassphrase = identity.recoveryPassphrase != null
-                    Text(
-                        if (hasPassphrase) "Set up" else "Not set up",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (hasPassphrase)
-                            MaterialTheme.colorScheme.primary
-                        else
-                            MaterialTheme.colorScheme.error
+                        if (hasPassphrase) "View" else "Set Up",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
