@@ -86,6 +86,7 @@ import com.akeshari.splitblind.data.database.entity.HistoryEntity
 import com.akeshari.splitblind.data.database.entity.SettlementEntity
 import com.akeshari.splitblind.data.database.entity.MemberEntity
 import com.akeshari.splitblind.ui.qr.QrCodeDialog
+import com.akeshari.splitblind.ui.components.AppLogo
 import com.akeshari.splitblind.util.Debt
 import kotlinx.serialization.json.Json
 import java.text.SimpleDateFormat
@@ -118,6 +119,8 @@ fun GroupDetailScreen(
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        AppLogo(22)
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(state.group?.name ?: "Group")
                         Spacer(modifier = Modifier.width(8.dp))
                         Box(

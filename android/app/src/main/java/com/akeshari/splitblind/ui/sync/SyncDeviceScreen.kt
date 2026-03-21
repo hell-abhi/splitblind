@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.akeshari.splitblind.ui.components.AppTitle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,7 +67,7 @@ fun SyncDeviceScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(if (mode == "generate") "Sync Device" else "Restore Identity")
+                    AppTitle(if (mode == "generate") "Sync Device" else "Restore Identity")
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

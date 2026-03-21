@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import com.akeshari.splitblind.ui.components.AppTitle
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.ui.unit.dp
 
@@ -40,7 +41,7 @@ fun SecurityScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Security") },
+                title = { AppTitle("Security") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

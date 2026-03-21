@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.akeshari.splitblind.ui.components.AppTitle
 import java.util.Locale
 
 private fun formatAmount(cents: Long): String {
@@ -57,7 +58,7 @@ fun SettleUpScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settle Up") },
+                title = { AppTitle("Settle Up") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

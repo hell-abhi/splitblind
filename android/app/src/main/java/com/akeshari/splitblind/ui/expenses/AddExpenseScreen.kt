@@ -61,6 +61,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.akeshari.splitblind.ui.components.AppTitle
 
 private val pastelAvatarColors = listOf(
     Color(0xFFF2A0C4), // pink
@@ -228,7 +229,7 @@ fun AddExpenseScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (state.isEditing) "Edit Expense" else "Add Expense") },
+                title = { AppTitle(if (state.isEditing) "Edit Expense" else "Add Expense") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

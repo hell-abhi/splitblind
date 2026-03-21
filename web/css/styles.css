@@ -50,7 +50,8 @@
             background:var(--surface); backdrop-filter:blur(20px);
             -webkit-backdrop-filter:blur(20px);
         }
-        .topbar h1 { font-size:18px; font-weight:800; flex:1; letter-spacing:-0.3px; }
+        .topbar h1 { font-size:18px; font-weight:800; flex:1; letter-spacing:-0.3px; display:flex; align-items:center; gap:8px; }
+        .topbar h1::before { content:''; display:inline-block; width:24px; height:24px; background:url('icon.svg') center/contain no-repeat; border-radius:6px; flex-shrink:0; }
         .topbar .back {
             background:var(--primary-bg); border:none; width:32px; height:32px;
             border-radius:10px; font-size:16px; cursor:pointer; color:var(--primary);

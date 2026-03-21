@@ -51,6 +51,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.akeshari.splitblind.crypto.Identity
+import com.akeshari.splitblind.ui.components.AppTitle
 import com.akeshari.splitblind.ui.expenses.CurrencyInfo
 import com.akeshari.splitblind.ui.theme.ThemeManager
 import com.akeshari.splitblind.ui.theme.ThemeMode
@@ -157,7 +158,7 @@ fun ProfileScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Profile") },
+                title = { AppTitle("Profile") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer

@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.akeshari.splitblind.ui.components.AppTitle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,7 +66,7 @@ fun SetupPassphraseScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Recovery Passphrase") },
+                title = { AppTitle("Recovery Passphrase") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -267,7 +268,7 @@ fun RecoverScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Recover Account") },
+                title = { AppTitle("Recover Account") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
