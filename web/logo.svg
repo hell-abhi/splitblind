@@ -7,17 +7,44 @@
   </defs>
   <!-- Rounded square background -->
   <rect width="512" height="512" rx="112" fill="url(#bg)"/>
-  <!-- Shield shape (protection/blind) -->
-  <path d="M256 80 L400 140 L400 280 C400 370 340 430 256 460 C172 430 112 370 112 280 L112 140 Z"
-        fill="none" stroke="white" stroke-width="24" stroke-linejoin="round" opacity="0.95"/>
-  <!-- Split line through shield (split expenses) -->
-  <line x1="256" y1="120" x2="256" y2="440" stroke="white" stroke-width="6" opacity="0.5"/>
-  <!-- Left half: currency symbol -->
-  <text x="200" y="310" font-family="system-ui,sans-serif" font-size="140" font-weight="800" fill="white" text-anchor="middle" opacity="0.95">₹</text>
-  <!-- Right half: lock -->
-  <g transform="translate(320, 220)" opacity="0.9">
-    <rect x="-28" y="10" width="56" height="44" rx="8" fill="white"/>
-    <path d="M-16 10 L-16 -4 C-16 -24 16 -24 16 -4 L16 10" fill="none" stroke="white" stroke-width="8" stroke-linecap="round"/>
-    <circle cx="0" cy="32" r="6" fill="#7C6FE0"/>
+
+  <!-- Left hand (coming from left) -->
+  <g fill="none" stroke="white" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Left forearm -->
+    <path d="M80 270 L180 270 Q195 270 200 258"/>
+    <!-- Left fist -->
+    <path d="M195 240 Q195 220 210 220 L230 220 Q245 220 245 235 L245 255"/>
+    <!-- Left fingers curled -->
+    <path d="M210 220 L210 205 Q210 192 220 192 L230 192 Q240 192 240 205 L240 220"/>
+    <path d="M220 192 L220 182 Q220 170 230 170 Q240 170 240 182 L240 192"/>
+    <!-- Left thumb -->
+    <path d="M200 258 Q195 275 205 280 L220 280"/>
   </g>
+
+  <!-- Right hand (coming from right, mirrored) -->
+  <g fill="none" stroke="white" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Right forearm -->
+    <path d="M432 270 L332 270 Q317 270 312 258"/>
+    <!-- Right fist -->
+    <path d="M317 240 Q317 220 302 220 L282 220 Q267 220 267 235 L267 255"/>
+    <!-- Right fingers curled -->
+    <path d="M302 220 L302 205 Q302 192 292 192 L282 192 Q272 192 272 205 L272 220"/>
+    <path d="M292 192 L292 182 Q292 170 282 170 Q272 170 272 182 L272 192"/>
+    <!-- Right thumb -->
+    <path d="M312 258 Q317 275 307 280 L292 280"/>
+  </g>
+
+  <!-- Connection point / bump area (where fists meet) -->
+  <circle cx="256" cy="240" r="8" fill="white" opacity="0.6"/>
+
+  <!-- Small sparkle/star at meeting point -->
+  <g fill="white" opacity="0.5">
+    <path d="M256 210 L258 220 L268 222 L258 224 L256 234 L254 224 L244 222 L254 220 Z"/>
+  </g>
+
+  <!-- "SplitBlind" text below -->
+  <text x="256" y="360" font-family="system-ui,-apple-system,sans-serif" font-size="42" font-weight="800" fill="white" text-anchor="middle" letter-spacing="-1" opacity="0.95">SplitBlind</text>
+
+  <!-- Tagline -->
+  <text x="256" y="395" font-family="system-ui,-apple-system,sans-serif" font-size="20" font-weight="500" fill="white" text-anchor="middle" opacity="0.6">Split. Settle. Secure.</text>
 </svg>
