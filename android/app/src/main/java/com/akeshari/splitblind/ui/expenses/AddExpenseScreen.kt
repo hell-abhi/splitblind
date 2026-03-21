@@ -319,7 +319,7 @@ fun AddExpenseScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 6.dp)
                         )
-                    } else if (state.conversionPreview != null) {
+                    } else if (state.conversionPreview != null && state.conversionRate != null) {
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -328,12 +328,47 @@ fun AddExpenseScreen(
                                 containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f)
                             )
                         ) {
-                            Text(
-                                text = state.conversionPreview!!,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-                            )
+                            Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                                Text(
+                                    text = state.conversionPreview!!,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        "1 ${state.currency} =",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    OutlinedTextField(
+                                        value = state.customRate,
+                                        onValueChange = { viewModel.setCustomRate(it) },
+                                        modifier = Modifier.width(100.dp).height(36.dp),
+                                        textStyle = androidx.compose.ui.text.TextStyle(
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            textAlign = TextAlign.End
+                                        ),
+                                        singleLine = true,
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                                    )
+                                    Text(
+                                        state.groupBaseCurrency,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Text(
+                                    "Market rate shown. Edit to use your own rate.",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    modifier = Modifier.padding(top = 2.dp)
+                                )
+                            }
                         }
                     }
                 }

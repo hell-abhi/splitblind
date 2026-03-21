@@ -151,7 +151,8 @@ data class AddExpenseState(
     val convertedAmountCents: Long? = null,
     val conversionPreview: String? = null,
     val groupBaseCurrency: String = "INR",
-    val isLoadingRate: Boolean = false
+    val isLoadingRate: Boolean = false,
+    val customRate: String = ""
 )
 
 @HiltViewModel
@@ -264,6 +265,25 @@ class AddExpenseViewModel @Inject constructor(
         fetchConversionRate()
     }
 
+    fun setCustomRate(rateStr: String) {
+        _state.value = _state.value.copy(customRate = rateStr)
+        val rate = rateStr.toDoubleOrNull() ?: return
+        if (rate <= 0) return
+        val amountDouble = _state.value.amount.toDoubleOrNull() ?: return
+        val convertedCents = (amountDouble * rate * 100).toLong()
+        val toSymbol = CurrencyInfo.symbolFor(_state.value.groupBaseCurrency)
+        val preview = String.format(
+            java.util.Locale.getDefault(),
+            "%s%,.2f (custom rate)",
+            toSymbol, convertedCents / 100.0
+        )
+        _state.value = _state.value.copy(
+            conversionRate = rate,
+            convertedAmountCents = convertedCents,
+            conversionPreview = preview
+        )
+    }
+
     private fun fetchConversionRate() {
         val s = _state.value
         val from = s.currency
@@ -303,7 +323,8 @@ class AddExpenseViewModel @Inject constructor(
                     conversionRate = rate,
                     convertedAmountCents = convertedCents,
                     conversionPreview = preview,
-                    isLoadingRate = false
+                    isLoadingRate = false,
+                    customRate = String.format(java.util.Locale.getDefault(), "%.4f", rate)
                 )
             } else {
                 _state.value = _state.value.copy(

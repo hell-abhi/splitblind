@@ -1437,7 +1437,9 @@ async function updateConversionPreview(){
         const baseSym=getCurrencySymbol(aeGroupBaseCurrency);
         const fromSym=getCurrencySymbol(aeCurrency);
         previewEl.style.display='';
-        previewEl.innerHTML=`<span class="conversion-approx">&asymp; ${baseSym}${convertedAmt.toFixed(2)}</span> <span class="conversion-rate">(1 ${aeCurrency} = ${baseSym}${aeConversionRate.toFixed(4)})</span>`;
+        previewEl.innerHTML=`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="conversion-approx">&asymp; ${baseSym}${convertedAmt.toFixed(2)}</span><span class="conversion-rate">1 ${aeCurrency} = ${baseSym}<input type="number" id="ae-custom-rate" value="${aeConversionRate.toFixed(4)}" step="0.0001" min="0" style="width:80px;padding:2px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-weight:700;font-family:inherit;background:var(--card);color:var(--text);text-align:right" title="Edit rate"></span></div><div style="font-size:10px;color:var(--text-secondary);margin-top:2px">Market rate shown. Tap the rate to use your own.</div>`;
+        const rateInput=document.getElementById('ae-custom-rate');
+        if(rateInput)rateInput.addEventListener('input',()=>{const v=parseFloat(rateInput.value);if(v>0){aeConversionRate=v;const a=parseFloat(document.getElementById('ae-amt').value)||0;document.querySelector('.conversion-approx').textContent='\u2248 '+baseSym+(a*v).toFixed(2)}});
     },300);
 }
 
