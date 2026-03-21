@@ -13,11 +13,23 @@ class Identity(context: Context) {
         val masterKey = MasterKey.Builder(context)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
             .build()
-        prefs = EncryptedSharedPreferences.create(
-            context, "splitblind_identity", masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
+        prefs = try {
+            EncryptedSharedPreferences.create(
+                context, "splitblind_identity", masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        } catch (e: Exception) {
+            // Corrupted prefs (e.g., after uninstall/reinstall with stale keystore)
+            // Delete the corrupted file and recreate
+            context.getSharedPreferences("splitblind_identity", Context.MODE_PRIVATE).edit().clear().apply()
+            try { java.io.File(context.filesDir.parent + "/shared_prefs/splitblind_identity.xml").delete() } catch (_: Exception) {}
+            EncryptedSharedPreferences.create(
+                context, "splitblind_identity", masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        }
     }
 
     var memberId: String
