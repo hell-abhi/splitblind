@@ -4,10 +4,36 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Shield outline -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M54,28 L54,80 M42,40 C42,35 48,32 54,32 C60,32 66,35 66,40 C66,45 60,48 54,48 C48,48 42,51 42,56 C42,61 48,64 54,64 C60,64 66,61 66,56 M38,54 L70,54"
-        android:strokeWidth="4"
+        android:pathData="M54,22 L78,34 L78,56 C78,74 68,84 54,90 C40,84 30,74 30,56 L30,34 Z"
+        android:fillColor="#00000000"
         android:strokeColor="#FFFFFF"
-        android:fillType="nonZero"/>
+        android:strokeWidth="3.5"
+        android:strokeLineJoin="round"/>
+    <!-- Split line -->
+    <path
+        android:pathData="M54,28 L54,86"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1"
+        android:strokeAlpha="0.4"/>
+    <!-- Rupee symbol (left) -->
+    <path
+        android:pathData="M39,44 L49,44 M39,50 L49,50 M42,44 C42,44 48,44 48,47 C48,50 42,50 42,50 L48,60"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"/>
+    <!-- Lock (right) -->
+    <path
+        android:pathData="M58,54 L58,50 C58,46 66,46 66,50 L66,54"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"/>
+    <path
+        android:pathData="M56,54 L68,54 L68,64 C68,66 66,68 64,68 L60,68 C58,68 56,66 56,64 Z"
+        android:fillColor="#FFFFFF"/>
+    <path
+        android:pathData="M62,59 A1.5,1.5 0 1,1 62,59.01"
+        android:fillColor="#7C6FE0"/>
 </vector>
