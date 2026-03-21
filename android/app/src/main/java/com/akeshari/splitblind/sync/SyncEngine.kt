@@ -299,14 +299,13 @@ class SyncEngine @Inject constructor(
      * Resolve a short code from Firebase at links/{code}.
      * Calls onResult with (groupId, groupName) or null if not found.
      */
-    fun resolveShortCode(code: String, onResult: (Triple<String, String, String?>?) -> Unit) {
+    fun resolveShortCode(code: String, onResult: (Pair<String, String>?) -> Unit) {
         firebaseDatabase.getReference("links/$code").get()
             .addOnSuccessListener { snapshot ->
                 val groupId = snapshot.child("g").getValue(String::class.java)
                 val name = snapshot.child("n").getValue(String::class.java) ?: "Shared Group"
-                val key = snapshot.child("k").getValue(String::class.java)
                 if (groupId != null) {
-                    onResult(Triple(groupId, name, key))
+                    onResult(Pair(groupId, name))
                 } else {
                     onResult(null)
                 }
