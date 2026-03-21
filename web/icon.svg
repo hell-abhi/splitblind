@@ -4,30 +4,40 @@
       <stop offset="0%" stop-color="#7C6FE0"/>
       <stop offset="100%" stop-color="#A89AF2"/>
     </linearGradient>
+    <linearGradient id="coinL" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#E8E4F8"/>
+    </linearGradient>
+    <linearGradient id="coinR" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E8E4F8"/>
+      <stop offset="100%" stop-color="#FFFFFF"/>
+    </linearGradient>
   </defs>
   <rect width="512" height="512" rx="112" fill="url(#bg)"/>
 
-  <!-- Left hand -->
-  <g fill="none" stroke="white" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M60 280 L170 280 Q190 280 195 265"/>
-    <path d="M190 245 Q190 220 210 220 L235 220 Q255 220 255 240 L255 265"/>
-    <path d="M210 220 L210 200 Q210 185 225 185 Q240 185 240 200 L240 220"/>
-    <path d="M225 185 L225 172 Q225 158 237 158 Q250 158 250 172 L250 185"/>
-    <path d="M195 265 Q190 285 202 292 L222 292"/>
+  <!-- Left coin half (offset left) -->
+  <g transform="translate(-16, 0)">
+    <path d="M256 76 A180 180 0 0 0 256 436 L256 76 Z" fill="url(#coinL)" opacity="0.93"/>
+    <!-- Rupee symbol -->
+    <g transform="translate(160, 190)">
+      <line x1="0" y1="0" x2="62" y2="0" stroke="#7C6FE0" stroke-width="12" stroke-linecap="round"/>
+      <line x1="0" y1="28" x2="62" y2="28" stroke="#7C6FE0" stroke-width="12" stroke-linecap="round"/>
+      <path d="M14 0 C14 0 56 0 56 28 C56 56 14 56 14 56 L56 115" fill="none" stroke="#7C6FE0" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
   </g>
 
-  <!-- Right hand -->
-  <g fill="none" stroke="white" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M452 280 L342 280 Q322 280 317 265"/>
-    <path d="M322 245 Q322 220 302 220 L277 220 Q257 220 257 240 L257 265"/>
-    <path d="M302 220 L302 200 Q302 185 287 185 Q272 185 272 200 L272 220"/>
-    <path d="M287 185 L287 172 Q287 158 275 158 Q262 158 262 172 L262 185"/>
-    <path d="M317 265 Q322 285 310 292 L290 292"/>
+  <!-- Right coin half (offset right) -->
+  <g transform="translate(16, 0)">
+    <path d="M256 76 A180 180 0 0 1 256 436 L256 76 Z" fill="url(#coinR)" opacity="0.93"/>
+    <!-- Lock icon -->
+    <g transform="translate(270, 185)">
+      <rect x="0" y="48" width="66" height="54" rx="10" fill="#7C6FE0"/>
+      <path d="M12 48 L12 28 C12 4 54 4 54 28 L54 48" fill="none" stroke="#7C6FE0" stroke-width="10" stroke-linecap="round"/>
+      <circle cx="33" cy="70" r="9" fill="white"/>
+      <rect x="29" y="70" width="8" height="15" rx="3" fill="white"/>
+    </g>
   </g>
 
-  <!-- Sparkle at meeting point -->
-  <g fill="white" opacity="0.7">
-    <circle cx="256" cy="250" r="6"/>
-    <path d="M256 225 L259 240 L274 243 L259 246 L256 261 L253 246 L238 243 L253 240 Z" opacity="0.5"/>
-  </g>
+  <!-- Subtle split line -->
+  <line x1="256" y1="88" x2="256" y2="424" stroke="white" stroke-width="2" opacity="0.2"/>
 </svg>

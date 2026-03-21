@@ -4,47 +4,47 @@
       <stop offset="0%" stop-color="#7C6FE0"/>
       <stop offset="100%" stop-color="#A89AF2"/>
     </linearGradient>
+    <linearGradient id="coinLeft" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#E8E4F8"/>
+    </linearGradient>
+    <linearGradient id="coinRight" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E8E4F8"/>
+      <stop offset="100%" stop-color="#FFFFFF"/>
+    </linearGradient>
   </defs>
   <!-- Rounded square background -->
   <rect width="512" height="512" rx="112" fill="url(#bg)"/>
 
-  <!-- Left hand (coming from left) -->
-  <g fill="none" stroke="white" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
-    <!-- Left forearm -->
-    <path d="M80 270 L180 270 Q195 270 200 258"/>
-    <!-- Left fist -->
-    <path d="M195 240 Q195 220 210 220 L230 220 Q245 220 245 235 L245 255"/>
-    <!-- Left fingers curled -->
-    <path d="M210 220 L210 205 Q210 192 220 192 L230 192 Q240 192 240 205 L240 220"/>
-    <path d="M220 192 L220 182 Q220 170 230 170 Q240 170 240 182 L240 192"/>
-    <!-- Left thumb -->
-    <path d="M200 258 Q195 275 205 280 L220 280"/>
+  <!-- Left half of coin (slightly offset left) -->
+  <g transform="translate(-12, 0)">
+    <path d="M256 100 A140 140 0 0 0 256 380 L256 100 Z" fill="url(#coinLeft)" opacity="0.92"/>
+    <!-- Rupee symbol on left half -->
+    <g transform="translate(185, 200)">
+      <line x1="0" y1="0" x2="50" y2="0" stroke="#7C6FE0" stroke-width="9" stroke-linecap="round"/>
+      <line x1="0" y1="22" x2="50" y2="22" stroke="#7C6FE0" stroke-width="9" stroke-linecap="round"/>
+      <path d="M12 0 C12 0 45 0 45 22 C45 45 12 45 12 45 L45 90" fill="none" stroke="#7C6FE0" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
   </g>
 
-  <!-- Right hand (coming from right, mirrored) -->
-  <g fill="none" stroke="white" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
-    <!-- Right forearm -->
-    <path d="M432 270 L332 270 Q317 270 312 258"/>
-    <!-- Right fist -->
-    <path d="M317 240 Q317 220 302 220 L282 220 Q267 220 267 235 L267 255"/>
-    <!-- Right fingers curled -->
-    <path d="M302 220 L302 205 Q302 192 292 192 L282 192 Q272 192 272 205 L272 220"/>
-    <path d="M292 192 L292 182 Q292 170 282 170 Q272 170 272 182 L272 192"/>
-    <!-- Right thumb -->
-    <path d="M312 258 Q317 275 307 280 L292 280"/>
+  <!-- Right half of coin (slightly offset right) -->
+  <g transform="translate(12, 0)">
+    <path d="M256 100 A140 140 0 0 1 256 380 L256 100 Z" fill="url(#coinRight)" opacity="0.92"/>
+    <!-- Lock icon on right half -->
+    <g transform="translate(274, 195)">
+      <!-- Lock body -->
+      <rect x="0" y="38" width="52" height="42" rx="8" fill="#7C6FE0"/>
+      <!-- Lock shackle -->
+      <path d="M10 38 L10 22 C10 4 42 4 42 22 L42 38" fill="none" stroke="#7C6FE0" stroke-width="8" stroke-linecap="round"/>
+      <!-- Keyhole -->
+      <circle cx="26" cy="56" r="7" fill="white"/>
+      <rect x="23" y="56" width="6" height="12" rx="2" fill="white"/>
+    </g>
   </g>
 
-  <!-- Connection point / bump area (where fists meet) -->
-  <circle cx="256" cy="240" r="8" fill="white" opacity="0.6"/>
+  <!-- Split line glow effect (gap between halves) -->
+  <line x1="256" y1="108" x2="256" y2="372" stroke="#A89AF2" stroke-width="3" opacity="0.4"/>
 
-  <!-- Small sparkle/star at meeting point -->
-  <g fill="white" opacity="0.5">
-    <path d="M256 210 L258 220 L268 222 L258 224 L256 234 L254 224 L244 222 L254 220 Z"/>
-  </g>
-
-  <!-- "SplitBlind" text below -->
-  <text x="256" y="360" font-family="system-ui,-apple-system,sans-serif" font-size="42" font-weight="800" fill="white" text-anchor="middle" letter-spacing="-1" opacity="0.95">SplitBlind</text>
-
-  <!-- Tagline -->
-  <text x="256" y="395" font-family="system-ui,-apple-system,sans-serif" font-size="20" font-weight="500" fill="white" text-anchor="middle" opacity="0.6">Split. Settle. Secure.</text>
+  <!-- App name -->
+  <text x="256" y="440" font-family="system-ui,-apple-system,sans-serif" font-size="38" font-weight="800" fill="white" text-anchor="middle" letter-spacing="-0.5" opacity="0.95">SplitBlind</text>
 </svg>
