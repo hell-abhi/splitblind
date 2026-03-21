@@ -7,8 +7,8 @@ async function handleJoin(){
         // Short link: ?c=code#key (key might be missing if # was stripped)
         const d=await resolveShort(sc);if(!d)return null;
         g=d.g;n=d.n||'Group';
-        k=hash?decodeURIComponent(hash):(d.k||null);
-        if(!k){toast('Invalid invite link — key missing');return null}
+        k=hash?decodeURIComponent(hash):null;
+        if(!k){toast('This invite link is incomplete. Ask the sender to share it again, or scan the QR code.');return null}
     }else if(gid&&hash){
         // Full link: ?g=uuid#key|name
         g=gid;const p=hash.split('|');k=decodeURIComponent(p[0]);n=p[1]?decodeURIComponent(p[1]):'Group';
@@ -201,7 +201,7 @@ function wireEvents(){
 
     // Sync generate
     const sgPin=document.getElementById('sg-pin');
-    sgPin.addEventListener('input',()=>{const v=sgPin.value.replace(/\D/g,'').slice(0,4);sgPin.value=v;document.getElementById('sg-btn').disabled=v.length!==4});
+    sgPin.addEventListener('input',()=>{const v=sgPin.value.replace(/\D/g,'').slice(0,6);sgPin.value=v;document.getElementById('sg-btn').disabled=v.length!==6});
     document.getElementById('sg-btn').addEventListener('click',async()=>{
         const pin=sgPin.value;
         try{
@@ -220,9 +220,9 @@ function wireEvents(){
 
     // Sync restore
     const srCode=document.getElementById('sr-code'),srPin=document.getElementById('sr-pin');
-    function updSrBtn(){const c=srCode.value.replace(/[^A-Za-z0-9]/g,'').length>=8,p=srPin.value.replace(/\D/g,'').length===4;document.getElementById('sr-btn').disabled=!(c&&p)}
+    function updSrBtn(){const c=srCode.value.replace(/[^A-Za-z0-9]/g,'').length>=8,p=srPin.value.replace(/\D/g,'').length===6;document.getElementById('sr-btn').disabled=!(c&&p)}
     srCode.addEventListener('input',()=>{let v=srCode.value.toUpperCase().replace(/[^A-Z0-9]/g,'');if(v.length>4)v=v.slice(0,4)+'-'+v.slice(4,8);srCode.value=v;updSrBtn()});
-    srPin.addEventListener('input',()=>{srPin.value=srPin.value.replace(/\D/g,'').slice(0,4);updSrBtn()});
+    srPin.addEventListener('input',()=>{srPin.value=srPin.value.replace(/\D/g,'').slice(0,6);updSrBtn()});
     document.getElementById('sr-btn').addEventListener('click',async()=>{
         const errEl=document.getElementById('sr-error');errEl.style.display='none';
         const code=srCode.value,pin=srPin.value;

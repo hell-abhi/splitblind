@@ -187,8 +187,8 @@ private fun GenerateContent(
 
         OutlinedTextField(
             value = pin,
-            onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) pin = it },
-            label = { Text("4-digit PIN") },
+            onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) pin = it },
+            label = { Text("6-digit PIN") },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             modifier = Modifier.fillMaxWidth()
@@ -198,7 +198,7 @@ private fun GenerateContent(
 
         Button(
             onClick = { onGenerate(pin) },
-            enabled = pin.length == 4 && !isLoading,
+            enabled = pin.length == 6 && !isLoading,
             modifier = Modifier.fillMaxWidth()
         ) {
             if (isLoading) {
@@ -265,9 +265,9 @@ private fun RestoreContent(
         value = pin,
         onValueChange = {
             onClearError()
-            if (it.length <= 4 && it.all { c -> c.isDigit() }) pin = it
+            if (it.length <= 6 && it.all { c -> c.isDigit() }) pin = it
         },
-        label = { Text("4-digit PIN") },
+        label = { Text("6-digit PIN") },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
         modifier = Modifier.fillMaxWidth()
@@ -277,7 +277,7 @@ private fun RestoreContent(
 
     Button(
         onClick = { onRestore(code, pin) },
-        enabled = code.length == 9 && pin.length == 4 && !isLoading,
+        enabled = code.length == 9 && pin.length == 6 && !isLoading,
         modifier = Modifier.fillMaxWidth()
     ) {
         if (isLoading) {

@@ -289,7 +289,7 @@ class SyncEngine @Inject constructor(
     fun createShortCode(groupId: String, groupName: String, groupKey: String): String {
         val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
         val code = (1..8).map { chars.random() }.joinToString("")
-        val data = mapOf("g" to groupId, "n" to groupName, "k" to groupKey)
+        val data = mapOf("g" to groupId, "n" to groupName)
         firebaseDatabase.getReference("links/$code").setValue(data)
             .addOnFailureListener { e -> Log.e(TAG, "Failed to create short link", e) }
         return code

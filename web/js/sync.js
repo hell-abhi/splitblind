@@ -199,7 +199,7 @@ async function applyRestore(bundle){
     }
 }
 
-// Short links — key stored in Firebase as fallback (short code is unguessable + link is shared privately)
-async function makeShortLink(gid,key,name){const code=shortId();await fbDb.ref('links/'+code).set({g:gid,n:name,k:key});return location.origin+location.pathname+'?c='+code+'#'+encodeURIComponent(key)}
+// Short links — key ONLY in URL fragment (never stored on Firebase)
+async function makeShortLink(gid,key,name){const code=shortId();await fbDb.ref('links/'+code).set({g:gid,n:name});return location.origin+location.pathname+'?c='+code+'#'+encodeURIComponent(key)}
 async function resolveShort(code){const s=await fbDb.ref('links/'+code).once('value');return s.val()}
 function shareLink(link,name){if(navigator.share){navigator.share({title:'Join "'+name+'" on SplitBlind',text:link}).catch(()=>{})}else{navigator.clipboard.writeText(link).then(()=>toast('Link copied!'))}}
